@@ -15,27 +15,35 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
-#pragma once
+
+// self
+//
+#include    "catch_main.h"
 
 
-namespace sc
+// snapcommunicator
+//
+#include    <snapcommunicator/version.h>
+
+
+// last include
+//
+#include    <snapdev/poison.h>
+
+
+
+
+CATCH_TEST_CASE("Version", "[version]")
 {
+    CATCH_START_SECTION("verify runtime vs compile time snapcommunicator version numbers")
+    {
+        CATCH_REQUIRE(sc::get_major_version()   == SNAPCOMMUNICATOR_VERSION_MAJOR);
+        CATCH_REQUIRE(sc::get_release_version() == SNAPCOMMUNICATOR_VERSION_MINOR);
+        CATCH_REQUIRE(sc::get_patch_version()   == SNAPCOMMUNICATOR_VERSION_PATCH);
+        CATCH_REQUIRE(strcmp(sc::get_version_string(), SNAPCOMMUNICATOR_VERSION_STRING) == 0);
+    }
+    CATCH_END_SECTION()
+}
 
 
-class snapcommunicator
-{
-public:
-                        snapcommunicator(advgetopt::getopt & opts);
-
-    void                add_snapcommunicator_options();
-    void                process_snapcommunicator_options();
-
-private:
-    advgetopt::getopt & f_opts;
-    ed::connection::pointer_t
-                        f_snapcommunicator_connection = ed::connection::pointer_t();
-};
-
-
-} // namespace sc
 // vim: ts=4 sw=4 et

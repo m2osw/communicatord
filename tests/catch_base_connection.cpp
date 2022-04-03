@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicator
+// https://snapwebsites.org/project/edhttp
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -15,27 +15,44 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
-#pragma once
+
+/** \file
+ * \brief Verify the snap_uri class.
+ *
+ * This file implements tests to verify that the snap_uri
+ * class functions as expected.
+ */
+
+// self
+//
+#include    "catch_main.h"
+
+// snapcommunicator
+//
+#include    <snapcommunicator/base_connection.h>
 
 
-namespace sc
-{
-
-
-class snapcommunicator
+class test_connection
+    : public sc::base_connection
 {
 public:
-                        snapcommunicator(advgetopt::getopt & opts);
 
-    void                add_snapcommunicator_options();
-    void                process_snapcommunicator_options();
-
-private:
-    advgetopt::getopt & f_opts;
-    ed::connection::pointer_t
-                        f_snapcommunicator_connection = ed::connection::pointer_t();
 };
 
 
-} // namespace sc
+CATCH_TEST_CASE("base_connection", "[connection]")
+{
+    CATCH_SECTION("verify object")
+    {
+        test_connection tc;
+
+        // verify defaults
+        //
+        CATCH_REQUIRE(tc.get_connection_started() == -1);
+        CATCH_REQUIRE(tc.get_connection_ended() == -1);
+        CATCH_REQUIRE(tc.get_server_name().empty());
+    }
+}
+
+
 // vim: ts=4 sw=4 et

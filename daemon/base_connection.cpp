@@ -1,12 +1,11 @@
-// Snap Websites Server -- server to handle inter-process communication
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/eventdispatcher
+// https://snapwebsites.org/project/snapcommunicator
 // contact@m2osw.com
 //
-// This program is free software; you can redistribute it and/or modify
+// This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
+// the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
 // This program is distributed in the hope that it will be useful,
@@ -14,28 +13,39 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 /** \file
- * \brief Base declaration of all the connections.
+ * \brief Base declaration for all the connections.
  *
- * The snapcommunicator has three types of connections:
+ * The snapcommunicator daemon has to deal with many connections. This
+ * base handles some basic aspects of each connection so we do not have
+ * to specialize the code everywhere.
+ *
+ * The several types of connections supported:
  *
  * * Connection from this server to another snapcommunicator server
+ *   (see remote_connection)
+ *
  * * Connection from another snapcommunicator server to this server
+ *   (see remote_connection)
+ *
+ * * Connection from a snapcommunicator to another which is expected to
+ *   connect to us (see gossip_connection)
+ *
  * * Connection from a local server to the snapcommunicator
+ *   (see service_connection and unix_connection)
  *
- * The first and second are managed between snapcommunicator servers
- * to create the RPC between all your tools.
+ * * Messages from a local server via UDP
+ *   (see ping)
  *
- * The last type of connections happen from all the local services
- * to the snapcommunicator.
+ * The connections between snapcommunicators are 100% managed by each
+ * snapcommunicator. This creates the RPC functionality between all your
+ * tools.
  *
- * In all cases, these connections derive from the base_connection
- * class so that way many of the common functions can be implemented
- * in one place.
+ * The other type of connections happen from the various local or remote
+ * services to the snapcommunicator.
  */
 
 

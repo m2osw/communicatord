@@ -17,25 +17,51 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
+// catch2 lib
+//
+#include    <catch2/snapcatch2.hpp>
 
-namespace sc
+
+// C++ lib
+//
+#include    <string>
+#include    <cstring>
+#include    <cstdlib>
+#include    <iostream>
+
+
+
+namespace SNAP_CATCH2_NAMESPACE
 {
 
 
-class snapcommunicator
+
+extern char ** g_argv;
+
+
+
+inline char32_t rand_char(bool full_range = false)
 {
-public:
-                        snapcommunicator(advgetopt::getopt & opts);
+    char32_t const max((full_range ? 0x0110000 : 0x0010000) - (0xE000 - 0xD800));
 
-    void                add_snapcommunicator_options();
-    void                process_snapcommunicator_options();
+    char32_t wc;
+    do
+    {
+        wc = ((rand() << 16) ^ rand()) % max;
+    }
+    while(wc == 0);
+    if(wc >= 0xD800)
+    {
+        // skip the surrogates
+        //
+        wc += 0xE000 - 0xD800;
+    }
 
-private:
-    advgetopt::getopt & f_opts;
-    ed::connection::pointer_t
-                        f_snapcommunicator_connection = ed::connection::pointer_t();
-};
+    return wc;
+}
 
 
-} // namespace sc
+
+}
+// namespace SNAP_CATCH2_NAMESPACE
 // vim: ts=4 sw=4 et

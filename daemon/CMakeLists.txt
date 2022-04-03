@@ -25,20 +25,30 @@ add_executable(${PROJECT_NAME}
     main.cpp
 
     cache.cpp
-    interrupt.cpp
-    listener.cpp
-    load_timer.cpp
-    ping.cpp
     remote_snapcommunicators.cpp
     server.cpp
     utils.cpp
 
-    # connections (pipes that send/receive messages)
-    base_connection.cpp
-    gossip_connection.cpp
-    remote_connection.cpp
-    service_connection.cpp
-    unix_connection.cpp
+    # eventdispatcher connections
+
+        # system
+        interrupt.cpp
+        load_timer.cpp
+
+        # listeners (a.k.a. servers)
+        listener.cpp
+        ping.cpp                # Ping is a UDP listener
+        unix_listener.cpp
+
+        # connections (steam-based pipes that send/receive messages)
+        base_connection.cpp
+        gossip_connection.cpp
+        remote_connection.cpp
+        service_connection.cpp
+        unix_connection.cpp
+
+        # we also have a logrotate UDP listener which specifically handles
+        # LOG messages in regard to the snaplogger
 )
 
 target_include_directories(${PROJECT_NAME}

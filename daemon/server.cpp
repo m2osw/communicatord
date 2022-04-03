@@ -1,12 +1,11 @@
-// Snap Websites Server -- server to handle inter-process communication
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/eventdispatcher
+// https://snapwebsites.org/project/snapcommunicator
 // contact@m2osw.com
 //
-// This program is free software; you can redistribute it and/or modify
+// This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
+// the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
 // This program is distributed in the hope that it will be useful,
@@ -14,9 +13,8 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 /** \file
  * \brief Implementation of the Snap! Communicator.
@@ -34,7 +32,7 @@
 //
 #include    "server.h"
 
-#include    "remote_snapcommunicator.h"
+#include    "remote_connection.h"
 
 
 // advgetopt
@@ -534,7 +532,7 @@ int server::init()
         throw snap::snap_exception(QString("my_address \"%1\" not found on this computer. Did a copy of the configuration file and forgot to change that entry?.").arg(QString::fromUtf8(addr.c_str())));
     }
 
-    f_remote_snapcommunicators.reset(new remote_communicator_connections(shared_from_this(), f_my_address));
+    f_remote_snapcommunicators = std::make_shared<remote_snapcommunicators>(shared_from_this(), f_my_address);
 
     // the add_neighbors() function parses the list of neighbors and
     // creates a permanent connection
@@ -803,7 +801,7 @@ void server::process_message(snap::snap_communicator::snap_connection::pointer_t
     }
 
     base_connection::pointer_t base(std::dynamic_pointer_cast<base_connection>(connection));
-    remote_communicator::pointer_t remote_communicator(std::dynamic_pointer_cast<remote_communicator>(connection));
+    remote_connection::pointer_t remote_conn(std::dynamic_pointer_cast<remote_connection>(connection));
     service_connection::pointer_t service_conn(std::dynamic_pointer_cast<service_connection>(connection));
 
     // TODO: move all the command bodies to sub-funtions.
@@ -831,9 +829,9 @@ void server::process_message(snap::snap_communicator::snap_connection::pointer_t
                     reply.set_command("QUITTING");
 
                     verify_command(base, reply);
-                    if(remote_communicator != nullptr)
+                    if(remote_conn != nullptr)
                     {
-                        remote_communicator->send_message(reply);
+                        remote_conn->send_message(reply);
                     }
                     else if(service_conn)
                     {
@@ -843,7 +841,10 @@ void server::process_message(snap::snap_communicator::snap_connection::pointer_t
                     {
                         // we have to have a remote or service connection here
                         //
-                        throw snap::snap_exception(QString("message \"%1\" sent on a \"weird\" connection.").arg(command));
+                        throw snap::snap_exception(
+                                  "message \""
+                                + command
+                                + "\" sent on a \"weird\" connection.");
                     }
                 }
 
@@ -864,7 +865,9 @@ void server::process_message(snap::snap_communicator::snap_connection::pointer_t
             {
                 if(udp)
                 {
-                    SNAP_LOG_ERROR("ACCEPT is only accepted over a TCP connection.");
+                    SNAP_LOG_ERROR
+                        << "ACCEPT is only accepted over a TCP connection."
+                        << SNAP_LOG_SEND;
                     return;
                 }
 
@@ -875,11 +878,13 @@ void server::process_message(snap::snap_communicator::snap_connection::pointer_t
                     if(!message.has_parameter("server_name")
                     || !message.has_parameter("my_address"))
                     {
-                        SNAP_LOG_ERROR("ACCEPT was received without a \"server_name\" parameter, which is mandatory.");
+                        SNAP_LOG_ERROR
+                            << "ACCEPT was received without a \"server_name\" parameter, which is mandatory."
+                            << SNAP_LOG_SEND;
                         return;
                     }
                     base->set_connection_type(base_connection::connection_type_t::CONNECTION_TYPE_REMOTE);
-                    QString const & remote_server_name(message.get_parameter("server_name"));
+                    std::string const & remote_server_name(message.get_parameter("server_name"));
                     base->set_server_name(remote_server_name);
 
                     // reply to a CONNECT, this was to connect to another
@@ -887,7 +892,7 @@ void server::process_message(snap::snap_communicator::snap_connection::pointer_t
                     // data from that remote computer
                     //
                     base->connection_started();
-                    QString const his_address(message.get_parameter("my_address"));
+                    std::string const his_address(message.get_parameter("my_address"));
                     base->set_my_address(his_address);
 
                     if(message.has_parameter("services"))
@@ -913,9 +918,9 @@ void server::process_message(snap::snap_communicator::snap_connection::pointer_t
                     snap::snap_communicator_message help;
                     help.set_command("HELP");
                     //verify_command(base, help); -- precisely
-                    if(remote_communicator != nullptr)
+                    if(remote_conn != nullptr)
                     {
-                        remote_communicator->send_message(help);
+                        remote_conn->send_message(help);
                     }
                     else if(service_conn)
                     {
@@ -1001,7 +1006,7 @@ void server::process_message(snap::snap_communicator::snap_connection::pointer_t
                                 ok = false;
                             }
                             // on a remote we get ACCEPT instead of READY
-                            if(remote_communicator != nullptr
+                            if(remote_conn != nullptr
                             || base->is_remote())
                             {
                                 if(!base->understand_command("ACCEPT"))
@@ -1074,7 +1079,7 @@ void server::process_message(snap::snap_communicator::snap_connection::pointer_t
                     snap::snap_communicator_message reply;
                     snap::snap_communicator_message new_remote_connection;
 
-                    QString const remote_server_name(message.get_parameter("server_name"));
+                    std::string const remote_server_name(message.get_parameter("server_name"));
                     snap::snap_communicator::snap_connection::vector_t const all_connections(f_communicator->get_connections());
                     snap::snap_communicator::snap_connection::pointer_t snap_conn(std::dynamic_pointer_cast<snap::snap_communicator::snap_connection>(base));
                     auto const & name_match(std::find_if(
@@ -1099,7 +1104,11 @@ void server::process_message(snap::snap_communicator::snap_connection::pointer_t
                     bool refuse(name_match != all_connections.end());
                     if(refuse)
                     {
-                        SNAP_LOG_ERROR("CONNECT from \"")(remote_server_name)("\" but we already have another computer using that same name.");
+                        SNAP_LOG_ERROR
+                            << "CONNECT from \""
+                            << remote_server_name
+                            << "\" but we already have another computer using that same name."
+                            << SNAP_LOG_SEND;
 
                         reply.set_command("REFUSE");
                         reply.add_parameter("conflict", "name");
@@ -1254,12 +1263,12 @@ void server::process_message(snap::snap_communicator::snap_connection::pointer_t
                     snap::snap_communicator_message help;
                     help.set_command("HELP");
                     //verify_command(base, help); -- precisely
-                    if(remote_communicator != nullptr)
+                    if(remote_conn != nullptr)
                     {
-                        remote_communicator->send_message(reply);
+                        remote_conn->send_message(reply);
                         if(!refuse)
                         {
-                            remote_communicator->send_message(help);
+                            remote_conn->send_message(help);
                             broadcast_message(new_remote_connection);
                         }
                     }
@@ -1321,7 +1330,7 @@ void server::process_message(snap::snap_communicator::snap_connection::pointer_t
                         //
                         base->set_connection_type(base_connection::connection_type_t::CONNECTION_TYPE_DOWN);
 
-                        if(remote_communicator == nullptr)
+                        if(remote_conn == nullptr)
                         {
                             // disconnecting means it is gone so we can remove
                             // it from the communicator since the other end
@@ -1342,9 +1351,9 @@ void server::process_message(snap::snap_communicator::snap_connection::pointer_t
                             // so we want to "induce a long enough pause"
                             // to avoid attempting to reconnect like crazy
                             //
-                            remote_communicator->disconnect();
-                            addr::addr const remote_addr(remote_communicator->get_address());
-                            f_remote_snapcommunicators->shutting_down(remote_addr.to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_PORT).c_str());
+                            remote_conn->disconnect();
+                            addr::addr const remote_addr(remote_conn->get_address());
+                            f_remote_snapcommunicators->shutting_down(remote_addr.to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_PORT));
                         }
 
                         // we just got some new services information,
@@ -1511,9 +1520,9 @@ void server::process_message(snap::snap_communicator::snap_connection::pointer_t
                         snap::snap_communicator_message reply;
                         reply.set_command("RECEIVED");
                         //verify_command(base, reply); -- in this case the remote snapcommunicator is not connected, so no HELP+COMMANDS and thus no verification possible
-                        if(remote_communicator)
+                        if(remote_conn)
                         {
-                            remote_communicator->send_message(reply);
+                            remote_conn->send_message(reply);
                         }
                         else if(service_conn)
                         {
@@ -1555,9 +1564,9 @@ SNAP_LOG_ERROR("GOSSIP is not yet fully implemented.");
                     reply.add_parameter("list", "ACCEPT,CLUSTERSTATUS,COMMANDS,CONNECT,DISCONNECT,FORGET,GOSSIP,HELP,LISTENLOADAVG,LOADAVG,LOG,PUBLIC_IP,QUITTING,REFUSE,REGISTER,REGISTERFORLOADAVG,RELOADCONFIG,SERVICES,SHUTDOWN,STOP,UNKNOWN,UNREGISTER,UNREGISTERFORLOADAVG");
 
                     //verify_command(base, reply); -- this verification does not work with remote snap communicator connections
-                    if(remote_communicator)
+                    if(remote_conn)
                     {
-                        remote_communicator->send_message(reply);
+                        remote_conn->send_message(reply);
                     }
                     else if(service_conn)
                     {
@@ -1658,9 +1667,9 @@ SNAP_LOG_ERROR("GOSSIP is not yet fully implemented.");
                 // later...
                 //
                 addr::addr peer_addr;
-                if(remote_communicator)
+                if(remote_conn)
                 {
-                    peer_addr = remote_communicator->get_address();
+                    peer_addr = remote_conn->get_address();
                 }
                 //else if(service_conn) -- this should not happen
                 //{
@@ -1686,7 +1695,7 @@ SNAP_LOG_ERROR("GOSSIP is not yet fully implemented.");
                 // lose the connection, but we need to disconnect
                 //
                 //f_communicator->remove_connection(connection);
-                remote_communicator->disconnect();
+                remote_conn->disconnect();
                 return;
             }
             else if(command == "REGISTER")
@@ -1741,9 +1750,9 @@ SNAP_LOG_ERROR("GOSSIP is not yet fully implemented.");
                     ed::message help;
                     help.set_command("HELP");
                     //verify_command(base, help); -- we cannot do that here since we did not yet get the COMMANDS reply
-                    if(remote_communicator)
+                    if(remote_conn)
                     {
-                        remote_communicator->send_message(help);
+                        remote_conn->send_message(help);
                     }
                     else if(service_conn)
                     {
@@ -1762,9 +1771,9 @@ SNAP_LOG_ERROR("GOSSIP is not yet fully implemented.");
                     ed::message reply;
                     reply.set_command("READY");
                     //verify_command(base, reply); -- we cannot do that here since we did not yet get the COMMANDS reply
-                    if(remote_communicator)
+                    if(remote_conn)
                     {
-                        remote_communicator->send_message(reply);
+                        remote_conn->send_message(reply);
                     }
                     else if(service_conn)
                     {
@@ -1785,16 +1794,16 @@ SNAP_LOG_ERROR("GOSSIP is not yet fully implemented.");
                     // forward them now
                     //
                     f_local_message_cache.process_messages(
-                        [service_name, remote_communicator, service_conn](ed::message const & msg)
+                        [service_name, remote_conn, service_conn](ed::message const & msg)
                         {
                             if(msg.get_service() != service_name)
                             {
                                 return false;
                             }
 
-                            if(remote_communicator)
+                            if(remote_conn)
                             {
-                                remote_communicator->send_message(msg);
+                                remote_conn->send_message(msg);
                             }
                             else if(service_conn)
                             {
@@ -1983,9 +1992,9 @@ SNAP_LOG_ERROR("GOSSIP is not yet fully implemented.");
             reply.set_command("UNKNOWN");
             reply.add_parameter("command", command);
             verify_command(base, reply);
-            if(remote_communicator)
+            if(remote_conn)
             {
-                remote_communicator->send_message(reply);
+                remote_conn->send_message(reply);
             }
             else if(service_conn)
             {
@@ -2147,7 +2156,7 @@ SNAP_LOG_ERROR("GOSSIP is not yet fully implemented.");
                     }
                     else
                     {
-                        remote_snap_communicator_pointer_t remote_connection(std::dynamic_pointer_cast<remote_snapcommunicator>(nc));
+                        remote_snap_communicator_pointer_t new_remote_connection(std::dynamic_pointer_cast<remote_connection>(nc));
                         // TODO: limit sending to remote only if they have that service?
                         //       (if we have the 'all_servers' set, otherwise it is not
                         //       required, for sure... also, if we have multiple remote
@@ -2159,29 +2168,29 @@ SNAP_LOG_ERROR("GOSSIP is not yet fully implemented.");
                         //       of that service, and if that is also empty, send to
                         //       all... for now we send to all anyway)
                         //
-                        if(remote_connection /*&& remote_connection->has_service(service)*/)
+                        if(new_remote_connection != nullptr /*&& new_remote_connection->has_service(service)*/)
                         {
-                            accepting_remote_connections.push_back(remote_connection);
+                            accepting_remote_connections.push_back(new_remote_connection);
                         }
                     }
                 }
             }
         }
 
-        auto transmission_report = [&message, &base, &remote_communicator, &service_conn]()
+        auto transmission_report = [&message, &base, &remote_conn, &service_conn]()
         {
             if(message.has_parameter("transmission_report"))
             {
-                QString const report(message.get_parameter("transmission_report"));
+                std::string const report(message.get_parameter("transmission_report"));
                 if(report == "failure")
                 {
                     snap::snap_communicator_message reply;
                     reply.set_command("TRANSMISSIONREPORT");
                     reply.add_parameter("status", "failed");
                     //verify_command(base, reply);
-                    if(remote_communicator)
+                    if(remote_conn)
                     {
-                        remote_communicator->send_message(reply);
+                        remote_conn->send_message(reply);
                     }
                     else if(service_conn)
                     {
@@ -2214,7 +2223,13 @@ SNAP_LOG_ERROR("GOSSIP is not yet fully implemented.");
         {
             if(!service.startsWith("lock_"))
             {
-                SNAP_LOG_DEBUG("received event \"")(command)("\" for local service \"")(service)("\", which is not currently registered. Dropping message.");
+                SNAP_LOG_DEBUG
+                    << "received event \""
+                    << command
+                    << "\" for local service \""
+                    << service
+                    << "\", which is not currently registered. Dropping message."
+                    << SNAP_LOG_SEND;
             }
             transmission_report();
             return;
@@ -2230,8 +2245,8 @@ SNAP_LOG_ERROR("GOSSIP is not yet fully implemented.");
 
 void server::broadcast_message(snap::snap_communicator_message const & message, base_connection_vector_t const & accepting_remote_connections)
 {
-    QString broadcast_msgid;
-    QString informed_neighbors;
+    std::string broadcast_msgid;
+    std::string informed_neighbors;
     int hops(0);
     time_t timeout(0);
 
@@ -2326,8 +2341,8 @@ void server::broadcast_message(snap::snap_communicator_message const & message, 
 
     if(accepting_remote_connections.empty())
     {
-        QString destination("?");
-        QString const service(message.get_service());
+        std::string destination("?");
+        std::string const service(message.get_service());
         if(service != "."
         && service != "?"
         && service != "*")
@@ -2351,13 +2366,13 @@ void server::broadcast_message(snap::snap_communicator_message const & message, 
             // try for a service or snapcommunicator that connected to us
             //
             service_connection::pointer_t conn(std::dynamic_pointer_cast<service_connection>(nc));
-            remote_snap_communicator_pointer_t remote_communicator;
+            remote_connection::pointer_t remote_conn;
             if(!conn)
             {
-                remote_communicator = std::dynamic_pointer_cast<remote_snapcommunicator>(nc);
+                remote_conn = std::dynamic_pointer_cast<remote_connection>(nc);
             }
             bool broadcast(false);
-            if(conn)
+            if(conn != nullptr)
             {
                 switch(conn->get_address().get_network_type())
                 {
@@ -2393,11 +2408,11 @@ void server::broadcast_message(snap::snap_communicator_message const & message, 
 
                 }
             }
-            else if(remote_communicator)
+            else if(remote_conn != nullptr)
             {
                 // another snapcommunicator that connected to us
                 //
-                switch(remote_communicator->get_address().get_network_type())
+                switch(remote_conn->get_address().get_network_type())
                 {
                 case addr::addr::network_type_t::NETWORK_TYPE_LOOPBACK:
                     {
@@ -2434,9 +2449,9 @@ void server::broadcast_message(snap::snap_communicator_message const & message, 
             {
                 // get the IP address of the remote snapcommunicator
                 //
-                QString const address(QString::fromUtf8((conn
+                std::string const address((conn != nullptr
                             ? conn->get_address()
-                            : remote_communicator->get_address()).to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_ONLY).c_str()));
+                            : remote_conn->get_address()).to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_ONLY));
                 if(!informed_neighbors_list.contains(address))
                 {
                     // not in the list of informed neighbors, add it and
@@ -2477,10 +2492,10 @@ void server::broadcast_message(snap::snap_communicator_message const & message, 
                 }
                 else
                 {
-                    remote_snap_communicator_pointer_t remote_communicator(std::dynamic_pointer_cast<remote_snapcommunicator>(nc));
-                    if(remote_communicator)
+                    remote_snap_communicator_pointer_t remote_conn(std::dynamic_pointer_cast<remote_connection>(nc));
+                    if(remote_conn != nullptr)
                     {
-                        QString const address(QString::fromUtf8(remote_communicator->get_address().to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_ONLY).c_str()));
+                        std::string const address(remote_conn->get_address().to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_ONLY));
                         if(!informed_neighbors_list.contains(address))
                         {
                             // not in the list of informed neighbors, add it and
@@ -2488,7 +2503,7 @@ void server::broadcast_message(snap::snap_communicator_message const & message, 
                             // send the broadcast message
                             //
                             informed_neighbors_list << address;
-                            broadcast_connection.push_back(remote_communicator);
+                            broadcast_connection.push_back(remote_conn);
                         }
                     }
                 }
@@ -2556,16 +2571,16 @@ void server::broadcast_message(snap::snap_communicator_message const & message, 
         for(auto const & bc : broadcast_connection)
         {
             service_connection::pointer_t conn(std::dynamic_pointer_cast<service_connection>(bc));
-            if(conn)
+            if(conn != nullptr)
             {
                 conn->send_message(broadcast_msg);
             }
             else
             {
-                remote_snap_communicator_pointer_t remote_communicator(std::dynamic_pointer_cast<remote_snapcommunicator>(bc));
-                if(remote_communicator) // this should always be true, but to be double sure...
+                remote_connection::pointer_t remote_conn(std::dynamic_pointer_cast<remote_connection>(bc));
+                if(remote_conn != nullptr) // this should always be true, but to be double sure...
                 {
-                    remote_communicator->send_message(broadcast_msg);
+                    remote_conn->send_message(broadcast_msg);
                 }
             }
         }
@@ -2839,15 +2854,15 @@ void server::register_for_loadavg(QString const & ip)
             all_connections.end(),
             [ip](auto const & connection)
             {
-                remote_snap_communicator_pointer_t remote_communicator(std::dynamic_pointer_cast<remote_snapcommunicator>(connection));
-                if(remote_communicator)
+                remote_connection::pointer_t remote_conn(std::dynamic_pointer_cast<remote_connection>(connection));
+                if(remote_conn != nullptr)
                 {
-                    return remote_communicator->get_my_address() == ip;
+                    return remote_conn->get_my_address() == ip;
                 }
                 else
                 {
                     service_connection::pointer_t service_conn(std::dynamic_pointer_cast<service_connection>(connection));
-                    if(service_conn)
+                    if(service_conn != nullptr)
                     {
                         return service_conn->get_my_address() == ip;
                     }
@@ -2864,15 +2879,15 @@ void server::register_for_loadavg(QString const & ip)
         snap::snap_communicator_message register_message;
         register_message.set_command("REGISTERFORLOADAVG");
 
-        remote_snap_communicator_pointer_t remote_communicator(std::dynamic_pointer_cast<remote_snapcommunicator>(*it));
-        if(remote_communicator)
+        remote_connection::pointer_t remote_conn(std::dynamic_pointer_cast<remote_connection>(*it));
+        if(remote_conn != nullptr)
         {
-            remote_communicator->send_message(register_message);
+            remote_conn->send_message(register_message);
         }
         else
         {
             service_connection::pointer_t service_conn(std::dynamic_pointer_cast<service_connection>(*it));
-            if(service_conn)
+            if(service_conn != nullptr)
             {
                 service_conn->send_message(register_message);
             }
@@ -2976,15 +2991,15 @@ void server::process_load_balancing()
                     if(base
                     && base->wants_loadavg())
                     {
-                        remote_snap_communicator_pointer_t remote_communicator(std::dynamic_pointer_cast<remote_snapcommunicator>(connection));
-                        if(remote_communicator)
+                        remote_connection::pointer_t remote_conn(std::dynamic_pointer_cast<remote_connection>(connection));
+                        if(remote_conn != nullptr)
                         {
-                            remote_communicator->send_message(load_avg);
+                            remote_conn->send_message(load_avg);
                         }
                         else
                         {
                             service_connection::pointer_t service_conn(std::dynamic_pointer_cast<service_connection>(connection));
-                            if(service_conn)
+                            if(service_conn != nullptr)
                             {
                                 service_conn->send_message(load_avg);
                             }
@@ -3282,8 +3297,8 @@ void server::shutdown(bool quitting)
     {
         // a remote communicator for which we initiated a new connection?
         //
-        remote_snap_communicator_pointer_t remote_communicator(std::dynamic_pointer_cast<remote_snapcommunicator>(connection));
-        if(remote_communicator)
+        remote_connection::pointer_t remote_conn(std::dynamic_pointer_cast<remote_connection>(connection));
+        if(remote_conn != nullptr)
         {
 
 // TODO: if the remote communicator IP address is the same as the
@@ -3315,20 +3330,20 @@ void server::shutdown(bool quitting)
             // we know this a remote snapcommunicator, no need to verify, and
             // we may not yet have received the ACCEPT message
             //verify_command(remote_communicator, reply);
-            remote_communicator->send_message(reply);
+            remote_conn->send_message(reply);
 
             // we are quitting so we want the permanent connection
             // to exit ASAP, by marking as done, it will stop as
             // soon as the message is written to the socket
             //
-            remote_communicator->mark_done(true);
+            remote_conn->mark_done(true);
         }
         else
         {
             // a standard service connection or a remote snapcommunicator server?
             //
             service_connection::pointer_t c(std::dynamic_pointer_cast<service_connection>(connection));
-            if(c)
+            if(c != nullptr)
             {
                 base_connection::connection_type_t const type(c->get_connection_type());
                 if(type == service_connection::connection_type_t::CONNECTION_TYPE_DOWN)
@@ -3461,16 +3476,16 @@ void server::process_connected(snap::snap_communicator::snap_connection::pointer
         connect.add_parameter("heard_of", f_services_heard_of);
     }
     service_connection::pointer_t service_conn(std::dynamic_pointer_cast<service_connection>(connection));
-    if(service_conn)
+    if(service_conn != nullptr)
     {
         service_conn->send_message(connect);
     }
     else
     {
-        remote_snap_communicator_pointer_t remote_communicator(std::dynamic_pointer_cast<remote_snapcommunicator>(connection));
-        if(remote_communicator)
+        remote_connection::pointer_t remote_conn(std::dynamic_pointer_cast<remote_connection>(connection));
+        if(remote_conn != nullptr)
         {
-            remote_communicator->send_message(connect);
+            remote_conn->send_message(connect);
         }
     }
 

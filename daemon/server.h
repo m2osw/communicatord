@@ -1,12 +1,11 @@
-// Snap Websites Server -- server to handle inter-process communication
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/eventdispatcher
+// https://snapwebsites.org/project/snapcommunicator
 // contact@m2osw.com
 //
-// This program is free software; you can redistribute it and/or modify
+// This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
+// the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
 // This program is distributed in the hope that it will be useful,
@@ -14,9 +13,8 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License along
-// with this program; if not, write to the Free Software Foundation, Inc.,
-// 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 /** \file
@@ -88,7 +86,7 @@ namespace sc
 
 
 class base_connection;
-class remote_connections;
+class remote_snapcommunicators;
 
 
 class server
@@ -164,8 +162,8 @@ private:
     std::string                     f_explicit_neighbors = std::string();
     sorted_list_of_strings_t        f_all_neighbors = sorted_list_of_strings_t();
     sorted_list_of_strings_t        f_registered_neighbors_for_loadavg = sorted_list_of_strings_t();
-    std::shared_ptr<remote_connections>
-                                    f_remote_snapcommunicators = std::shared_ptr<remote_connections>();
+    std::shared_ptr<remote_snapcommunicators>
+                                    f_remote_snapcommunicators = std::shared_ptr<remote_snapcommunicators>();
     size_t                          f_max_connections = SNAP_COMMUNICATOR_MAX_CONNECTIONS;
     size_t                          f_total_count_sent = 0; // f_all_neighbors.size() sent along CLUSTERUP/DOWN/COMPLETE/INCOMPLETE
     bool                            f_shutdown = false;
