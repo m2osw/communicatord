@@ -43,7 +43,7 @@ namespace sc
 
 
 
-class remote_snapcommunicator
+class remote_connection
     : public ed::tcp_client_permanent_message_connection
     , public base_connection
 {
@@ -52,10 +52,10 @@ public:
     static uint64_t const           REMOTE_CONNECTION_RECONNECT_TIMEOUT =         5LL * 60LL * 1000000LL;   // 5 minutes
     static uint64_t const           REMOTE_CONNECTION_TOO_BUSY_TIMEOUT  = 24LL * 60LL * 60LL * 1000000LL;   // 24 hours
 
-                                    remote_snapcommunicator(
+                                    remote_connection(
                                               server::pointer_t cs
                                             , addr::addr const & addr);
-    virtual                         ~remote_snapcommunicator() override;
+    virtual                         ~remote_connection() override;
 
     // tcp_client_permanent_message_connection implementation
     virtual void                    process_message(ed::message const & msg) override;

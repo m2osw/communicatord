@@ -99,7 +99,7 @@ the traffic going through the Snap! Communicator.
 
 # License
 
-The project is covered by the GPL 2.0 license.
+The project is covered by the GPL 3.0 license.
 
 
 # Bugs

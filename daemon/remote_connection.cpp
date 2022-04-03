@@ -27,7 +27,7 @@
 
 // self
 //
-#include    "remote_snapcommunicator.h"
+#include    "remote_connection.h"
 
 
 
@@ -36,7 +36,7 @@ namespace sc
 
 
 
-/** \class remote_snapcommunicator
+/** \class remote_connection
  * \brief Describe a remove snapcommunicator by IP address, etc.
  *
  * This class defines a snapcommunicator server. Mainly we include
@@ -53,7 +53,7 @@ namespace sc
  */
 
 
-/** \brief Setup a remote_snapcommunicator object.
+/** \brief Setup a remote_connection object.
  *
  * This initialization function sets up the attached snap_timer
  * to 1 second delay before we try to connect to this remote
@@ -64,7 +64,7 @@ namespace sc
  * \param[in] cs  The snap communicator server shared pointer.
  * \param[in] addr  The address to connect to.
  */
-remote_snapcommunicator::remote_snapcommunicator(
+remote_connection::remote_connection(
               server::pointer_t cs
             , addr::addr const & address)
     : tcp_client_permanent_message_connection(
@@ -77,12 +77,12 @@ remote_snapcommunicator::remote_snapcommunicator(
 }
 
 
-remote_snapcommunicator::~remote_snapcommunicator()
+remote_connection::~remote_connection()
 {
     try
     {
         SNAP_LOG_DEBUG
-            << "deleting remote_snapcommunicator connection: "
+            << "deleting remote_connection connection: "
             << f_address.to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_PORT)
             << SNAP_LOG_SEND;
     }
@@ -92,7 +92,7 @@ remote_snapcommunicator::~remote_snapcommunicator()
 }
 
 
-void remote_snapcommunicator::process_message(ed::message const & message)
+void remote_connection::process_message(ed::message const & message)
 {
     if(f_server_name.empty())
     {
@@ -103,7 +103,7 @@ void remote_snapcommunicator::process_message(ed::message const & message)
 }
 
 
-void remote_snapcommunicator::process_connection_failed(std::string const & error_message)
+void remote_connection::process_connection_failed(std::string const & error_message)
 {
     tcp_client_permanent_message_connection::process_connection_failed(error_message);
 
@@ -205,7 +205,7 @@ void remote_snapcommunicator::process_connection_failed(std::string const & erro
 }
 
 
-void remote_snapcommunicator::process_connected()
+void remote_connection::process_connected()
 {
     f_connected = true;
 
@@ -247,7 +247,7 @@ void remote_snapcommunicator::process_connected()
 }
 
 
-addr::addr const & remote_snapcommunicator::get_address() const
+addr::addr const & remote_connection::get_address() const
 {
     return f_address;
 }

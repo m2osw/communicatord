@@ -33,7 +33,7 @@
 
 // self
 //
-#include    "remote_connections.h"
+#include    "remote_snapcommunicators.h"
 
 
 //// snapwebsites lib
@@ -98,7 +98,7 @@ namespace sc
 
 
 
-remote_connections::remote_connections(
+remote_snapcommunicators::remote_snapcommunicators(
               server::pointer_t server
             , addr::addr const & my_addr)
     : f_server(server)
@@ -108,13 +108,13 @@ remote_connections::remote_connections(
 
 
 
-addr::addr remote_connections::get_my_address() const
+addr::addr remote_snapcommunicators::get_my_address() const
 {
     return f_my_address;
 }
 
 
-void remote_connections::add_remote_communicator(std::string const & addr_port)
+void remote_snapcommunicators::add_remote_communicator(std::string const & addr_port)
 {
     SNAP_LOG_DEBUG
         << "adding remote communicator at "
@@ -299,7 +299,7 @@ void remote_connections::add_remote_communicator(std::string const & addr_port)
  * Also these connections do not support any other messages than the
  * GOSSIP and RECEIVED.
  */
-void remote_connections::stop_gossiping()
+void remote_snapcommunicators::stop_gossiping()
 {
     while(!f_gossip_ips.empty())
     {
@@ -329,7 +329,7 @@ void remote_connections::stop_gossiping()
  * \param[in] address  The address of the snapcommunicator that refused a
  *                     CONNECT because it is too busy.
  */
-void remote_connections::too_busy(addr::addr const & address)
+void remote_snapcommunicators::too_busy(addr::addr const & address)
 {
     auto it(f_smaller_ips.find(address));
     if(it != f_smaller_ips.end()
@@ -350,7 +350,7 @@ void remote_connections::too_busy(addr::addr const & address)
  * \param[in] addr  The address of the snapcommunicator that refused a
  *                  CONNECT because it is shutting down.
  */
-void remote_connections::shutting_down(QString const & addr)
+void remote_snapcommunicators::shutting_down(QString const & addr)
 {
     if(f_smaller_ips.contains(addr))
     {
@@ -363,7 +363,7 @@ void remote_connections::shutting_down(QString const & addr)
 }
 
 
-void remote_connections::server_unreachable(QString const & addr)
+void remote_snapcommunicators::server_unreachable(QString const & addr)
 {
     // we do not have the name of the computer in snapcommunicator so
     // we just broadcast the IP address of the non-responding computer
@@ -376,7 +376,7 @@ void remote_connections::server_unreachable(QString const & addr)
 }
 
 
-void remote_connections::gossip_received(QString const & addr)
+void remote_snapcommunicators::gossip_received(QString const & addr)
 {
     auto it(f_gossip_ips.find(addr));
     if(it != f_gossip_ips.end())
@@ -387,7 +387,7 @@ void remote_connections::gossip_received(QString const & addr)
 }
 
 
-void remote_connections::forget_remote_connection(QString const & addr_port)
+void remote_snapcommunicators::forget_remote_connection(QString const & addr_port)
 {
     QString addr(addr_port);
     int const pos(addr.indexOf(':'));
@@ -427,7 +427,7 @@ void remote_connections::forget_remote_connection(QString const & addr_port)
  *
  * \return The number of live connections.
  */
-size_t remote_connections::count_live_connections() const
+size_t remote_snapcommunicators::count_live_connections() const
 {
     size_t count(0);
 

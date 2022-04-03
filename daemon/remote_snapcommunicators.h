@@ -37,13 +37,13 @@ namespace sc
 
 
 
-class remote_connections
-    : public std::enable_shared_from_this<remote_connections>
+class remote_snapcommunicators
+    : public std::enable_shared_from_this<remote_snapcommunicators>
 {
 public:
-    typedef std::shared_ptr<remote_connections>    pointer_t;
+    typedef std::shared_ptr<remote_snapcommunicators>    pointer_t;
 
-                                            remote_connections(
+                                            remote_snapcommunicators(
                                                   server::pointer_t communicator
                                                 , addr::addr const & my_addr);
 
