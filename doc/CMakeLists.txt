@@ -1,6 +1,6 @@
 # Copyright (c) 2012-2022  Made to Order Software Corp.  All Rights Reserved
 #
-# https://snapwebsites.org/project/eventdispatcher
+# https://snapwebsites.org/project/snapcommunicator
 # contact@m2osw.com
 #
 # This program is free software; you can redistribute it and/or modify
@@ -23,9 +23,9 @@
 ##
 find_package(SnapDoxygen)
 AddDoxygenTarget(snapcommunicator
-    ${EVENTDISPATCHER_VERSION_MAJOR}
-    ${EVENTDISPATCHER_VERSION_MINOR}
-    ${EVENTDISPATCHER_VERSION_PATCH}
+    ${SNAPCOMMUNICATOR_VERSION_MAJOR}
+    ${SNAPCOMMUNICATOR_VERSION_MINOR}
+    ${SNAPCOMMUNICATOR_VERSION_PATCH}
 )
 
 # vim: ts=4 sw=4 et

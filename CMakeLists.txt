@@ -1,6 +1,6 @@
 # Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 #
-# https://snapwebsites.org/project/eventdispatcher
+# https://snapwebsites.org/project/snapcommunicator
 # contact@m2osw.com
 #
 # This program is free software; you can redistribute it and/or modify
@@ -17,14 +17,34 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
+cmake_minimum_required(VERSION 3.10.2)
+
 ##
 ## snapcommunicator RPC project
 ##
 project(snapcommunicator_project)
 
+find_package(AdvGetOpt        REQUIRED)
+find_package(Boost            REQUIRED)
+find_package(EdHttp           REQUIRED)
+find_package(EventDispatcher  REQUIRED)
+find_package(LibAddr          REQUIRED)
+find_package(LibExcept        REQUIRED)
+find_package(SnapCMakeModules REQUIRED)
+find_package(SnapDev          REQUIRED)
+find_package(SnapLogger       REQUIRED)
+
+SnapGetVersion(SNAPCOMMUNICATOR ${CMAKE_CURRENT_SOURCE_DIR})
+
+include_directories(
+    ${PROJECT_SOURCE_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}
+)
+
 add_subdirectory(daemon)
+add_subdirectory(cmake )
 add_subdirectory(doc   )
 add_subdirectory(tools )
-
+add_subdirectory(tests )
 
 # vim: ts=4 sw=4 et

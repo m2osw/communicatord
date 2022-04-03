@@ -1,7 +1,6 @@
-# sitter -- a tool used to verify service availabilities
 # Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 #
-# https://snapwebsites.org/project/sitter
+# https://snapwebsites.org/project/snapcommunicator
 # contact@m2osw.com
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,14 +16,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-project(sitter_cmake)
+project(snapcommunicator_cmake)
 
 install(
     FILES
-        SitterConfig.cmake
+        SnapCommunicatorConfig.cmake
 
     DESTINATION
-        share/cmake/Sitter
+        share/cmake/SnapCommunicator
 )
 
 # vim: ts=4 sw=4 et nocindent
