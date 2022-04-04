@@ -87,7 +87,7 @@
 
 
 
-namespace sc
+namespace scd
 {
 
 
@@ -135,14 +135,13 @@ namespace sc
  * \param[in] server_name  The name of the server we are running on
  *                         (i.e. generally your hostname.)
  */
-unix_service::~unix_connection(
+unix_connection::unix_connection(
           server::pointer_t cs
         , snapdev::raii_fd_t client
         , std::string const & server_name)
-    : unix_server_client_message_connection(client)
+    : local_stream_server_client_message_connection(std::move(client))
     , base_connection(cs)
     , f_server_name(server_name)
-    , f_address(get_remote_address)  // address:port of peer (computer on the other side)
 {
 }
 
@@ -152,7 +151,7 @@ unix_service::~unix_connection(
  * When a connection goes down it gets deleted. This is when we can
  * send a new STATUS event to all the other STATUS hungry connections.
  */
-unix_service::~unix_connection()
+unix_connection::~unix_connection()
 {
     // save when it is ending in case we did not get a DISCONNECT
     // or an UNREGISTER event
@@ -190,7 +189,7 @@ unix_service::~unix_connection()
 
 
 // snap::snap_communicator::snap_tcp_server_client_message_connection implementation
-void unix_service::process_message(ed::message const & msg)
+void unix_connection::process_message(ed::message const & msg)
 {
     // make sure the destination knows who sent that message so it
     // is possible to directly reply to that specific instance of
@@ -198,19 +197,19 @@ void unix_service::process_message(ed::message const & msg)
     //
     if(f_named)
     {
-        snap::snap_communicator_message forward_message(msg);
+        ed::message forward_message(msg);
         forward_message.set_sent_from_server(f_server_name);
         forward_message.set_sent_from_service(get_name());
-        f_communicator_server->process_message(
+        f_server->process_message(
                   shared_from_this()
                 , forward_message
                 , false);
     }
     else
     {
-        f_communicator_server->process_message(
+        f_server->process_message(
                   shared_from_this()
-                , message
+                , msg
                 , false);
     }
 }
@@ -222,13 +221,13 @@ void unix_service::process_message(ed::message const & msg)
  * lost so we can send a STATUS message with information saying
  * that the connection is gone.
  */
-void unix_service::send_status()
+void unix_connection::send_status()
 {
     // mark connection as down before we call the send_status()
     //
     set_connection_type(connection_type_t::CONNECTION_TYPE_DOWN);
 
-    f_communicator_server->send_status(shared_from_this());
+    f_server->send_status(shared_from_this());
 }
 
 
@@ -239,7 +238,7 @@ void unix_service::send_status()
  * the timeout, which happens after we finalize all read and write
  * callbacks.
  */
-void unix_service::process_timeout()
+void unix_connection::process_timeout()
 {
     remove_from_communicator();
 
@@ -247,9 +246,9 @@ void unix_service::process_timeout()
 }
 
 
-void unix_service::process_error()
+void unix_connection::process_error()
 {
-    unix_server_client_message_connection::process_error();
+    local_stream_server_client_message_connection::process_error();
 
     send_status();
 }
@@ -262,9 +261,9 @@ void unix_service::process_error()
  * example.) So we handle the process_hup() event and send a
  * HANGUP if this connection is a remote connection.
  */
-void unix_service::process_hup()
+void unix_connection::process_hup()
 {
-    unix_server_client_message_connection::process_hup();
+    local_stream_server_client_message_connection::process_hup();
 
     if(is_remote()
     && !get_server_name().empty())
@@ -272,22 +271,22 @@ void unix_service::process_hup()
         // TODO: this is nice, but we would probably need such in the
         //       process_invalid(), process_error(), process_timeout()?
         //
-        snap::snap_communicator_message hangup;
+        ed::message hangup;
         hangup.set_command("HANGUP");
         hangup.set_service(".");
         hangup.add_parameter("server_name", get_server_name());
-        f_communicator_server->broadcast_message(hangup);
+        f_server->broadcast_message(hangup);
 
-        f_communicator_server->cluster_status(shared_from_this());
+        f_server->cluster_status(shared_from_this());
     }
 
     send_status();
 }
 
 
-void unix_service::process_invalid()
+void unix_connection::process_invalid()
 {
-    unix_server_client_message_connection::process_invalid();
+    local_stream_server_client_message_connection::process_invalid();
 
     send_status();
 }
@@ -311,24 +310,12 @@ void unix_service::process_invalid()
  * This very function must be called once the proper name was
  * set in this connection.
  */
-void unix_service::properly_named()
+void unix_connection::properly_named()
 {
     f_named = true;
 }
 
 
-/** \brief Return the type of address this connection has.
- *
- * This function determines the type of address of the connection.
- *
- * \return A reference to the remote address of this connection.
- */
-addr::addr const & unix_service::get_address() const
-{
-    return f_address;
-}
 
-
-
-} // sc namespace
+} // namespace scd
 // vim: ts=4 sw=4 et

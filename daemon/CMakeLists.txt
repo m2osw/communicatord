@@ -16,14 +16,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-##
-## snapcommunicator daemon
-##
-project(snapcommunicator)
 
-add_executable(${PROJECT_NAME}
-    main.cpp
-
+# We create a shared library used by the unit tests to verify most every
+# algorithm so we keep the list of files in a variable in order to be
+# able to include the same files in the daemon and the test library
+#
+set(SNAPCOMMUNICATORD_SOURCE_FILES
     cache.cpp
     remote_snapcommunicators.cpp
     server.cpp
@@ -51,17 +49,29 @@ add_executable(${PROJECT_NAME}
         # LOG messages in regard to the snaplogger
 )
 
+
+##
+## snapcommunicatord
+##
+project(snapcommunicatord)
+
+add_executable(${PROJECT_NAME}
+    main.cpp
+    ${SNAPCOMMUNICATORD_SOURCE_FILES}
+)
+
 target_include_directories(${PROJECT_NAME}
     PUBLIC
         ${ADVGETOPT_INCLUDE_DIRS}
+        ${EVENTDISPATCHER_INCLUDE_DIRS}
         ${LIBADDR_INCLUDE_DIRS}
         ${LIBEXCEPT_INCLUDE_DIRS}
         ${SNAPLOGGER_INCLUDE_DIRS}
 )
 
 target_link_libraries(${PROJECT_NAME}
-    eventdispatcher
     ${ADVGETOPT_LIBRARIES}
+    ${EVENTDISPATCHER_LIBRARIES}
     ${LIBADDR_LIBRARIES}
     ${LIBEXCEPT_LIBRARIES}
     ${SNAPLOGGER_LIBRARIES}
@@ -75,6 +85,34 @@ install(
         sbin
 )
 
+
+##
+## testcommunicatord
+##
+project(testcommunicatord)
+
+add_library(${PROJECT_NAME}
+    ${SNAPCOMMUNICATORD_SOURCE_FILES}
+)
+
+target_include_directories(${PROJECT_NAME}
+    PUBLIC
+        ${ADVGETOPT_INCLUDE_DIRS}
+        ${EVENTDISPATCHER_INCLUDE_DIRS}
+        ${LIBADDR_INCLUDE_DIRS}
+        ${LIBEXCEPT_INCLUDE_DIRS}
+        ${SNAPLOGGER_INCLUDE_DIRS}
+)
+
+target_link_libraries(${PROJECT_NAME}
+    ${ADVGETOPT_LIBRARIES}
+    ${EVENTDISPATCHER_LIBRARIES}
+    ${LIBADDR_LIBRARIES}
+    ${LIBEXCEPT_LIBRARIES}
+    ${SNAPLOGGER_LIBRARIES}
+)
+
+# NOT INSTALLED -- THIS IS JUST FOR OUR UNIT TESTS
 
 
 # vim: ts=4 sw=4 et

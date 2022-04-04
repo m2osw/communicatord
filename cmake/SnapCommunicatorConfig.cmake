@@ -2,10 +2,10 @@
 #
 # Once done this will define
 #
-# SITTER_FOUND        - System has Sitter
-# SITTER_INCLUDE_DIRS - The Sitter include directories
-# SITTER_LIBRARIES    - The libraries needed to use Sitter
-# SITTER_DEFINITIONS  - Compiler switches required for using Sitter
+# SNAPCOMMUNICATOR_FOUND        - System has Sitter
+# SNAPCOMMUNICATOR_INCLUDE_DIRS - The Sitter include directories
+# SNAPCOMMUNICATOR_LIBRARIES    - The libraries needed to use Sitter
+# SNAPCOMMUNICATOR_DEFINITIONS  - Compiler switches required for using Sitter
 #
 # License:
 #
@@ -28,38 +28,38 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 find_path(
-    SITTER_INCLUDE_DIR
-        sitter/version.h
+    SNAPCOMMUNICATOR_INCLUDE_DIR
+        snapcommunicator/version.h
 
     PATHS
-        $ENV{SITTER_INCLUDE_DIR}
+        $ENV{SNAPCOMMUNICATOR_INCLUDE_DIR}
 )
 
 find_library(
-    SITTER_LIBRARY
-        sitter
+    SNAPCOMMUNICATOR_LIBRARY
+        snapcommunicator
 
     PATHS
-        $ENV{SITTER_LIBRARY}
+        $ENV{SNAPCOMMUNICATOR_LIBRARY}
 )
 
 mark_as_advanced(
-    SITTER_INCLUDE_DIR
-    SITTER_LIBRARY
+    SNAPCOMMUNICATOR_INCLUDE_DIR
+    SNAPCOMMUNICATOR_LIBRARY
 )
 
-set(SITTER_INCLUDE_DIRS ${SITTER_INCLUDE_DIR})
-set(SITTER_LIBRARIES    ${SITTER_LIBRARY})
+set(SNAPCOMMUNICATOR_INCLUDE_DIRS ${SNAPCOMMUNICATOR_INCLUDE_DIR})
+set(SNAPCOMMUNICATOR_LIBRARIES    ${SNAPCOMMUNICATOR_LIBRARY})
 
 include(FindPackageHandleStandardArgs)
 
-# handle the QUIETLY and REQUIRED arguments and set SITTER_FOUND to
+# handle the QUIETLY and REQUIRED arguments and set SNAPCOMMUNICATOR_FOUND to
 # TRUE if all listed variables are TRUE
 find_package_handle_standard_args(
-    Sitter
+    SnapCommunicator
     DEFAULT_MSG
-    SITTER_INCLUDE_DIR
-    SITTER_LIBRARY
+    SNAPCOMMUNICATOR_INCLUDE_DIR
+    SNAPCOMMUNICATOR_LIBRARY
 )
 
 # vim: ts=4 sw=4 et

@@ -27,6 +27,7 @@
 
 // self
 //
+#include    "remote_snapcommunicators.h"
 #include    "server.h"
 
 
@@ -84,41 +85,39 @@
 
 
 
-namespace sc
+namespace scd
 {
 
 
-class gossip_to_remote_snap_communicator
+class gossip_connection
     : public ed::tcp_client_permanent_message_connection
 {
 public:
-    typedef std::shared_ptr<gossip_to_remote_snap_communicator> pointer_t;
+    typedef std::shared_ptr<gossip_connection> pointer_t;
 
     static int64_t const        FIRST_TIMEOUT = 5LL * 1000000L;  // 5 seconds before first attempt
 
-                                gossip_to_remote_snap_communicator(
-                                          remote_communicator_connections::pointer_t rcs
-                                        , std::string const & addr
-                                        , int port);
+                                gossip_connection(
+                                          remote_snapcommunicators::pointer_t rcs
+                                        , addr::addr const & address);
 
     // connection implementation
     virtual void                process_timeout();
 
     // tcp_client_permanent_message_connection implementation
-    virtual void                process_message(ed::message const & message) override;
+    virtual void                process_message(ed::message const & msg) override;
     virtual void                process_connection_failed(std::string const & error_message) override;
     virtual void                process_connected() override;
 
     void                        kill();
 
 private:
-    std::string const           f_addr;
-    int const                   f_port = 0;
+    addr::addr const            f_address;
     int64_t                     f_wait = FIRST_TIMEOUT;
-    remote_connections::pointer_t
-                                f_remote_communicators = remote_connections::pointer_t();
+    remote_snapcommunicators::pointer_t
+                                f_remote_communicators = remote_snapcommunicators::pointer_t();
 };
 
 
-} // sc namespace
+} // namespace scd
 // vim: ts=4 sw=4 et

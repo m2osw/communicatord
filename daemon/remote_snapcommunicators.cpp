@@ -33,47 +33,43 @@
 //
 #include    "remote_snapcommunicators.h"
 
+#include    "gossip_connection.h"
+#include    "remote_connection.h"
 
-//// snapwebsites lib
-////
-//#include <snapwebsites/chownnm.h>
-//#include <snapwebsites/flags.h>
+
+// snapdev
+//
+#include    <snapdev/gethostname.h>
 //#include <snapwebsites/glob_dir.h>
 //#include <snapwebsites/loadavg.h>
 //#include <snapwebsites/log.h>
 //#include <snapwebsites/qcompatibility.h>
 //#include <snapwebsites/snap_communicator.h>
 //#include <snapwebsites/snapwebsites.h>
+
+
+// snaplogger
 //
+#include    <snaplogger/message.h>
+
+
+// libaddr lib
 //
-//// snapdev lib
-////
-//#include <snapdev/not_used.h>
-//#include <snapdev/tokenize_string.h>
-//
-//
-//// libaddr lib
-////
 //#include <libaddr/addr_exception.h>
-//#include <libaddr/addr_parser.h>
+#include <libaddr/addr_parser.h>
 //#include <libaddr/iface.h>
+
+
+// C++ lib
 //
-//
-//// Qt lib
-////
-//#include <QFile>
-//
-//
-//// C++ lib
-////
 //#include <atomic>
 //#include <cmath>
 //#include <fstream>
-//#include <iomanip>
+#include <iomanip>
 //#include <sstream>
-//#include <thread>
-//
-//
+#include <thread>
+
+
 //// C lib
 ////
 //#include <grp.h>
@@ -91,7 +87,7 @@
 
 
 
-namespace sc
+namespace scd
 {
 
 
@@ -106,7 +102,7 @@ remote_snapcommunicators::remote_snapcommunicators(
 
 
 
-addr::addr remote_snapcommunicators::get_my_address() const
+addr::addr const & remote_snapcommunicators::get_my_address() const
 {
     return f_my_address;
 }
@@ -137,15 +133,14 @@ void remote_snapcommunicators::add_remote_communicator(std::string const & addr_
         return;
     }
 
-    std::string const addr(remote_addr.to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_BRACKETS));
-    int const port(remote_addr.get_port());
+    std::string const addr(remote_addr.to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_PORT));
 
     // was this address already added
     //
     // TODO: use addr::addr objects in the map and the == operator
     //       will then use the one from addr::addr (and not a string)
     //
-    if(f_all_ips.find(addr))
+    if(f_all_ips.find(remote_addr) != f_all_ips.end())
     {
         if(remote_addr < f_my_address)
         {
@@ -160,16 +155,16 @@ void remote_snapcommunicators::add_remote_communicator(std::string const & addr_
                 // when we should have been enabled, although it should not
                 // be the case, do not take any chances)
                 //
-                if(!it->is_connected())
+                if(!it->second->is_connected())
                 {
                     // reset that timer to run ASAP in case the timer is enabled
                     //
                     // just in case, we reset the timeout as well, we want to
                     // do it since we are back in business now
                     //
-                    it->set_timeout_delay(remote_snapcommunicator::REMOTE_CONNECTION_TOO_BUSY_TIMEOUT);
-                    it->set_timeout_date(time(nullptr) * 1'000'000LL);
-                    it->set_enable(true);
+                    it->second->set_timeout_delay(remote_connection::REMOTE_CONNECTION_TOO_BUSY_TIMEOUT);
+                    it->second->set_timeout_date(time(nullptr) * 1'000'000LL);
+                    it->second->set_enable(true);
                 }
             }
             else
@@ -183,14 +178,18 @@ void remote_snapcommunicators::add_remote_communicator(std::string const & addr_
         {
             // we may already be GOSSIP-ing about this one (see below)
             //
-            SNAP_LOG_DEBUG("new remote connection ")(addr_port)(" has a larger address than us. This is a GOSSIP channel.");
+            SNAP_LOG_DEBUG
+                << "new remote connection "
+                << addr_port
+                << " has a larger address than us. This is a GOSSIP channel."
+                << SNAP_LOG_SEND;
         }
         return;
     }
 
     // keep a copy of all addresses
     //
-    f_all_ips[addr] = port;
+    f_all_ips.insert(remote_addr);
 
     // if this new IP is smaller than ours, then we start a connection
     //
@@ -199,9 +198,9 @@ void remote_snapcommunicators::add_remote_communicator(std::string const & addr_
         // smaller connections are created as remote snap communicator
         // which are permanent message connections
         //
-        remote_snapcommunicator::pointer_t remote_communicator(std::make_shared<remote_snapcommunicator>(f_server, remote_addr));
-        f_smaller_ips[addr] = remote_communicator;
-        remote_communicator->set_name("remote communicator connection: " + addr);
+        remote_connection::pointer_t remote_conn(std::make_shared<remote_connection>(f_server, remote_addr));
+        f_smaller_ips[remote_addr] = remote_conn;
+        remote_conn->set_name("remote communicator connection: " + addr);
 
         // make sure not to try to connect to all remote communicators
         // all at once
@@ -211,7 +210,7 @@ void remote_snapcommunicators::add_remote_communicator(std::string const & addr_
         {
             f_last_start_date = now;
         }
-        remote_communicator->set_timeout_date(f_last_start_date * 1'000'000LL);
+        remote_conn->set_timeout_date(f_last_start_date * 1'000'000LL);
 
         // TBD: 1 second between attempts for each remote communicator,
         //      should that be smaller? (i.e. not the same connection but
@@ -219,7 +218,7 @@ void remote_snapcommunicators::add_remote_communicator(std::string const & addr_
         //
         f_last_start_date += 1LL;
 
-        if(!ed::communicator::instance()->add_connection(remote_communicator))
+        if(!ed::communicator::instance()->add_connection(remote_conn))
         {
             // this should never happens here since each new creates a
             // new pointer
@@ -230,7 +229,7 @@ void remote_snapcommunicators::add_remote_communicator(std::string const & addr_
                 << " could not be added to the ed::communicator list of connections"
                 << SNAP_LOG_SEND;
 
-            auto it(f_smaller_ips.find(addr));
+            auto it(f_smaller_ips.find(remote_addr));
             if(it != f_smaller_ips.end())
             {
                 f_smaller_ips.erase(it);
@@ -253,12 +252,12 @@ void remote_snapcommunicators::add_remote_communicator(std::string const & addr_
         // send the GOSSIP message up until it succeeds or the
         // application quits
         //
-        f_gossip_ips[addr] = std::make_shared<gossip_connection>(
+        f_gossip_ips[remote_addr] = std::make_shared<gossip_connection>(
                                       shared_from_this()
                                     , remote_addr);
-        f_gossip_ips[addr]->set_name("gossip to remote snap communicator: " + addr);
+        f_gossip_ips[remote_addr]->set_name("gossip to remote snap communicator: " + addr);
 
-        if(!ed::communicator::instance()->add_connection(f_gossip_ips[addr]))
+        if(!ed::communicator::instance()->add_connection(f_gossip_ips[remote_addr]))
         {
             // this should never happens here since each new creates a
             // new pointer
@@ -269,7 +268,7 @@ void remote_snapcommunicators::add_remote_communicator(std::string const & addr_
                 << " could not be added to the ed::communicator list of connections."
                 << SNAP_LOG_SEND;
 
-            auto it(f_gossip_ips.find(addr));
+            auto it(f_gossip_ips.find(remote_addr));
             if(it != f_gossip_ips.end())
             {
                 f_gossip_ips.erase(it);
@@ -301,7 +300,7 @@ void remote_snapcommunicators::stop_gossiping()
 {
     while(!f_gossip_ips.empty())
     {
-        ed::communicator::instance()->remove_connection(*f_gossip_ips.begin());
+        ed::communicator::instance()->remove_connection(f_gossip_ips.begin()->second);
         f_gossip_ips.erase(f_gossip_ips.begin());
     }
 }
@@ -330,12 +329,16 @@ void remote_snapcommunicators::stop_gossiping()
 void remote_snapcommunicators::too_busy(addr::addr const & address)
 {
     auto it(f_smaller_ips.find(address));
-    if(it != f_smaller_ips.end()
+    if(it != f_smaller_ips.end())
     {
         // wait for 1 day and try again (is 1 day too long?)
-        f_smaller_ips[addr]->set_timeout_delay(remote_snapcommunicator::REMOTE_CONNECTION_TOO_BUSY_TIMEOUT);
-        f_smaller_ips[addr]->set_enable(true);
-        SNAP_LOG_INFO("remote communicator ")(addr)(" was marked as too busy. Pause for 1 day before trying to connect again.");
+        it->second->set_timeout_delay(remote_connection::REMOTE_CONNECTION_TOO_BUSY_TIMEOUT);
+        it->second->set_enable(true);
+        SNAP_LOG_INFO
+            << "remote communicator "
+            << address.to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_PORT)
+            << " was marked as too busy. Pause for 1 day before trying to connect again."
+            << SNAP_LOG_SEND;
     }
 }
 
@@ -348,57 +351,57 @@ void remote_snapcommunicators::too_busy(addr::addr const & address)
  * \param[in] addr  The address of the snapcommunicator that refused a
  *                  CONNECT because it is shutting down.
  */
-void remote_snapcommunicators::shutting_down(QString const & addr)
+void remote_snapcommunicators::shutting_down(addr::addr const & address)
 {
-    if(f_smaller_ips.contains(addr))
+    auto it(f_smaller_ips.find(address));
+    if(it != f_smaller_ips.end())
     {
         // wait for 5 minutes and try again
         //
-        f_smaller_ips[addr]->set_timeout_delay(remote_snapcommunicator::REMOTE_CONNECTION_RECONNECT_TIMEOUT);
-        f_smaller_ips[addr]->set_enable(true);
-        SNAP_LOG_DEBUG("remote communicator ")(addr)(" was said it was shutting down. Pause for 5 minutes before trying to connect again.");
+        it->second->set_timeout_delay(remote_connection::REMOTE_CONNECTION_RECONNECT_TIMEOUT);
+        it->second->set_enable(true);
+        SNAP_LOG_DEBUG
+            << "remote communicator "
+            << address.to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_PORT)
+            << " said it was shutting down. Pause for "
+            << std::setprecision(2)
+            << static_cast<double>(remote_connection::REMOTE_CONNECTION_RECONNECT_TIMEOUT) / 60.0
+            << " minutes before trying to connect again."
+            << SNAP_LOG_SEND;
     }
 }
 
 
-void remote_snapcommunicators::server_unreachable(QString const & addr)
+void remote_snapcommunicators::server_unreachable(addr::addr const & address)
 {
     // we do not have the name of the computer in snapcommunicator so
     // we just broadcast the IP address of the non-responding computer
     //
-    snap::snap_communicator_message unreachable;
+    ed::message unreachable;
     unreachable.set_service(".");
     unreachable.set_command("UNREACHABLE");
-    unreachable.add_parameter("who", addr);
-    f_communicator_server->broadcast_message(unreachable);
+    unreachable.add_parameter("who", address.to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_PORT));
+    f_server->broadcast_message(unreachable);
 }
 
 
-void remote_snapcommunicators::gossip_received(QString const & addr)
+void remote_snapcommunicators::gossip_received(addr::addr const & address)
 {
-    auto it(f_gossip_ips.find(addr));
+    auto it(f_gossip_ips.find(address));
     if(it != f_gossip_ips.end())
     {
-        snap::snap_communicator::instance()->remove_connection(*it);
+        ed::communicator::instance()->remove_connection(it->second);
         f_gossip_ips.erase(it);
     }
 }
 
 
-void remote_snapcommunicators::forget_remote_connection(QString const & addr_port)
+void remote_snapcommunicators::forget_remote_connection(addr::addr const & address)
 {
-    QString addr(addr_port);
-    int const pos(addr.indexOf(':'));
-    if(pos > 0)
-    {
-        // forget about the port if present
-        //
-        addr = addr.mid(0, pos);
-    }
-    auto it(f_smaller_ips.find(addr));
+    auto it(f_smaller_ips.find(address));
     if(it != f_smaller_ips.end())
     {
-        snap::snap_communicator::instance()->remove_connection(*it);
+        ed::communicator::instance()->remove_connection(it->second);
         f_smaller_ips.erase(it);
     }
 }
@@ -465,11 +468,11 @@ size_t remote_snapcommunicators::count_live_connections() const
     // connections are left in the complete list of connections in the
     // snap::snap_communicator::instance() all mixed up
     //
-    snap::snap_communicator::snap_connection::vector_t const & all_connections(snap::snap_communicator::instance()->get_connections());
+    ed::connection::vector_t const & all_connections(ed::communicator::instance()->get_connections());
     for(auto const & conn : all_connections)
     {
-        remote_snapcommunicator::pointer_t sc(std::dynamic_pointer_cast<remote_snapcommunicator>(conn));
-        if(sc != nullptr)
+        remote_connection::pointer_t rc(std::dynamic_pointer_cast<remote_connection>(conn));
+        if(rc != nullptr)
         {
             // this is a remote connection by definition
             //
@@ -481,7 +484,7 @@ size_t remote_snapcommunicators::count_live_connections() const
             //
             // these are connections we receive from from our listeners
             //
-            base_connection_pointer_t bc(std::dynamic_pointer_cast<base_connection>(conn));
+            base_connection::pointer_t bc(std::dynamic_pointer_cast<base_connection>(conn));
             if(bc != nullptr
             && bc->is_remote())
             {
@@ -494,5 +497,5 @@ size_t remote_snapcommunicators::count_live_connections() const
 }
 
 
-} // sc namespace
+} // namespace scd
 // vim: ts=4 sw=4 et

@@ -87,7 +87,7 @@
 
 
 
-namespace sc
+namespace scd
 {
 
 
@@ -135,14 +135,14 @@ namespace sc
  * \param[in] server_name  The name of the server we are running on
  *                         (i.e. generally your hostname.)
  */
-service_connection(
+service_connection::service_connection(
             server::pointer_t cs
           , ed::tcp_bio_client::pointer_t client
           , std::string const & server_name)
     : tcp_server_client_message_connection(client)
     , base_connection(cs)
     , f_server_name(server_name)
-    , f_address(client->get_remote_address())  // peer address:port (computer on the other side)
+    , f_address(client->get_address())  // peer address:port (computer on the other side)
 {
 }
 
@@ -152,7 +152,7 @@ service_connection(
  * When a connection goes down it gets deleted. This is when we can
  * send a new STATUS event to all the other STATUS hungry connections.
  */
-virtual ~service_connection() override
+service_connection::~service_connection()
 {
     // save when it is ending in case we did not get a DISCONNECT
     // or an UNREGISTER event
@@ -190,7 +190,7 @@ virtual ~service_connection() override
 
 
 // snap::snap_communicator::snap_tcp_server_client_message_connection implementation
-virtual void process_message(ed::message const & msg) override
+void service_connection::process_message(ed::message const & msg)
 {
     // make sure the destination knows who sent that message so it
     // is possible to directly reply to that specific instance of
@@ -201,14 +201,14 @@ virtual void process_message(ed::message const & msg) override
         ed::message forward_message(msg);
         forward_message.set_sent_from_server(f_server_name);
         forward_message.set_sent_from_service(get_name());
-        f_communicator_server->process_message(
+        f_server->process_message(
                       shared_from_this()
                     , forward_message
                     , false);
     }
     else
     {
-        f_communicator_server->process_message(
+        f_server->process_message(
                       shared_from_this()
                     , msg
                     , false);
@@ -222,13 +222,13 @@ virtual void process_message(ed::message const & msg) override
  * lost so we can send a STATUS message with information saying
  * that the connection is gone.
  */
-void send_status()
+void service_connection::send_status()
 {
     // mark connection as down before we call the send_status()
     //
     set_connection_type(connection_type_t::CONNECTION_TYPE_DOWN);
 
-    f_communicator_server->send_status(shared_from_this());
+    f_server->send_status(shared_from_this());
 }
 
 
@@ -239,7 +239,7 @@ void send_status()
  * the timeout, which happens after we finalize all read and write
  * callbacks.
  */
-virtual void process_timeout() override
+void service_connection::process_timeout()
 {
     remove_from_communicator();
 
@@ -247,7 +247,7 @@ virtual void process_timeout() override
 }
 
 
-virtual void process_error() override
+void service_connection::process_error()
 {
     tcp_server_client_message_connection::process_error();
 
@@ -262,7 +262,7 @@ virtual void process_error() override
  * example.) So we handle the process_hup() event and send a
  * HANGUP if this connection is a remote connection.
  */
-virtual void process_hup() override
+void service_connection::process_hup()
 {
     tcp_server_client_message_connection::process_hup();
 
@@ -285,7 +285,7 @@ virtual void process_hup() override
 }
 
 
-virtual void process_invalid() override
+void service_connection::process_invalid()
 {
     tcp_server_client_message_connection::process_invalid();
 
@@ -311,7 +311,7 @@ virtual void process_invalid() override
  * This very function must be called once the proper name was
  * set in this connection.
  */
-void properly_named()
+void service_connection::properly_named()
 {
     f_named = true;
 }
@@ -323,12 +323,12 @@ void properly_named()
  *
  * \return A reference to the remote address of this connection.
  */
-addr::addr const & get_address() const
+addr::addr const & service_connection::get_address() const
 {
     return f_address;
 }
 
 
 
-} // namespace sc
+} // namespace scd
 // vim: ts=4 sw=4 et

@@ -41,7 +41,7 @@ if(SnapCatch2_FOUND)
     )
 
     target_link_libraries(${PROJECT_NAME}
-        edhttp
+        testcommunicatord
         ${SNAPCATCH2_LIBRARIES}
     )
 

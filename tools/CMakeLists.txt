@@ -26,10 +26,25 @@ add_executable(${PROJECT_NAME}
     snapmessage.cpp
 )
 
+target_include_directories(${PROJECT_NAME}
+    PUBLIC
+        ${ADVGETOPT_INCLUDE_DIRS}
+        ${EVENTDISPATCHER_INCLUDE_DIRS}
+        ${LIBADDR_INCLUDE_DIRS}
+        ${LIBEXCEPT_INCLUDE_DIRS}
+        ${LIBTLD_INCLUDE_DIRS}
+        ${SNAPLOGGER_INCLUDE_DIRS}
+)
+
 target_link_libraries(${PROJECT_NAME}
-    eventdispatcher
-    readline
+    ${ADVGETOPT_LIBRARIES}
+    ${EVENTDISPATCHER_LIBRARIES}
+    ${LIBADDR_LIBRARIES}
+    ${LIBEXCEPT_LIBRARIES}
     ${LIBTLD_LIBRARIES}
+    ${SNAPLOGGER_LIBRARIES}
+    ncurses
+    readline
 )
 
 install(
@@ -51,9 +66,23 @@ add_executable(${PROJECT_NAME}
     snapclusterstatus.cpp
 )
 
+target_include_directories(${PROJECT_NAME}
+    PUBLIC
+        ${ADVGETOPT_INCLUDE_DIRS}
+        ${EVENTDISPATCHER_INCLUDE_DIRS}
+        ${LIBADDR_INCLUDE_DIRS}
+        ${LIBEXCEPT_INCLUDE_DIRS}
+        ${LIBTLD_INCLUDE_DIRS}
+        ${SNAPLOGGER_INCLUDE_DIRS}
+)
+
 target_link_libraries(${PROJECT_NAME}
-    eventdispatcher
+    ${ADVGETOPT_LIBRARIES}
+    ${EVENTDISPATCHER_LIBRARIES}
+    ${LIBADDR_LIBRARIES}
+    ${LIBEXCEPT_LIBRARIES}
     ${LIBTLD_LIBRARIES}
+    ${SNAPLOGGER_LIBRARIES}
 )
 
 install(

@@ -27,10 +27,12 @@
 //
 #include    "unix_listener.h"
 
+#include    "unix_connection.h"
 
-//// snapwebsites lib
-////
-//#include <snapwebsites/chownnm.h>
+
+// eventdispatcher
+//
+#include <eventdispatcher/tcp_bio_client.h>
 //#include <snapwebsites/flags.h>
 //#include <snapwebsites/glob_dir.h>
 //#include <snapwebsites/loadavg.h>
@@ -38,14 +40,13 @@
 //#include <snapwebsites/qcompatibility.h>
 //#include <snapwebsites/snap_communicator.h>
 //#include <snapwebsites/snapwebsites.h>
+
+
+// snaplogger
 //
-//
-//// snapdev lib
-////
-//#include <snapdev/not_used.h>
-//#include <snapdev/tokenize_string.h>
-//
-//
+#include <snaplogger/message.h>
+
+
 //// libaddr lib
 ////
 //#include <libaddr/addr_exception.h>
@@ -85,7 +86,7 @@
 
 
 
-namespace sc
+namespace scd
 {
 
 
@@ -132,12 +133,12 @@ unix_listener::unix_listener(
 }
 
 
-void listener::process_accept()
+void unix_listener::process_accept()
 {
     // a new client just connected, create a new service_connection
     // object and add it to the snap_communicator object.
     //
-    tcp_client_server::bio_client::pointer_t const new_client(accept());
+    snapdev::raii_fd_t new_client(std::move(accept()));
     if(new_client == nullptr)
     {
         // an error occurred, report in the logs
@@ -151,75 +152,31 @@ void listener::process_accept()
         return;
     }
 
-    service_connection::pointer_t connection(
-            std::shared_ptr<service_connection>(
+    unix_connection::pointer_t service(
+            std::make_shared<unix_connection>(
                       f_server
-                    , new_client
+                    , std::move(new_client)
                     , f_server_name));
 
-    // TBD: is that a really weak test?
+    // set a default name in each new connection, this changes
+    // whenever we receive a REGISTER message from that connection
     //
-    //QString const addr(connection->get_remote_address());
-    // the get_remote_address() function may return an IP and a port so
-    // parse that to remove the port; also remote_addr() has a function
-    // that tells us whether the IP is private, local, or public
-    //
-    addr::addr const remote_addr(addr::string_to_addr(connection->get_remote_address().toUtf8().data(), "0.0.0.0", 4040, "tcp"));
-    addr::addr::network_type_t const network_type(remote_addr.addr::get_network_type());
-    if(f_local)
-    {
-        if(network_type != addr::addr::network_type_t::NETWORK_TYPE_LOOPBACK)
-        {
-            // TODO: look into making this an ERROR() again and return, in
-            //       effect viewing the error as a problem and refusing the
-            //       connection (we had a problem with the IP detection
-            //       which should be resolved now that we use the `addr`
-            //       class
-            //
-            SNAP_LOG_WARNING("received what should be a local connection from \"")(connection->get_remote_address())("\".");
-            //return;
-        }
+    service->set_name("client unix connection");
 
-        // set a default name in each new connection, this changes
-        // whenever we receive a REGISTER message from that connection
-        //
-        connection->set_name("client connection");
+    service->set_server_name(f_server_name);
 
-        connection->set_server_name(f_server_name);
-    }
-    else
-    {
-        if(network_type == addr::addr::network_type_t::NETWORK_TYPE_LOOPBACK)
-        {
-            SNAP_LOG_ERROR("received what should be a remote connection from \"")(connection->get_remote_address())("\".");
-            return;
-        }
-
-        // set a name for remote connections
-        //
-        // the following name includes a space which prevents someone
-        // from send to such a connection, which is certainly a good
-        // thing since there can be duplicate and that name is not
-        // sensible as a destination
-        //
-        // we will change the name once we receive the CONNECT message
-        // and as we send the ACCEPT message
-        //
-        connection->set_name(QString("remote connection from: %1").arg(connection->get_remote_address())); // remote host connected to us
-        connection->mark_as_remote();
-    }
-
-    if(!snap::snap_communicator::instance()->add_connection(connection))
+    if(!ed::communicator::instance()->add_connection(service))
     {
         // this should never happen here since each new creates a
         // new pointer
         //
-        SNAP_LOG_ERROR("new client connection could not be added to the snap_communicator list of connections");
+        SNAP_LOG_ERROR
+            << "new client connection could not be added to the ed::communicator list of connections."
+            << SNAP_LOG_SEND;
     }
 }
 
 
 
-
-} // sc namespace
+} // namespace scd
 // vim: ts=4 sw=4 et

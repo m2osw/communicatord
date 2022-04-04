@@ -29,8 +29,33 @@
 #include    "remote_connection.h"
 
 
+// libaddr
+//
+#include    <libaddr/exception.h>
 
-namespace sc
+
+// sitter
+//
+#include    <sitter/flags.h>
+
+
+// snaplogger
+//
+#include    <snaplogger/message.h>
+
+
+// C++
+//
+#include    <iomanip>
+
+
+// last include
+//
+#include    <snapdev/poison.h>
+
+
+
+namespace scd
 {
 
 
@@ -65,13 +90,16 @@ namespace sc
  */
 remote_connection::remote_connection(
               server::pointer_t cs
-            , addr::addr const & address)
+            , addr::addr const & address
+            , bool secure)
     : tcp_client_permanent_message_connection(
               address
-            , cs->connection_mode()
+            , (secure
+                ? ed::mode_t::MODE_SECURE
+                : ed::mode_t::MODE_PLAIN)
             , REMOTE_CONNECTION_DEFAULT_TIMEOUT)
     , base_connection(cs)
-    , f_address(addr::string_to_addr(addr.toUtf8().data(), "", 4040, "tcp"))
+    , f_address(address)
 {
 }
 
@@ -119,11 +147,11 @@ void remote_connection::process_connection_failed(std::string const & error_mess
     {
         f_connected = false;
 
-        snap::snap_communicator_message hangup;
+        ed::message hangup;
         hangup.set_command("HANGUP");
         hangup.set_service(".");
         hangup.add_parameter("server_name", f_server_name);
-        f_communicator_server->broadcast_message(hangup);
+        f_server->broadcast_message(hangup);
     }
 
     // we count the number of failures, after a certain number we raise a
@@ -189,7 +217,7 @@ void remote_connection::process_connection_failed(std::string const & error_mess
               " fails connecting. If not, please remove that IP address"
               " from the list of neighbors AND THE FIREWALL if it is there too.";
 
-        snap::snap_flag::pointer_t flag(SNAP_FLAG_UP(
+        sitter::flag::pointer_t flag(SITTER_FLAG_UP(
                       "snapcommunicator"
                     , "remote-connection"
                     , "connection-failed"
@@ -222,7 +250,7 @@ void remote_connection::process_connected()
         f_failures = 0;
         f_flagged = false;
 
-        snap::snap_flag::pointer_t flag(SNAP_FLAG_DOWN(
+        sitter::flag::pointer_t flag(SITTER_FLAG_DOWN(
                            "snapcommunicator"
                          , "remote-connection"
                          , "connection-failed")
@@ -232,7 +260,7 @@ void remote_connection::process_connected()
 
     tcp_client_permanent_message_connection::process_connected();
 
-    f_communicator_server->process_connected(shared_from_this());
+    f_server->process_connected(shared_from_this());
 
     // reset the wait to the default 5 minutes
     //
@@ -253,5 +281,5 @@ addr::addr const & remote_connection::get_address() const
 
 
 
-} // namespace sc
+} // namespace scd
 // vim: ts=4 sw=4 et

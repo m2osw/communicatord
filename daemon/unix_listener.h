@@ -84,7 +84,7 @@
 
 
 
-namespace sc
+namespace scd
 {
 
 
@@ -99,7 +99,7 @@ public:
                             , std::string const & server_name);
 
     // ed::local_stream_server_connection
-    virtual void        process_accept() override
+    virtual void        process_accept() override;
 
 private:
     server::pointer_t   f_server = server::pointer_t();
@@ -107,5 +107,5 @@ private:
 };
 
 
-} // sc namespace
+} // namespace scd
 // vim: ts=4 sw=4 et

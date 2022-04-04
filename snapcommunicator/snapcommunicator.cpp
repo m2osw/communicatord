@@ -16,7 +16,29 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+// self
+//
 #include    "snapcommunicator.h"
+
+#include    "exception.h"
+
+
+// snaplogger
+//
+#include    <snaplogger/message.h>
+
+
+// eventdispatcher
+//
+#include    <eventdispatcher/communicator.h>
+#include    <eventdispatcher/local_stream_client_permanent_message_connection.h>
+#include    <eventdispatcher/tcp_client_permanent_message_connection.h>
+
+
+// libaddr
+//
+#include    <libaddr/addr_parser.h>
+#include    <libaddr/unix.h>
 
 
 // edhttp
@@ -59,7 +81,7 @@ advgetopt::option const g_options[] =
             , advgetopt::GETOPT_FLAG_ENVIRONMENT_VARIABLE
             , advgetopt::GETOPT_FLAG_CONFIGURATION_FILE
             , advgetopt::GETOPT_FLAG_REQUIRED>())
-        , advgetopt::EnvironmentVariable("SNAPCOMMUNICATOR_LISTEN")
+        , advgetopt::EnvironmentVariableName("SNAPCOMMUNICATOR_LISTEN")
         , advgetopt::DefaultValue("unix:///run/snapcommunicator/snapcommunicator.socket")
         , advgetopt::Help("define the connection type as a protocol (tcp, ssl, unix, udp) along an <address:port>.")
     ),
@@ -71,7 +93,7 @@ advgetopt::option const g_options[] =
             , advgetopt::GETOPT_FLAG_ENVIRONMENT_VARIABLE
             , advgetopt::GETOPT_FLAG_CONFIGURATION_FILE
             , advgetopt::GETOPT_FLAG_REQUIRED>())
-        , advgetopt::EnvironmentVariable("SNAPCOMMUNICATOR_SECRET")
+        , advgetopt::EnvironmentVariableName("SNAPCOMMUNICATOR_SECRET")
         , advgetopt::Help("the <login:password> to connect from a remote computer (i.e. a computer with an IP address other than this one or a local network IP).")
     ),
 
@@ -120,26 +142,36 @@ void snapcommunicator::process_snapcommunicator_options()
     //
     if(u.protocol() == "unix")
     {
-        addr::unix unix(u.);
-        f_snapcommunicator_connection = std::make_shared<local_stream_client_permanent_message_connection>(unix);
+        addr::unix address(u.path(false));
+        f_snapcommunicator_connection = std::make_shared<ed::local_stream_client_permanent_message_connection>(address);
     }
     else
     {
+        addr::addr const address(addr::string_to_addr(
+              u.full_domain() + ':' + std::to_string(u.get_port())
+            , "127.0.0.1"
+            , 4040
+            , "tcp"));
+        f_snapcommunicator_connection = std::make_shared<ed::tcp_client_permanent_message_connection>(address);
     }
 
-    addr::addr_parser parser;
+    if(f_snapcommunicator_connection == nullptr)
+    {
+        SNAP_LOG_FATAL
+            << "could not create a connection to the snapcommunicator."
+            << SNAP_LOG_SEND;
+        throw connection_unavailable("could not create a connection to the snapcommunicator.");
+    }
 
-    addr::addr const logrotate_addr(addr::string_to_addr(
-          
-        , f_default_address
-        , f_default_port
-        , "udp"));
+    if(!ed::communicator::instance()->add_connection(f_snapcommunicator_connection))
+    {
+        f_snapcommunicator_connection.reset();
 
-    f_logrotate_messenger = std::make_shared<ed::logrotate_udp_messenger>(
-          logrotate_addr
-        , f_opts.get_string("logrotate-secret"));
-
-    ed::communicator::instance()->add_connection(f_logrotate_messenger);
+        SNAP_LOG_FATAL
+            << "could not register the snapcommunicator connection."
+            << SNAP_LOG_SEND;
+        throw connection_unavailable("could not register the snapcommunicator connection.");
+    }
 }
 
 

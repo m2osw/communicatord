@@ -34,13 +34,12 @@
 //
 #include    <eventdispatcher/connection.h>
 #include    <eventdispatcher/communicator.h>
-//#include <snapwebsites/flags.h>
-//#include <snapwebsites/glob_dir.h>
-//#include <snapwebsites/loadavg.h>
-//#include <snapwebsites/log.h>
-//#include <snapwebsites/qcompatibility.h>
-//#include <snapwebsites/snap_communicator.h>
-//#include <snapwebsites/snapwebsites.h>
+#include    <eventdispatcher/logrotate_udp_messenger.h>
+
+
+// advgetopt
+//
+#include    <advgetopt/advgetopt.h>
 
 
 //// snapdev lib
@@ -81,7 +80,7 @@
 
 
 
-namespace sc
+namespace scd
 {
 
 
@@ -124,7 +123,7 @@ public:
     void                        process_connected(ed::connection::pointer_t connection);
     void                        broadcast_message(
                                           ed::message const & message
-                                        , std::vector<base_connection> const & accepting_remote_connections = std::vector<base_connection>());
+                                        , std::vector<std::shared_ptr<base_connection>> const & accepting_remote_connections = std::vector<std::shared_ptr<base_connection>>());
     void                        process_load_balancing();
     void                        cluster_status(ed::connection::pointer_t reply_connection);
     void                        shutdown(bool quitting);
@@ -139,11 +138,13 @@ private:
 
     //snap::server::pointer_t   f_server = snap::server::pointer_t(); -- this was the snapwebsites server
 
+    advgetopt::getopt               f_opts;
+    ed::logrotate_extension         f_logrotate;
     std::string                     f_server_name = std::string();
     int                             f_number_of_processors = 1;
     std::string                     f_neighbors_cache_filename = std::string();
-    std::string                     f_username = std::string();
-    std::string                     f_groupname = std::string();
+    std::string                     f_user_name = std::string();
+    std::string                     f_group_name = std::string();
     std::string                     f_public_ip = std::string();        // f_listener IP address
     ed::communicator::pointer_t     f_communicator = ed::communicator::pointer_t();
     ed::connection::pointer_t       f_interrupt = ed::connection::pointer_t();        // TCP/IP
@@ -177,5 +178,5 @@ private:
 
 
 
-} // namespace sc
+} // namespace scd
 // vim: ts=4 sw=4 et

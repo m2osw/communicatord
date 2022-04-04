@@ -34,7 +34,7 @@
 
 // self
 //
-#include    "gossip.h"
+#include    "gossip_connection.h"
 
 
 //// snapwebsites lib
@@ -47,14 +47,13 @@
 //#include <snapwebsites/qcompatibility.h>
 //#include <snapwebsites/snap_communicator.h>
 //#include <snapwebsites/snapwebsites.h>
+
+
+// snaplogger
 //
-//
-//// snapdev lib
-////
-//#include <snapdev/not_used.h>
-//#include <snapdev/tokenize_string.h>
-//
-//
+#include    <snaplogger/message.h>
+
+
 //// libaddr lib
 ////
 //#include <libaddr/addr_exception.h>
@@ -94,13 +93,13 @@
 
 
 
-namespace sc
+namespace scd
 {
 
 
 
 
-/** \class gossip_to_remote_snap_communicator
+/** \class gossip_connection
  * \brief To send a GOSSIP to a remote snapcommunicator.
  *
  * This class defines a connection used to send a GOSSIP message
@@ -131,24 +130,26 @@ namespace sc
  *
  * The addr and port are both mandatory to this constructor.
  *
+ * \todo
+ * We need to correctly select PLAIN or SECURE. It's pretty secure to
+ * use a PLAIN connection for a GOSSIP message, but if the IP:port we
+ * were given represent a SECURE port, then it won't work.
+ *
  * \param[in] cs  The snap communicator server object which we contact
  *                whenever the GOSSIP message was confirmed by the
  *                remote connection.
  * \param[in] addr  The IP address of the remote snap communicator.
  * \param[in] port  The port to connect to that snap communicator.
  */
-gossip_to_remote_snap_communicator::gossip_to_remote_snap_communicator(
-                  remote_communicator_connections::pointer_t rcs
-                , QString const & addr
-                , int port)
-    : snap_tcp_client_permanent_message_connection(
-                  addr.toUtf8().data()
-                , port
-                , rcs->connection_mode()
+gossip_connection::gossip_connection(
+                  remote_snapcommunicators::pointer_t rcs
+                , addr::addr const & address)
+    : tcp_client_permanent_message_connection(
+                  address
+                , ed::mode_t::MODE_PLAIN //rcs->connection_mode()
                 , -FIRST_TIMEOUT  // must be negative so first timeout is active (otherwise we get an immediately attempt, which we do not want in this case)
                 , true)
-    , f_addr(addr)
-    , f_port(port)
+    , f_address(address)
     , f_remote_communicators(rcs)
 {
 }
@@ -172,9 +173,9 @@ gossip_to_remote_snap_communicator::gossip_to_remote_snap_communicator(
  * missing in the cluster (Even if we likely will have other means
  * to know of the problem.)
  */
-void gossip_to_remote_snap_communicator::process_timeout()
+void gossip_connection::process_timeout()
 {
-    snap_tcp_client_permanent_message_connection::process_timeout();
+    tcp_client_permanent_message_connection::process_timeout();
 
     // increase the delay on each timeout until we reach 1h and then
     // repeat every 1h or so (i.e. if you change the FIRST_TIMEOUT
@@ -198,16 +199,20 @@ void gossip_to_remote_snap_communicator::process_timeout()
  *
  * \param[in] message  The message received from the remote snapcommunicator.
  */
-void gossip_to_remote_snap_communicator::process_message(snap::snap_communicator_message const & message)
+void gossip_connection::process_message(ed::message const & msg)
 {
-    SNAP_LOG_TRACE("gossip connection received a message [")(message.to_message())("]");
+    SNAP_LOG_TRACE
+        << "gossip connection received a message ["
+        << msg.to_message()
+        << "]"
+        << SNAP_LOG_SEND;
 
-    QString const & command(message.get_command());
+    std::string const & command(msg.get_command());
     if(command == "RECEIVED")
     {
         // we got confirmation that the GOSSIP went across
         //
-        f_remote_communicators->gossip_received(f_addr);
+        f_remote_communicators->gossip_received(f_address);
     }
 }
 
@@ -225,16 +230,16 @@ void gossip_to_remote_snap_communicator::process_message(snap::snap_communicator
  *
  * \param[in] error_message  The error that occurred.
  */
-void gossip_to_remote_snap_communicator::process_connection_failed(std::string const & error_message)
+void gossip_connection::process_connection_failed(std::string const & error_message)
 {
     // make sure the default function does its job.
     //
-    snap::snap_communicator::snap_tcp_client_permanent_message_connection::process_connection_failed(error_message);
+    tcp_client_permanent_message_connection::process_connection_failed(error_message);
 
     // now let people know about the fact that this other computer is
     // unreachable
     //
-    f_remote_communicators->server_unreachable(f_addr);
+    f_remote_communicators->server_unreachable(f_address);
 }
 
 
@@ -248,7 +253,7 @@ void gossip_to_remote_snap_communicator::process_connection_failed(std::string c
  * secondary thread was used to call the connect() function, but
  * it is not used to send or receive any messages.
  */
-void gossip_to_remote_snap_communicator::process_connected()
+void gossip_connection::process_connected()
 {
     // TODO:
     // The default process_connected() function disables the timer
@@ -267,14 +272,16 @@ void gossip_to_remote_snap_communicator::process_connected()
     //
     // https://en.wikipedia.org/wiki/Byzantine_fault_tolerance
     //
-    snap_tcp_client_permanent_message_connection::process_connected();
+    tcp_client_permanent_message_connection::process_connected();
 
     // we are connected so we can send the GOSSIP message
     // (each time we reconnect!)
     //
-    snap::snap_communicator_message gossip;
+    ed::message gossip;
     gossip.set_command("GOSSIP");
-    gossip.add_parameter("my_address", f_remote_communicators->get_my_address());
+    gossip.add_parameter(
+              "my_address"
+            , f_remote_communicators->get_my_address().to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_PORT));
     send_message(gossip); // do not cache, if we lose the connection, we lose the message and that's fine in this case
 }
 
@@ -284,5 +291,5 @@ void gossip_to_remote_snap_communicator::process_connected()
 
 
 
-} // sc namespace
+} // namespace scd
 // vim: ts=4 sw=4 et

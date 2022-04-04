@@ -18,6 +18,17 @@
 #pragma once
 
 
+// advgetopt
+//
+#include    <advgetopt/advgetopt.h>
+
+
+// eventdispatcher
+//
+#include    <eventdispatcher/connection.h>
+
+
+
 namespace sc
 {
 

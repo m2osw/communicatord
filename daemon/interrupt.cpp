@@ -80,7 +80,7 @@
 
 
 
-namespace sc
+namespace scd
 {
 
 
@@ -127,5 +127,5 @@ void interrupt::process_signal()
 
 
 
-} // sc namespace
+} // namespace scd
 // vim: ts=4 sw=4 et

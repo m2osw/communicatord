@@ -16,8 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// snapcommunicator daemon
-// (this is not a library, the functions are not available)
+// snapcommunicator
 //
 #include    <snapcommunicator/version.h>
 
@@ -25,9 +24,12 @@
 // eventdispatcher
 //
 #include    <eventdispatcher/tcp_client_message_connection.h>
-//#include <snapwebsites/snap_communicator.h>
 #include    <eventdispatcher/dispatcher.h>
-//#include <snapwebsites/snap_config.h>
+
+
+// libaddr
+//
+#include    <libaddr/addr_parser.h>
 
 
 // snapdev
@@ -38,6 +40,7 @@
 // advgetopt
 //
 #include    <advgetopt/advgetopt.h>
+#include    <advgetopt/conf_file.h>
 #include    <advgetopt/exception.h>
 
 
@@ -109,22 +112,22 @@ public:
     int                         run();
 
     // implementation of connection_with_send_message
-    virtual bool                send_message(snap::snap_communicator_message const & message, bool cache = false) override;
+    virtual bool                send_message(ed::message const & message, bool cache = false) override;
 
     // implementation of snap::snapcommunicator::connection_with_send_message
-    virtual void                ready(snap::snap_communicator_message & message) override; // no "msg_" because that's in connection_with_send_message
+    virtual void                ready(ed::message & message) override; // no "msg_" because that's in connection_with_send_message
     virtual void                stop(bool quitting) override; // no "msg_" because that's in connection_with_send_message
 
 private:
-    void                        done(snap::snap_communicator_message & message);
+    void                        done(ed::message & message);
 
     // messages handled by the dispatcher
     // (see also ready() and stop() above)
     //
-    void                        msg_cluster_status(snap::snap_communicator_message & message);
-    void                        msg_cluster_complete(snap::snap_communicator_message & message);
+    void                        msg_cluster_status(ed::message & message);
+    void                        msg_cluster_complete(ed::message & message);
 
-    static snap::dispatcher<snapcluster>::dispatcher_match::vector_t const
+    static ed::dispatcher<snapcluster>::dispatcher_match::vector_t const
                                         g_snapcluster_service_messages;
 
     advgetopt::getopt                   f_opts;
@@ -190,10 +193,12 @@ advgetopt::option const g_options[] =
 advgetopt::options_environment const g_options_environment =
 {
     .f_project_name = "snapcommunicator",
-    .f_group_name = nullptr,
+    .f_group_name = "snapcommunicator",
     .f_options = g_options,
     .f_options_files_directory = nullptr,
     .f_environment_variable_name = nullptr,
+    .f_environment_variable_intro = nullptr,
+    .f_section_variables_name = nullptr,
     .f_configuration_files = nullptr,
     .f_configuration_filename = nullptr,
     .f_configuration_directories = nullptr,
@@ -222,13 +227,14 @@ snapcluster::snapcluster(int argc, char * argv[])
     , f_opts(g_options_environment)
     , f_communicator(ed::communicator::instance())
 {
-    snaplogger::add_logger_options(f_opts);
+    // we do not log, this is a command line tool?
+    //snaplogger::add_logger_options(f_opts);
     f_opts.finish_parsing(argc, argv);
-    if(!snaplogger::process_logger_options(f_opt, "/etc/eventdispatcher/logger"))
-    {
-        // exit on any error
-        throw advgetopt::getopt_exit("logger options generated an error.", 1);
-    }
+    //if(!snaplogger::process_logger_options(f_opt, "/etc/eventdispatcher/logger"))
+    //{
+    //    // exit on any error
+    //    throw advgetopt::getopt_exit("logger options generated an error.", 1);
+    //}
 
     advgetopt::conf_file_setup setup(f_opts.get_string("snapcommunicator-config"));
     f_snapcommunicator_config = advgetopt::conf_file::get_conf_file(setup);
@@ -265,7 +271,7 @@ int snapcluster::run()
 }
 
 
-bool snapcluster::send_message(snap::snap_communicator_message const & message, bool cache)
+bool snapcluster::send_message(ed::message const & message, bool cache)
 {
     return f_messenger->send_message(message, cache);
 }
@@ -310,8 +316,8 @@ void snapcluster::msg_cluster_complete(ed::message & message)
 
 void snapcluster::done(ed::message & message)
 {
-    if(f_cluster_status.isEmpty()
-    || f_cluster_complete.isEmpty())
+    if(f_cluster_status.empty()
+    || f_cluster_complete.empty())
     {
         // not quite done yet...
         return;

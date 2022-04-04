@@ -27,6 +27,7 @@
 //
 #include    "listener.h"
 
+#include    "service_connection.h"
 
 //// snapwebsites lib
 ////
@@ -44,15 +45,20 @@
 ////
 //#include <snapdev/not_used.h>
 //#include <snapdev/tokenize_string.h>
+
+
+// snaplogger
 //
+#include <snaplogger/message.h>
+
+
+// libaddr
 //
-//// libaddr lib
-////
-//#include <libaddr/addr_exception.h>
-//#include <libaddr/addr_parser.h>
+#include <libaddr/addr.h>
+#include <libaddr/addr_parser.h>
 //#include <libaddr/iface.h>
-//
-//
+
+
 //// Qt lib
 ////
 //#include <QFile>
@@ -85,7 +91,7 @@
 
 
 
-namespace sc
+namespace scd
 {
 
 
@@ -123,7 +129,7 @@ namespace sc
  *                    connection.
  */
 listener::listener(
-          snap_communicator_server::pointer_t cs
+          server::pointer_t cs
         , addr::addr const & address
         , std::string const & certificate
         , std::string const & private_key
@@ -135,8 +141,8 @@ listener::listener(
             , certificate
             , private_key
             , (certificate.empty() || private_key.empty()
-                ? tcp_client_server::mode_t::MODE_PLAIN
-                : tcp_client_server::mode_t::MODE_SECURE)
+                ? ed::mode_t::MODE_PLAIN
+                : ed::mode_t::MODE_SECURE)
             , max_connections
             , true)
     , f_server(cs)
@@ -151,25 +157,33 @@ void listener::process_accept()
     // a new client just connected, create a new service_connection
     // object and add it to the snap_communicator object.
     //
-    tcp_client_server::bio_client::pointer_t const new_client(accept());
+    ed::tcp_bio_client::pointer_t const new_client(accept());
     if(new_client == nullptr)
     {
         // an error occurred, report in the logs
         int const e(errno);
-        SNAP_LOG_ERROR("somehow accept() failed with errno: ")(e)(" -- ")(strerror(e));
+        SNAP_LOG_ERROR
+            << "somehow accept() failed with errno: "
+            << e
+            << " -- "
+            << strerror(e)
+            << SNAP_LOG_SEND;
         return;
     }
 
-    service_connection::pointer_t connection(new service_connection(f_server, new_client, f_server_name));
+    service_connection::pointer_t service(std::make_shared<service_connection>(
+                  f_server
+                , new_client
+                , f_server_name));
 
     // TBD: is that a really weak test?
     //
-    //QString const addr(connection->get_remote_address());
+    //QString const addr(service->get_remote_address());
     // the get_remote_address() function may return an IP and a port so
     // parse that to remove the port; also remote_addr() has a function
     // that tells us whether the IP is private, local, or public
     //
-    addr::addr const remote_addr(connection->get_remote_address());
+    addr::addr const remote_addr(service->get_remote_address());
     addr::addr::network_type_t const network_type(remote_addr.get_network_type());
     if(f_local)
     {
@@ -183,7 +197,7 @@ void listener::process_accept()
             //
             SNAP_LOG_WARNING
                 << "received what should be a local connection from \""
-                << connection->get_remote_address()
+                << service->get_remote_address().to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_PORT)
                 << "\"."
                 << SNAP_LOG_SEND;
             //return;
@@ -192,9 +206,9 @@ void listener::process_accept()
         // set a default name in each new connection, this changes
         // whenever we receive a REGISTER message from that connection
         //
-        connection->set_name("client connection");
+        service->set_name("client connection");
 
-        connection->set_server_name(f_server_name);
+        service->set_server_name(f_server_name);
     }
     else
     {
@@ -202,7 +216,7 @@ void listener::process_accept()
         {
             SNAP_LOG_ERROR
                 << "received what should be a remote connection from \""
-                << connection->get_remote_address().to_ipv4or6_string(addr::string_ip_t::STRING_IP_PORT)
+                << service->get_remote_address().to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_PORT)
                 << "\"."
                 << SNAP_LOG_SEND;
             return;
@@ -218,13 +232,13 @@ void listener::process_accept()
         // we will change the name once we receive the CONNECT message
         // and as we send the ACCEPT message
         //
-        connection->set_name(
+        service->set_name(
                   std::string("remote connection from: ")
-                + connection->get_remote_address().to_ipv4or6_string(addr::string_ip_t::STRING_IP_PORT));
-        connection->mark_as_remote();
+                + service->get_remote_address().to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_PORT));
+        service->mark_as_remote();
     }
 
-    if(!ed::communicator::instance()->add_connection(connection))
+    if(!ed::communicator::instance()->add_connection(service))
     {
         // this should never happen here since each new creates a
         // new pointer
@@ -238,5 +252,5 @@ void listener::process_accept()
 
 
 
-} // sc namespace
+} // namespace scd
 // vim: ts=4 sw=4 et

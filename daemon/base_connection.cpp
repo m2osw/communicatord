@@ -65,14 +65,13 @@
 // #include <snapwebsites/qcompatibility.h>
 // #include <snapwebsites/snap_communicator.h>
 // #include <snapwebsites/snapwebsites.h>
-// 
-// 
-// // snapdev lib
-// //
-// #include <snapdev/not_used.h>
-// #include <snapdev/tokenize_string.h>
-// 
-// 
+
+
+// snapdev lib
+//
+#include <snapdev/tokenize_string.h>
+
+
 // // libaddr lib
 // //
 // #include <libaddr/addr_exception.h>
@@ -106,7 +105,7 @@
 
 
 
-namespace sc
+namespace scd
 {
 
 
@@ -220,7 +219,7 @@ void base_connection::set_server_name(std::string const & server_name)
  * \return The name of the server that is on the other
  *         side of this connection.
  */
-QString base_connection::get_server_name() const
+std::string base_connection::get_server_name() const
 {
     return f_server_name;
 }
@@ -303,14 +302,9 @@ connection_type_t base_connection::get_connection_type() const
  *
  * \param[in] services  The list of services this server handles.
  */
-void base_connection::set_services(set::string const & services)
+void base_connection::set_services(std::string const & services)
 {
-    std::set<std::string> list;
-    snapdev::tokenize_string(list, services, { "," });
-    for(auto const & s : list)
-    {
-        f_services[s] = true;
-    }
+    snapdev::tokenize_string(f_services, services, { "," });
 }
 
 
@@ -357,12 +351,7 @@ bool base_connection::has_service(std::string const & name)
  */
 void base_connection::set_services_heard_of(std::string const & services)
 {
-    std::set<std::string> list;
-    snapdev::tokenize_string(list, services, { "," });
-    for(auto const & s : list)
-    {
-        f_services_heard_of[s] = true;
-    }
+    snapdev::tokenize_string(f_services_heard_of, services, { "," });
 }
 
 
@@ -393,15 +382,10 @@ void base_connection::get_services_heard_of(sorted_list_of_strings_t & services)
  */
 void base_connection::set_commands(std::string const & commands)
 {
-    snap::snap_string_list cmds(commands.split(','));
-    for(auto const & c : cmds)
-    {
-        std::string const name(c.trimmed());
-        if(!name.empty())
-        {
-            f_understood_commands[name] = true;
-        }
-    }
+    snapdev::tokenize_string(
+          f_understood_commands
+        , commands
+        , { "," });
 }
 
 
@@ -511,5 +495,5 @@ bool base_connection::wants_loadavg() const
 
 
 
-} // namespace sc
+} // namespace scd
 // vim: ts=4 sw=4 et

@@ -80,7 +80,7 @@
 
 
 
-namespace sc
+namespace scd
 {
 
 
@@ -118,5 +118,5 @@ void ping::process_message(ed::message const & msg)
 
 
 
-} // sc namespace
+} // namespace scd
 // vim: ts=4 sw=4 et

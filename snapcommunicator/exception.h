@@ -30,7 +30,7 @@
 
 
 
-namespace ed
+namespace sc
 {
 
 
@@ -39,11 +39,16 @@ DECLARE_LOGIC_ERROR(snapcommunicator_logic_error);
 
 DECLARE_MAIN_EXCEPTION(snapcommunicator_error);
 
+DECLARE_EXCEPTION(snapcommunicator_error, address_missing);
+DECLARE_EXCEPTION(snapcommunicator_error, connection_unavailable);
 DECLARE_EXCEPTION(snapcommunicator_error, unexpected_message);
 DECLARE_EXCEPTION(snapcommunicator_error, unexpected_message_parameter);
+DECLARE_EXCEPTION(snapcommunicator_error, unknown_command);
 DECLARE_EXCEPTION(snapcommunicator_error, unknown_exception);
+DECLARE_EXCEPTION(snapcommunicator_error, switching_to_user_failed);
+DECLARE_EXCEPTION(snapcommunicator_error, user_missing);
 
 
 
-} // namespace ed
+} // namespace sc
 // vim: ts=4 sw=4 et

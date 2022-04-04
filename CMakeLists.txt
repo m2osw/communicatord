@@ -40,10 +40,11 @@ include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-add_subdirectory(daemon)
-add_subdirectory(cmake )
-add_subdirectory(doc   )
-add_subdirectory(tools )
-add_subdirectory(tests )
+add_subdirectory(snapcommunicator)      # helper library
+add_subdirectory(daemon          )      # actual snapcommunicator service
+add_subdirectory(cmake           )      # find helper library
+add_subdirectory(doc             )      # various docs
+add_subdirectory(tools           )      # various tools
+add_subdirectory(tests           )      # unit tests
 
 # vim: ts=4 sw=4 et

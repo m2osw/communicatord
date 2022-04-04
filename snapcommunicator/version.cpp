@@ -17,9 +17,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 /** \file
- * \brief The version of the event dispatcher at compile time.
+ * \brief The version of the snapcommunicator at compile time.
  *
- * This file records the event dispatcher library version at compile time.
+ * This file records the snapcommunicator library version at compile time.
  *
  * The macros give you the library version at the time you are compiling.
  * The functions allow you to retrieve the version of a dynamically linked
@@ -28,7 +28,7 @@
 
 // self
 //
-#include    "eventdispatcher/version.h"
+#include    "snapcommunicator/version.h"
 
 
 // last include
@@ -37,7 +37,7 @@
 
 
 
-namespace ed
+namespace sc
 {
 
 
@@ -52,7 +52,7 @@ namespace ed
  */
 int get_major_version()
 {
-    return EVENTDISPATCHER_VERSION_MAJOR;
+    return SNAPCOMMUNICATOR_VERSION_MAJOR;
 }
 
 
@@ -65,7 +65,7 @@ int get_major_version()
  */
 int get_release_version()
 {
-    return EVENTDISPATCHER_VERSION_MINOR;
+    return SNAPCOMMUNICATOR_VERSION_MINOR;
 }
 
 
@@ -78,7 +78,7 @@ int get_release_version()
  */
 int get_patch_version()
 {
-    return EVENTDISPATCHER_VERSION_PATCH;
+    return SNAPCOMMUNICATOR_VERSION_PATCH;
 }
 
 
@@ -97,9 +97,9 @@ int get_patch_version()
  */
 char const * get_version_string()
 {
-    return EVENTDISPATCHER_VERSION_STRING;
+    return SNAPCOMMUNICATOR_VERSION_STRING;
 }
 
 
-} // namespace ed
+} // namespace sc
 // vim: ts=4 sw=4 et

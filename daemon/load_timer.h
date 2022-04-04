@@ -86,7 +86,7 @@
 
 
 
-namespace sc
+namespace scd
 {
 
 
@@ -106,5 +106,5 @@ private:
 
 
 
-} // namespace sc
+} // namespace scd
 // vim: ts=4 sw=4 et

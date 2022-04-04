@@ -18,10 +18,16 @@
 #pragma once
 
 /** \file
- * \brief Declaration of the remote connection.
+ * \brief Declaration of the remote snapcommunicators manager.
  *
- * The remote connection allows this communicator to connect  to another
- * communicator on a remote computer.
+ * The remote snapcommunicators is in charge of managing the connections
+ * to the other snapcommunicators on your network.
+ *
+ * When the IP address is smaller than ours, then we connect to that
+ * snapcommunicator. When the IP address is larger than ours, then we
+ * instead connect to send a GOSSIP message. The GOSSIP is a mean to
+ * connect to new servers without the need to define them on all your
+ * servers. Defining it on one server is enough to get things started.
  */
 
 // self
@@ -29,10 +35,19 @@
 #include    "server.h"
 
 
+// eventdispatcher
+//
+#include    <eventdispatcher/tcp_bio_client.h>
 
-namespace sc
+
+
+namespace scd
 {
 
+
+
+class remote_connection;
+class gossip_connection;
 
 
 class remote_snapcommunicators
@@ -45,24 +60,28 @@ public:
                                                   server::pointer_t communicator
                                                 , addr::addr const & my_addr);
 
-    std::string                             get_my_address() const;
-    void                                    add_remote_communicator(std::string const & addr);
+    addr::addr const &                      get_my_address() const;
+    void                                    add_remote_communicator(std::string const & addr_port);
     void                                    stop_gossiping();
-    void                                    too_busy(std::string const & addr);
-    void                                    shutting_down(std::string const & addr);
-    void                                    server_unreachable(std::string const & addr);
-    void                                    gossip_received(std::string const & addr);
-    void                                    forget_remote_connection(std::string const & addr);
-    tcp_client_server::bio_client::mode_t   connection_mode() const;
+    void                                    too_busy(addr::addr const & address);
+    void                                    shutting_down(addr::addr const & address);
+    void                                    server_unreachable(addr::addr const & address);
+    void                                    gossip_received(addr::addr const & address);
+    void                                    forget_remote_connection(addr::addr const & address);
     size_t                                  count_live_connections() const;
 
 private:
+    typedef std::map<addr::addr, std::shared_ptr<remote_connection>>
+                                            sorted_remote_connections_by_address_t;
+    typedef std::map<addr::addr, std::shared_ptr<gossip_connection>>
+                                            sorted_gossip_connections_by_address_t;
+
     server::pointer_t                       f_server = server::pointer_t();
     addr::addr const &                      f_my_address;
     int64_t                                 f_last_start_date = 0;
     sorted_list_of_addresses_t              f_all_ips = sorted_list_of_addresses_t();
-    sorted_list_of_addresses_t              f_smaller_ips = sorted_list_of_addresses_t();   // we connect to smaller IPs
-    sorted_list_of_addresses_t              f_gossip_ips = sorted_list_of_addresses_t();    // we gossip with larger IPs
+    sorted_remote_connections_by_address_t  f_smaller_ips = sorted_remote_connections_by_address_t();   // we connect to smaller IPs
+    sorted_gossip_connections_by_address_t  f_gossip_ips = sorted_gossip_connections_by_address_t();    // we gossip with larger IPs
 
     // larger IPs connect so they end up in the list with the local connections
     //service_connection_list_t               f_larger_ips = service_connection_list_t();       // larger IPs connect to us
@@ -70,5 +89,5 @@ private:
 
 
 
-} // sc namespace
+} // namespace scd
 // vim: ts=4 sw=4 et

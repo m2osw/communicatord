@@ -35,7 +35,7 @@
 
 
 
-namespace sc
+namespace scd
 {
 
 
@@ -48,5 +48,5 @@ std::string                 canonicalize_server_types(std::string const & server
 std::string                 canonicalize_neighbors(std::string const & neighbors);
 
 
-} // sc namespace
+} // namespace scd
 // vim: ts=4 sw=4 et

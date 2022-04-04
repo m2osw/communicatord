@@ -86,7 +86,7 @@
 
 
 
-namespace sc
+namespace scd
 {
 
 
@@ -122,5 +122,5 @@ void load_timer::process_timeout()
 
 
 
-} // sc namespace
+} // namespace scd
 // vim: ts=4 sw=4 et

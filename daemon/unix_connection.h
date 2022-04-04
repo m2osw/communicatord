@@ -80,7 +80,7 @@
 
 
 
-namespace sc
+namespace scd
 {
 
 
@@ -106,15 +106,13 @@ public:
     virtual void        process_hup() override;
     virtual void        process_invalid() override;
     void                properly_named();
-    addr::addr const &  get_address() const;
 
 private:
     std::string const   f_server_name;
-    addr::addr          f_address = addr::addr();
     bool                f_named = false;
 };
 
 
 
-} // sc namespace
+} // namespace scd
 // vim: ts=4 sw=4 et

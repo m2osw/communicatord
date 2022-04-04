@@ -24,15 +24,33 @@
  * cache.
  */
 
-// eventdispatcher lib
+// self
 //
-#include <eventdispatcher/message.h>
+#include    "cache.h"
+
+
+// advgetopt
+//
+#include    <advgetopt/validator_integer.h>
+
+
+// snaplogger
+//
+#include    <snaplogger/message.h>
+
+
+// snapdev
+//
+#include    <snapdev/tokenize_string.h>
+
+
+// last include
+//
+#include    <snapdev/poison.h>
 
 
 
-
-
-namespace sc
+namespace scd
 {
 
 
@@ -52,13 +70,13 @@ namespace sc
  */
 void cache::cache_message(ed::message const & msg)
 {
-    std::string cache;
-    if(message.has_parameter("cache"))
+    std::string cache_value;
+    if(msg.has_parameter("cache"))
     {
-        cache = message.get_parameter("cache");
+        cache_value = msg.get_parameter("cache");
     }
 
-    !f(cache == "no")
+    if(cache_value == "no")
     {
         return;
     }
@@ -66,7 +84,7 @@ void cache::cache_message(ed::message const & msg)
     // convert `cache` in a map of name/value parameters
     //
     std::list<std::string> cache_parameters;
-    snapdev::tokenize_string(cache_parameters, cache, { ";" }, true);
+    snapdev::tokenize_string(cache_parameters, cache_value, { ";" }, true);
     std::map<std::string, std::string> params;
     for(auto const & p : cache_parameters)
     {
@@ -122,7 +140,7 @@ void cache::cache_message(ed::message const & msg)
     //
     message_cache cache_message;
     cache_message.f_timeout_timestamp = time(nullptr) + ttl;
-    cache_message.f_message = message;
+    cache_message.f_message = msg;
     f_message_cache.push_back(cache_message);
 
 //#ifdef _DEBUG
@@ -132,7 +150,7 @@ void cache::cache_message(ed::message const & msg)
 //        << "cached command=[" << command
 //        << "], server_name=[" << server_name
 //        << "], service=[" << service
-//        << "], message=[" << message.to_message()
+//        << "], message=[" << msg.to_message()
 //        << "], ttl=[" << ttl
 //        << "]"
 //        << SNAP_LOG_SEND;
@@ -146,7 +164,7 @@ void cache::remove_old_messages()
     auto it(f_message_cache.begin());
     while(it != f_message_cache.end())
     {
-        if(now > i->f_timeout_timestamp)
+        if(now > it->f_timeout_timestamp)
         {
             it = f_message_cache.erase(it);
         }
@@ -164,8 +182,8 @@ void cache::process_messages(std::function<bool(ed::message const & msg)> callba
     auto it(f_message_cache.begin());
     while(it != f_message_cache.end())
     {
-        if(callback(i->f_message)
-        || now > i->f_timeout_timestamp)
+        if(callback(it->f_message)
+        || now > it->f_timeout_timestamp)
         {
             it = f_message_cache.erase(it);
         }
@@ -178,5 +196,5 @@ void cache::process_messages(std::function<bool(ed::message const & msg)> callba
 
 
 
-} // namespace sc
+} // namespace scd
 // vim: ts=4 sw=4 et

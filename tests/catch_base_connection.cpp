@@ -27,16 +27,21 @@
 //
 #include    "catch_main.h"
 
-// snapcommunicator
+
+// snapcommunicatord
 //
-#include    <snapcommunicator/base_connection.h>
+#include    <daemon/base_connection.h>
+
 
 
 class test_connection
     : public sc::base_connection
 {
 public:
-
+    test_connection(sc::server::pointer_t s)
+        : base_connection(s)
+    {
+    }
 };
 
 
@@ -44,7 +49,8 @@ CATCH_TEST_CASE("base_connection", "[connection]")
 {
     CATCH_SECTION("verify object")
     {
-        test_connection tc;
+        sc::server::pointer_t s;
+        test_connection tc(s);
 
         // verify defaults
         //

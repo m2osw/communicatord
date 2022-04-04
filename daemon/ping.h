@@ -38,7 +38,7 @@
 
 
 
-namespace sc
+namespace scd
 {
 
 
@@ -51,7 +51,7 @@ public:
 
                         ping(
                               server::pointer_t cs
-                            , std::string const & addr);
+                            , addr::addr const & address);
 
     // ed::udp_server_message_connection implementation
     virtual void        process_message(ed::message const & message) override;
@@ -62,5 +62,5 @@ private:
 
 
 
-} // sc namespace
+} // namespace scd
 // vim: ts=4 sw=4 et
