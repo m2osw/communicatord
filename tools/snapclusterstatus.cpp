@@ -112,7 +112,7 @@ public:
     int                         run();
 
     // implementation of connection_with_send_message
-    virtual bool                send_message(ed::message const & message, bool cache = false) override;
+    virtual bool                send_message(ed::message & message, bool cache = false) override;
 
     // implementation of snap::snapcommunicator::connection_with_send_message
     virtual void                ready(ed::message & message) override; // no "msg_" because that's in connection_with_send_message
@@ -271,7 +271,7 @@ int snapcluster::run()
 }
 
 
-bool snapcluster::send_message(ed::message const & message, bool cache)
+bool snapcluster::send_message(ed::message & message, bool cache)
 {
     return f_messenger->send_message(message, cache);
 }

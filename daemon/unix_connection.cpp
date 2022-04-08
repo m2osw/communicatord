@@ -140,7 +140,7 @@ unix_connection::unix_connection(
         , snapdev::raii_fd_t client
         , std::string const & server_name)
     : local_stream_server_client_message_connection(std::move(client))
-    , base_connection(cs)
+    , base_connection(cs, false)
     , f_server_name(server_name)
 {
 }
@@ -189,7 +189,7 @@ unix_connection::~unix_connection()
 
 
 // snap::snap_communicator::snap_tcp_server_client_message_connection implementation
-void unix_connection::process_message(ed::message const & msg)
+void unix_connection::process_message(ed::message & msg)
 {
     // make sure the destination knows who sent that message so it
     // is possible to directly reply to that specific instance of
@@ -197,21 +197,12 @@ void unix_connection::process_message(ed::message const & msg)
     //
     if(f_named)
     {
-        ed::message forward_message(msg);
-        forward_message.set_sent_from_server(f_server_name);
-        forward_message.set_sent_from_service(get_name());
-        f_server->process_message(
-                  shared_from_this()
-                , forward_message
-                , false);
+        msg.set_sent_from_server(f_server_name);
+        msg.set_sent_from_service(get_name());
     }
-    else
-    {
-        f_server->process_message(
-                  shared_from_this()
-                , msg
-                , false);
-    }
+    //f_server->process_message(shared_from_this(), msg, false);
+    msg.user_data(shared_from_this());
+    f_server->dispatch_message(msg);
 }
 
 

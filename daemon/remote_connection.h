@@ -60,9 +60,10 @@ public:
     virtual                         ~remote_connection() override;
 
     // tcp_client_permanent_message_connection implementation
-    virtual void                    process_message(ed::message const & msg) override;
+    virtual void                    process_message(ed::message & msg) override;
     virtual void                    process_connection_failed(std::string const & error_message) override;
     virtual void                    process_connected() override;
+    virtual bool                    send_message(ed::message & msg, bool cache = false);
 
     addr::addr const &              get_address() const;
 

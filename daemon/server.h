@@ -42,41 +42,9 @@
 #include    <advgetopt/advgetopt.h>
 
 
-//// snapdev lib
-////
-//#include <snapdev/not_used.h>
-//#include <snapdev/tokenize_string.h>
-
-
 // libaddr lib
 //
 #include    <libaddr/addr.h>
-//#include <libaddr/addr_parser.h>
-//#include <libaddr/iface.h>
-//
-//
-//// Qt lib
-////
-//#include <QFile>
-//
-//
-//// C++ lib
-////
-//#include <atomic>
-//#include <cmath>
-//#include <fstream>
-//#include <iomanip>
-//#include <sstream>
-//#include <thread>
-//
-//
-//// C lib
-////
-//#include <grp.h>
-//#include <pwd.h>
-//#include <sys/resource.h>
-
-
 
 
 
@@ -88,8 +56,12 @@ class base_connection;
 class remote_snapcommunicators;
 
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
 class server
     : public std::enable_shared_from_this<server>
+    , public ed::dispatcher_support
+    , public ed::connection_with_send_message
 {
 public:
     typedef std::shared_ptr<server>     pointer_t;
@@ -98,15 +70,23 @@ public:
 
                                 server(int argc, char * argv[]);
                                 server(server const & src) = delete;
+    virtual                     ~server() override;
     server &                    operator = (server const & rhs) = delete;
 
     int                         run();
 
-    // one place where all messages get processed
-    void                        process_message(
-                                          ed::connection::pointer_t connection
-                                        , ed::message const & message
-                                        , bool udp);
+    // ed::dispatcher_support implementation
+    virtual bool                dispatch_message(ed::message & msg) override;
+    virtual void                process_message(ed::message & msg) override;
+
+    // ed::connection_with_send_message implementation
+    virtual bool                send_message(ed::message & msg, bool cache = false) override;
+    virtual void                stop(bool quitting) override;
+
+    //void                        process_message(
+    //                                      ed::connection::pointer_t connection
+    //                                    , ed::message const & msg
+    //                                    , bool udp);
 
     void                        send_status(
                                           ed::connection::pointer_t connection
@@ -117,35 +97,62 @@ public:
     void                        remove_neighbor(std::string const & neighbor);
     void                        read_neighbors();
     void                        save_neighbors();
-    void                        verify_command(
+    bool                        verify_command(
                                           std::shared_ptr<base_connection> connection
                                         , ed::message const & message);
     void                        process_connected(ed::connection::pointer_t connection);
     void                        broadcast_message(
-                                          ed::message const & message
+                                          ed::message & message
                                         , std::vector<std::shared_ptr<base_connection>> const & accepting_remote_connections = std::vector<std::shared_ptr<base_connection>>());
     void                        process_load_balancing();
     void                        cluster_status(ed::connection::pointer_t reply_connection);
-    void                        shutdown(bool quitting);
+    bool                        is_debug() const;
+    bool                        is_tcp_connection(ed::message & msg); // connection defined in message is TCP (or Unix) opposed to UDP
+
+    void                        msg_accept(ed::message & msg);
+    void                        msg_clusterstatus(ed::message & msg);
+    void                        msg_commands(ed::message & msg);
+    void                        msg_connect(ed::message & msg);
+    void                        msg_disconnect(ed::message & msg);
+    void                        msg_forget(ed::message & msg);
+    void                        msg_gossip(ed::message & msg);
+    void                        msg_listen_loadavg(ed::message & msg);
+    void                        msg_list_services(ed::message & msg);
+    virtual void                msg_log_unknown(ed::message & msg); // reimplementation to indicate the name of the connection when available
+    void                        msg_public_ip(ed::message & msg);
+    void                        msg_quitting(ed::message & msg);
+    void                        msg_refuse(ed::message & msg);
+    void                        msg_register(ed::message & msg);
+    void                        msg_registerforloadavg(ed::message & msg);
+    void                        msg_save_loadavg(ed::message & msg);
+    void                        msg_servicestatus(ed::message & msg);
+    void                        msg_shutdown(ed::message & msg);
+    void                        msg_unregister(ed::message & msg);
+    void                        msg_unregisterforloadavg(ed::message & msg);
 
 private:
     int                         init();
     void                        drop_privileges();
     void                        refresh_heard_of();
-    void                        listen_loadavg(ed::message const & message);
-    void                        save_loadavg(ed::message const & message);
     void                        register_for_loadavg(std::string const & ip);
+    bool                        shutting_down(ed::message & msg);
+    bool                        check_broadcast_message(ed::message const & msg);
+    bool                        snapcommunicator_message(ed::message & msg);
+    void                        transmission_report(ed::message & msg);
 
     //snap::server::pointer_t   f_server = snap::server::pointer_t(); -- this was the snapwebsites server
 
     advgetopt::getopt               f_opts;
     ed::logrotate_extension         f_logrotate;
+    ed::dispatcher<server>::pointer_t
+                                    f_dispatcher = ed::dispatcher<server>::pointer_t();
     std::string                     f_server_name = std::string();
     int                             f_number_of_processors = 1;
     std::string                     f_neighbors_cache_filename = std::string();
     std::string                     f_user_name = std::string();
     std::string                     f_group_name = std::string();
-    std::string                     f_public_ip = std::string();        // f_listener IP address
+    std::string                     f_public_ip = std::string();        // f_listener IP address for plain connections
+    std::string                     f_secure_ip = std::string();        // f_listener IP address with TLS
     ed::communicator::pointer_t     f_communicator = ed::communicator::pointer_t();
     ed::connection::pointer_t       f_interrupt = ed::connection::pointer_t();        // TCP/IP
     ed::connection::pointer_t       f_local_listener = ed::connection::pointer_t();   // TCP/IP
@@ -168,6 +175,7 @@ private:
     size_t                          f_max_connections = SNAP_COMMUNICATOR_MAX_CONNECTIONS;
     size_t                          f_total_count_sent = 0; // f_all_neighbors.size() sent along CLUSTERUP/DOWN/COMPLETE/INCOMPLETE
     bool                            f_shutdown = false;
+    bool                            f_debug = false;
     bool                            f_debug_all_messages = false;
     bool                            f_force_restart = false;
     cache                           f_local_message_cache = cache();
@@ -175,6 +183,7 @@ private:
     std::string                     f_cluster_status = std::string();
     std::string                     f_cluster_complete = std::string();
 };
+#pragma GCC diagnostic pop
 
 
 

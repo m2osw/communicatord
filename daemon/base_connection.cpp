@@ -55,16 +55,9 @@
 #include    "base_connection.h"
 
 
-// // snapwebsites lib
-// //
-// #include <snapwebsites/chownnm.h>
-// #include <snapwebsites/flags.h>
-// #include <snapwebsites/glob_dir.h>
-// #include <snapwebsites/loadavg.h>
-// #include <snapwebsites/log.h>
-// #include <snapwebsites/qcompatibility.h>
-// #include <snapwebsites/snap_communicator.h>
-// #include <snapwebsites/snapwebsites.h>
+// snapcommunicator
+//
+#include <snapcommunicator/exception.h>
 
 
 // snapdev lib
@@ -72,36 +65,9 @@
 #include <snapdev/tokenize_string.h>
 
 
-// // libaddr lib
-// //
-// #include <libaddr/addr_exception.h>
-// #include <libaddr/addr_parser.h>
-// #include <libaddr/iface.h>
-// 
-// 
-// // C++ lib
-// //
-// #include <atomic>
-// #include <cmath>
-// #include <fstream>
-// #include <iomanip>
-// #include <sstream>
-// #include <thread>
-// 
-// 
-// // C lib
-// //
-// #include <grp.h>
-// #include <pwd.h>
-// #include <sys/resource.h>
-
-
 // included last
 //
 #include <snapdev/poison.h>
-
-
-
 
 
 
@@ -117,8 +83,11 @@ namespace scd
  * The constructor saves the communicator server pointer
  * so one can access it from any derived version.
  */
-base_connection::base_connection(server::pointer_t cs)
+base_connection::base_connection(
+          server::pointer_t cs
+        , bool is_udp)
     : f_server(cs)
+    , f_is_udp(is_udp)
 {
 }
 
@@ -464,6 +433,24 @@ bool base_connection::is_remote() const
 }
 
 
+/** \brief The function returns true if this is a UDP connection.
+ *
+ * This function returns the f_is_udp flag which is true if the connection
+ * represents a UDP (datagram based) connection.
+ *
+ * At this time, we only have one UDP connection recorded here. The connection
+ * managed by the f_logrotate object is not added to the snapcommunicator
+ * system (it does not even derive from the base_connection; although we may
+ * stop using that sub-object because the ping class is probably enough).
+ *
+ * \return true if the connection is a datagram based connection.
+ */
+bool base_connection::is_udp() const
+{
+    return f_is_udp;
+}
+
+
 /** \brief Set whether this connection wants to receive LOADAVG messages.
  *
  * Whenever a frontend wants to know which backend to use for its
@@ -491,6 +478,17 @@ void base_connection::set_wants_loadavg(bool wants_loadavg)
 bool base_connection::wants_loadavg() const
 {
     return f_wants_loadavg;
+}
+
+
+bool base_connection::send_message(ed::message & msg, bool cache)
+{
+    ed::connection * conn(dynamic_cast<ed::connection *>(this));
+    if(conn == nullptr)
+    {
+        throw sc::snapcommunicator_logic_error("somehow a dynamic_cast<ed::connection *> on our base_connection failed.");
+    }
+    return std::dynamic_pointer_cast<ed::connection_with_send_message>(conn->shared_from_this())->send_message(msg, cache);
 }
 
 

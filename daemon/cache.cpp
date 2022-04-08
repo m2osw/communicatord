@@ -68,7 +68,7 @@ namespace scd
  *
  * \param[in] msg  The message to save in the cache.
  */
-void cache::cache_message(ed::message const & msg)
+void cache::cache_message(ed::message & msg)
 {
     std::string cache_value;
     if(msg.has_parameter("cache"))
@@ -176,7 +176,7 @@ void cache::remove_old_messages()
 }
 
 
-void cache::process_messages(std::function<bool(ed::message const & msg)> callback)
+void cache::process_messages(std::function<bool(ed::message & msg)> callback)
 {
     time_t const now(time(nullptr));
     auto it(f_message_cache.begin());

@@ -34,54 +34,6 @@
 // eventdispatcher
 //
 #include    <eventdispatcher/tcp_client_permanent_message_connection.h>
-//#include <snapwebsites/flags.h>
-//#include <snapwebsites/glob_dir.h>
-//#include <snapwebsites/loadavg.h>
-//#include <snapwebsites/log.h>
-//#include <snapwebsites/qcompatibility.h>
-//#include <snapwebsites/snap_communicator.h>
-//#include <snapwebsites/snapwebsites.h>
-//
-//
-//// snapdev lib
-////
-//#include <snapdev/not_used.h>
-//#include <snapdev/tokenize_string.h>
-//
-//
-//// libaddr lib
-////
-//#include <libaddr/addr_exception.h>
-//#include <libaddr/addr_parser.h>
-//#include <libaddr/iface.h>
-//
-//
-//// Qt lib
-////
-//#include <QFile>
-//
-//
-//// C++ lib
-////
-//#include <atomic>
-//#include <cmath>
-//#include <fstream>
-//#include <iomanip>
-//#include <sstream>
-//#include <thread>
-//
-//
-//// C lib
-////
-//#include <grp.h>
-//#include <pwd.h>
-//#include <sys/resource.h>
-
-
-
-
-
-
 
 
 
@@ -105,7 +57,7 @@ public:
     virtual void                process_timeout();
 
     // tcp_client_permanent_message_connection implementation
-    virtual void                process_message(ed::message const & msg) override;
+    virtual void                process_message(ed::message & msg) override;
     virtual void                process_connection_failed(std::string const & error_message) override;
     virtual void                process_connected() override;
 

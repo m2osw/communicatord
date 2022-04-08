@@ -29,7 +29,7 @@
 
 // self
 //
-#include    "server.h"
+#include    "base_connection.h"
 
 
 // eventdispatcher
@@ -45,6 +45,7 @@ namespace scd
 
 class ping
     : public ed::udp_server_message_connection
+    , public base_connection
 {
 public:
     typedef std::shared_ptr<ping>  pointer_t;
@@ -54,10 +55,7 @@ public:
                             , addr::addr const & address);
 
     // ed::udp_server_message_connection implementation
-    virtual void        process_message(ed::message const & message) override;
-
-private:
-    server::pointer_t   f_server = server::pointer_t();
+    virtual void        process_message(ed::message & msg) override;
 };
 
 

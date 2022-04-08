@@ -28,6 +28,7 @@ configure_file(
 )
 
 add_library(${PROJECT_NAME} SHARED
+    loadavg.cpp
     snapcommunicator.cpp
     version.cpp
 )
@@ -37,6 +38,7 @@ target_include_directories(${PROJECT_NAME}
         ${EDHTTP_INCLUDE_DIRS}
         ${EVENTDISPATCHER_INCLUDE_DIRS}
         ${LIBEXCEPT_INCLUDE_DIRS}
+        ${SERVERPLUGINS_INCLUDE_DIRS}
         ${SNAPLOGGER_INCLUDE_DIRS}
         ${LIBADDR_INCLUDE_DIRS}
 )

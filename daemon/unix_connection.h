@@ -98,7 +98,7 @@ public:
     virtual             ~unix_connection() override;
 
     // snap::snap_communicator::snap_tcp_server_client_message_connection implementation
-    virtual void        process_message(ed::message const & msg) override;
+    virtual void        process_message(ed::message & msg) override;
 
     void                send_status();
     virtual void        process_timeout() override;

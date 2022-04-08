@@ -41,6 +41,9 @@ DECLARE_MAIN_EXCEPTION(snapcommunicator_error);
 
 DECLARE_EXCEPTION(snapcommunicator_error, address_missing);
 DECLARE_EXCEPTION(snapcommunicator_error, connection_unavailable);
+DECLARE_EXCEPTION(snapcommunicator_error, missing_message);
+DECLARE_EXCEPTION(snapcommunicator_error, missing_name);
+DECLARE_EXCEPTION(snapcommunicator_error, path_already_set);
 DECLARE_EXCEPTION(snapcommunicator_error, unexpected_message);
 DECLARE_EXCEPTION(snapcommunicator_error, unexpected_message_parameter);
 DECLARE_EXCEPTION(snapcommunicator_error, unknown_command);

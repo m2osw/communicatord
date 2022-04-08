@@ -37,59 +37,14 @@
 #include    "gossip_connection.h"
 
 
-//// snapwebsites lib
-////
-//#include <snapwebsites/chownnm.h>
-//#include <snapwebsites/flags.h>
-//#include <snapwebsites/glob_dir.h>
-//#include <snapwebsites/loadavg.h>
-//#include <snapwebsites/log.h>
-//#include <snapwebsites/qcompatibility.h>
-//#include <snapwebsites/snap_communicator.h>
-//#include <snapwebsites/snapwebsites.h>
-
-
 // snaplogger
 //
 #include    <snaplogger/message.h>
 
 
-//// libaddr lib
-////
-//#include <libaddr/addr_exception.h>
-//#include <libaddr/addr_parser.h>
-//#include <libaddr/iface.h>
-//
-//
-//// Qt lib
-////
-//#include <QFile>
-//
-//
-//// C++ lib
-////
-//#include <atomic>
-//#include <cmath>
-//#include <fstream>
-//#include <iomanip>
-//#include <sstream>
-//#include <thread>
-//
-//
-//// C lib
-////
-//#include <grp.h>
-//#include <pwd.h>
-//#include <sys/resource.h>
-
-
 // included last
 //
 #include <snapdev/poison.h>
-
-
-
-
 
 
 
@@ -135,11 +90,10 @@ namespace scd
  * use a PLAIN connection for a GOSSIP message, but if the IP:port we
  * were given represent a SECURE port, then it won't work.
  *
- * \param[in] cs  The snap communicator server object which we contact
- *                whenever the GOSSIP message was confirmed by the
- *                remote connection.
- * \param[in] addr  The IP address of the remote snap communicator.
- * \param[in] port  The port to connect to that snap communicator.
+ * \param[in] rcs  The remote snap communicators object which we contact
+ *                 whenever the GOSSIP message was confirmed by the
+ *                 remote connection.
+ * \param[in] address  The IP:port address of the remote snap communicator.
  */
 gossip_connection::gossip_connection(
                   remote_snapcommunicators::pointer_t rcs
@@ -199,7 +153,7 @@ void gossip_connection::process_timeout()
  *
  * \param[in] message  The message received from the remote snapcommunicator.
  */
-void gossip_connection::process_message(ed::message const & msg)
+void gossip_connection::process_message(ed::message & msg)
 {
     SNAP_LOG_TRACE
         << "gossip connection received a message ["

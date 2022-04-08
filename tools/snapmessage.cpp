@@ -294,10 +294,10 @@ public:
         std::cerr << "error: the connection is invalid." << std::endl;
     }
 
-    virtual void process_message(ed::message const & message) override
+    virtual void process_message(ed::message & msg) override
     {
         std::cout << "success: received message: "
-                  << message.to_message()
+                  << msg.to_message()
                   << '\n';
     }
 

@@ -37,30 +37,6 @@
 #include    <eventdispatcher/connection.h>
 
 
-// libaddr lib
-//
-//#include <libaddr/addr_exception.h>
-//#include <libaddr/addr_parser.h>
-//#include <libaddr/iface.h>
-
-
-// C++ lib
-//
-//#include <atomic>
-//#include <cmath>
-//#include <fstream>
-//#include <iomanip>
-//#include <sstream>
-//#include <thread>
-
-
-// C lib
-//
-//#include <grp.h>
-//#include <pwd.h>
-//#include <sys/resource.h>
-
-
 
 namespace scd
 {
@@ -75,13 +51,16 @@ enum class connection_type_t
 };
 
 
+
 class base_connection
 {
 public:
     typedef std::shared_ptr<base_connection>    pointer_t;
     typedef std::vector<pointer_t>              vector_t;
 
-                                base_connection(server::pointer_t cs);
+                                base_connection(
+                                      server::pointer_t cs
+                                    , bool is_udp);
     virtual                     ~base_connection();
 
     void                        connection_started();
@@ -105,8 +84,12 @@ public:
     void                        remove_command(std::string const & command);
     void                        mark_as_remote();
     bool                        is_remote() const;
+    bool                        is_udp() const;
     void                        set_wants_loadavg(bool wants_loadavg);
     bool                        wants_loadavg() const;
+
+    // allows us to send messages directly from the base_connection class
+    virtual bool                send_message(ed::message & msg, bool cache = false);
 
 protected:
     server::pointer_t           f_server = server::pointer_t();
@@ -122,6 +105,7 @@ private:
     sorted_list_of_strings_t    f_services_heard_of = sorted_list_of_strings_t();
     bool                        f_remote_connection = false;
     bool                        f_wants_loadavg = false;
+    bool                        f_is_udp = false;
 };
 
 

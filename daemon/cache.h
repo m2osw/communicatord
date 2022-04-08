@@ -45,9 +45,9 @@ namespace scd
 class cache
 {
 public:
-    void                cache_message(ed::message const & msg);
+    void                cache_message(ed::message & msg);
     void                remove_old_messages();
-    void                process_messages(std::function<bool(ed::message const & msg)> callback);
+    void                process_messages(std::function<bool(ed::message & msg)> callback);
 
 private:
     class message_cache

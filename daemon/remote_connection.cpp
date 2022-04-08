@@ -98,7 +98,7 @@ remote_connection::remote_connection(
                 ? ed::mode_t::MODE_SECURE
                 : ed::mode_t::MODE_PLAIN)
             , REMOTE_CONNECTION_DEFAULT_TIMEOUT)
-    , base_connection(cs)
+    , base_connection(cs, false)
     , f_address(address)
 {
 }
@@ -119,14 +119,16 @@ remote_connection::~remote_connection()
 }
 
 
-void remote_connection::process_message(ed::message const & message)
+void remote_connection::process_message(ed::message & msg)
 {
     if(f_server_name.empty())
     {
-        f_server_name = message.get_sent_from_server();
+        f_server_name = msg.get_sent_from_server();
     }
 
-    f_server->process_message(shared_from_this(), message, false);
+    //f_server->process_message(shared_from_this(), message, false);
+    msg.user_data(shared_from_this());
+    f_server->dispatch_message(msg);
 }
 
 
@@ -271,6 +273,12 @@ void remote_connection::process_connected()
     // slowdown over time
     //
     set_timeout_delay(REMOTE_CONNECTION_DEFAULT_TIMEOUT);
+}
+
+
+bool remote_connection::send_message(ed::message & msg, bool cache)
+{
+    return tcp_client_permanent_message_connection::send_message(msg, cache);
 }
 
 

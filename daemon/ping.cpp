@@ -106,14 +106,16 @@ namespace scd
  */
 ping::ping(server::pointer_t cs, addr::addr const & address)
     : udp_server_message_connection(address)
-    , f_server(cs)
+    , base_connection(cs, true)
 {
 }
 
 
-void ping::process_message(ed::message const & msg)
+void ping::process_message(ed::message & msg)
 {
-    f_server->process_message(shared_from_this(), msg, true);
+    //f_server->process_message(shared_from_this(), msg, true);
+    msg.user_data(shared_from_this());
+    f_server->dispatch_message(msg);
 }
 
 

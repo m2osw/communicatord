@@ -97,8 +97,9 @@ public:
                                 , std::string const & server_name);
     virtual             ~service_connection() override;
 
-    // snap::snap_communicator::snap_tcp_server_client_message_connection implementation
-    virtual void        process_message(ed::message const & msg) override;
+    // ed::tcp_server_client_message_connection implementation
+    virtual void        process_message(ed::message & msg) override;
+    virtual bool        send_message(ed::message & msg, bool cache = false);
 
     void                send_status();
     virtual void        process_timeout() override;

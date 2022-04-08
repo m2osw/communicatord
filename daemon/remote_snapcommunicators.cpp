@@ -198,7 +198,9 @@ void remote_snapcommunicators::add_remote_communicator(std::string const & addr_
         // smaller connections are created as remote snap communicator
         // which are permanent message connections
         //
-        remote_connection::pointer_t remote_conn(std::make_shared<remote_connection>(f_server, remote_addr));
+        // TODO: how to choose whether to use TLS or not here?
+        //
+        remote_connection::pointer_t remote_conn(std::make_shared<remote_connection>(f_server, remote_addr, false));
         f_smaller_ips[remote_addr] = remote_conn;
         remote_conn->set_name("remote communicator connection: " + addr);
 

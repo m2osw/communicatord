@@ -45,6 +45,7 @@
 // snapcommunicator
 //
 #include    <snapcommunicator/exception.h>
+#include    <snapcommunicator/loadavg.h>
 #include    <snapcommunicator/version.h>
 
 
@@ -52,6 +53,11 @@
 //
 #include    <advgetopt/exception.h>
 #include    <advgetopt/options.h>
+
+
+// serverplugins
+//
+#include    <serverplugins/plugin.h>
 
 
 // libaddr
@@ -121,6 +127,31 @@ namespace scd
 
 namespace
 {
+
+
+char const *        g_status_filename = "/var/lib/snapwebsites/cluster-status.txt";
+
+
+/** \brief The sequence number of a message being broadcast.
+ *
+ * Each instance of snapcommunicator may broadcast a message to other
+ * snapcommunicators. When that happens, we want to ignore that
+ * message in case it comes again to the same snapcommunicator. This
+ * can be accomplished by saving which messages we received.
+ *
+ * We also control a number of hops and a timeout.
+ *
+ * This counter is added to the name of the computer running this
+ * snapcommunicator (i.e. f_server_name) so for example it would
+ * look as following if the computer name is "snap":
+ *
+ * \code
+ *          snap-123
+ * \endcode
+ */
+int64_t             g_broadcast_sequence = 0;
+
+
 
 
 const advgetopt::option g_options[] =
@@ -312,6 +343,112 @@ advgetopt::options_environment const g_options_environment =
 };
 #pragma GCC diagnostic pop
 
+
+/** \brief List of messages understood by the snapcommunicator.
+ *
+ * The snapcommunicator daemon propagates messages between services. It
+ * also understands a certain number of messages to implement the
+ * communication channels appropriately.
+ *
+ * The following table includes comments about messages that are
+ * implemented in the connection_with_send_message class which the
+ * server derives from. It would be possible to reimplement those
+ * functions here, but the version in that eventdispatcher class
+ * work as expected so far.
+ */
+ed::dispatcher<server>::dispatcher_match::vector_t const g_server_messages =
+{
+    {
+          "ACCEPT"
+        , &server::msg_accept
+    },
+    // default in dispatcher: ALIVE
+    {
+          "CLUSTERSTATUS"
+        , &server::msg_clusterstatus
+    },
+    {
+          "COMMANDS"
+        , &server::msg_commands
+    },
+    {
+          "CONNECT"
+        , &server::msg_connect
+    },
+    {
+          "DISCONNECT"
+        , &server::msg_disconnect
+    },
+    {
+          "FORGET"
+        , &server::msg_forget
+    },
+    {
+          "GOSSIP"
+        , &server::msg_gossip
+    },
+    // default in dispatcher: HELP
+    // default in dispatcher: LEAK
+    {
+          "LISTENLOADAVG"
+        , &server::msg_listen_loadavg
+    },
+    {
+          "LISTSERVICES"
+        , &server::msg_list_services
+    },
+    {
+          "LOADAVG"
+        , &server::msg_save_loadavg
+    },
+    // default in dispatcher: LOG
+    {
+          "PUBLIC_IP"
+        , &server::msg_public_ip
+    },
+    // default in dispatcher: QUITTING -- the default is not valid for us
+    {
+          "QUITTING"
+        , &server::msg_public_ip
+    },
+    // default in dispatcher: READY
+    {
+          "REFUSE"
+        , &server::msg_refuse
+    },
+    {
+          "REGISTER"
+        , &server::msg_register
+    },
+    {
+          "REGISTERFORLOADAVG"
+        , &server::msg_registerforloadavg
+    },
+    // default in dispatcher: RESTART
+    {
+          "SERVICESTATUS"
+          , &server::msg_servicestatus
+    },
+    {
+          "SHUTDOWN"
+        , &server::msg_shutdown
+    },
+    {
+          "UNREGISTER"
+        , &server::msg_unregister
+    },
+    {
+          "UNREGISTERFORLOADAVG"
+        , &server::msg_unregisterforloadavg
+    },
+    // default in dispatcher: STOP -- we overload the stop() which gets called by the message implementation
+    // default in dispatcher: UNKNOWN -- we overload the function to include more details in the log
+
+    // others are handled with the eventdispatcher defaults
+};
+
+
+
 }
 // noname namespace
 
@@ -333,10 +470,16 @@ advgetopt::options_environment const g_options_environment =
  * This function saves the server pointer in the server
  * object. It is used later to gather various information and call helper
  * functions.
+ *
+ * \param[in] argc  The number of arguments in \p argv.
+ * \param[in] argv  The command line arguments.
  */
 server::server(int argc, char * argv[])
     : f_opts(g_options_environment)
     , f_logrotate(f_opts, "127.0.0.1", 4043)
+    , f_dispatcher(std::make_shared<ed::dispatcher<server>>(
+                          this
+                        , g_server_messages))
 {
     snaplogger::add_logger_options(f_opts);
     f_logrotate.add_logrotate_options();
@@ -347,6 +490,19 @@ server::server(int argc, char * argv[])
         throw advgetopt::getopt_exit("logger options generated an error.", 1);
     }
     f_logrotate.process_logrotate_options();
+
+    f_dispatcher->add_communicator_commands();
+#ifdef _DEBUG
+    if(advgetopt::is_true(f_opts.get_string("debug_all_messages")))
+    {
+        f_dispatcher->set_trace();
+    }
+#endif
+}
+
+
+server::~server()
+{
 }
 
 
@@ -376,6 +532,7 @@ int server::init()
 
     f_number_of_processors = std::max(1U, std::thread::hardware_concurrency());
 
+    f_debug = advgetopt::is_true(f_opts.get_string("debug"));
     f_debug_all_messages = advgetopt::is_true(f_opts.get_string("debug_all_messages"));
 
     // check a user defined maximum number of connections
@@ -383,6 +540,8 @@ int server::init()
     // which at this time is 100
     //
     f_max_connections = f_opts.get_long("max_connections");
+
+    sc::set_loadavg_path(f_opts.get_string("data_path"));
 
     // read the list of available services
     //
@@ -536,6 +695,7 @@ int server::init()
         //
         if(secure_listen.get_network_type() != addr::addr::network_type_t::NETWORK_TYPE_LOOPBACK)
         {
+            f_secure_ip = secure_listen.to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_BRACKETS);
             f_secure_listener = std::make_shared<listener>(
                       shared_from_this()
                     , secure_listen
@@ -776,7 +936,7 @@ int server::run()
  * \param[in,out] connection  The concerned connection that has to understand the command.
  * \param[in] message  The message about to be sent to \p connection.
  */
-void server::verify_command(
+bool server::verify_command(
           base_connection::pointer_t connection
         , ed::message const & msg)
 {
@@ -785,7 +945,7 @@ void server::verify_command(
     if(!f_debug_all_messages)
     {
         // nope, do not waste any more time
-        return;
+        return true;
     }
 
     if(!connection->has_commands())
@@ -794,14 +954,14 @@ void server::verify_command(
         // pretend that the understand_command() will return a sensible
         // result, so ignore that test...
         //
-        return;
+        return true;
     }
 
     if(connection->understand_command(msg.get_command()))
     {
         // all good, the command is implemented
         //
-        return;
+        return true;
     }
 
     // if you get this message, it could be that you do implement
@@ -809,26 +969,26 @@ void server::verify_command(
     // reply to the HELP message sent by snapcommunicator
     //
     ed::connection::pointer_t c(std::dynamic_pointer_cast<ed::connection>(connection));
-    if(c)
+    if(c != nullptr)
     {
-        std::stringstream ss;
-        ss << "connection \""
-           << c->get_name()
-           << "\" does not implement command \""
-           << msg.get_command()
-           << "\".";
-        SNAP_LOG_FATAL << ss << SNAP_LOG_SEND;
-        throw sc::unknown_command(ss.str());
+        SNAP_LOG_ERROR
+            << "connection \""
+            << c->get_name()
+            << "\" does not implement command \""
+            << msg.get_command()
+            << "\"."
+            << SNAP_LOG_SEND;
     }
     else
     {
-        std::stringstream ss;
-        ss << "connection does not understand command \""
-           << msg.get_command()
-           << "\".";
-        SNAP_LOG_FATAL << ss << SNAP_LOG_SEND;
-        throw sc::unknown_command(ss.str());
+        SNAP_LOG_ERROR
+            << "connection does not understand command \""
+            << msg.get_command()
+            << "\"."
+            << SNAP_LOG_SEND;
     }
+
+    return false;
 }
 
 
@@ -846,1297 +1006,10 @@ void server::verify_command(
  * not have sent an ACCEPT as a response to a CONNECT over a UDP
  * connection.)
  *
- * \param[in] connection  The connection that just sent us that message.
  * \param[in] message  The message were were just sent.
- * \param[in] udp  If true, this was a UDP message.
  */
-void server::process_message(
-          ed::connection::pointer_t connection
-        , ed::message const & message
-        , bool udp)
+void server::process_message(ed::message & msg)
 {
-    // messages being broadcast to us have a unique ID, if that ID is
-    // one we already received we must ignore the message altogether;
-    // also, a broadcast message has a timeout, we must ignore the
-    // message if it already timed out
-    //
-    if(message.has_parameter("broadcast_msgid"))
-    {
-        // check whether the message already timed out
-        //
-        // this is a safety feature of our broadcasting capability
-        // which should rarely be activated unless you have multiple
-        // data center locations
-        //
-        time_t const timeout(message.get_integer_parameter("broadcast_timeout"));
-        time_t const now(time(nullptr));
-        if(timeout < now)
-        {
-            return;
-        }
-
-        // check whether we already received that message, if so ignore
-        // the second instance (it should not happen with the list of
-        // neighbors included in the message, but just in case...)
-        //
-        QString const broadcast_msgid(message.get_parameter("broadcast_msgid"));
-        auto const received_it(f_received_broadcast_messages.find(broadcast_msgid));
-        if(received_it != f_received_broadcast_messages.cend())     // message arrived again?
-        {
-            // note that although we include neighbors it is normal that
-            // this happens in a cluster where some computers are not
-            // aware of certain nodes; for example, if A sends a
-            // message to B and C, both B and C know of a node D
-            // which is unknown to A, then both B and C end up
-            // forwarding that same message to D, so D will discard
-            // the second instance it receives.
-            //
-            return;
-        }
-    }
-
-    // if the destination server was specified, we have to forward
-    // the message to that specific server
-    //
-    QString const server_name(message.get_server() == "." ? f_server_name : message.get_server());
-    QString const service(message.get_service());
-    QString const command(message.get_command());
-    QString const sent_from_service(message.get_sent_from_service());
-
-    if(f_debug_all_messages
-    || (command != "UNLOCKED"
-     && sent_from_service != "snaplock"
-     && !sent_from_service.startsWith("lock_")
-     && (command != "REGISTER"
-         || !message.has_parameter("service")
-         || !message.get_parameter("service").startsWith("lock_"))
-     && command != "SNAPLOG"))
-    {
-        SNAP_LOG_TRACE("received command=[")(command)
-                ("], server_name=[")(server_name)
-                ("], service=[")(service)
-                ("], message=[")(message.to_message())
-                ("]");
-    }
-
-    base_connection::pointer_t base(std::dynamic_pointer_cast<base_connection>(connection));
-    remote_connection::pointer_t remote_conn(std::dynamic_pointer_cast<remote_connection>(connection));
-    service_connection::pointer_t service_conn(std::dynamic_pointer_cast<service_connection>(connection));
-
-    // TODO: move all the command bodies to sub-funtions.
-
-    // check whether this message is for us
-    //
-    if((server_name.isEmpty() || server_name == f_server_name || server_name == "*")    // match server
-    && (service.isEmpty() || service == "snapcommunicator"))                            // and service?
-    {
-        if(f_shutdown)
-        {
-            // if the user sent us an UNREGISTER we should not generate a
-            // QUITTING because the UNREGISTER is in reply to our STOP
-            // TBD: we may want to implement the UNREGISTER in this
-            //      situation?
-            //
-            if(!udp)
-            {
-                if(command != "UNREGISTER")
-                {
-                    // we are shutting down so just send a quick QUTTING reply
-                    // letting the other process know about it
-                    //
-                    snap::snap_communicator_message reply;
-                    reply.set_command("QUITTING");
-
-                    verify_command(base, reply);
-                    if(remote_conn != nullptr)
-                    {
-                        remote_conn->send_message(reply);
-                    }
-                    else if(service_conn)
-                    {
-                        service_conn->send_message(reply);
-                    }
-                    else
-                    {
-                        // we have to have a remote or service connection here
-                        //
-                        throw snap::snap_exception(
-                                  "message \""
-                                + command
-                                + "\" sent on a \"weird\" connection.");
-                    }
-                }
-
-                // get rid of that connection now, we don't need any more
-                // messages coming from it
-                //
-                f_communicator->remove_connection(connection);
-            }
-            //else -- UDP message arriving after f_shutdown are ignored
-            return;
-        }
-
-        // this one is for us!
-        switch(command[0].unicode())
-        {
-        case 'A':
-            if(command == "ACCEPT")
-            {
-                if(udp)
-                {
-                    SNAP_LOG_ERROR
-                        << "ACCEPT is only accepted over a TCP connection."
-                        << SNAP_LOG_SEND;
-                    return;
-                }
-
-                if(base)
-                {
-                    // the type is mandatory in an ACCEPT message
-                    //
-                    if(!message.has_parameter("server_name")
-                    || !message.has_parameter("my_address"))
-                    {
-                        SNAP_LOG_ERROR
-                            << "ACCEPT was received without a \"server_name\" parameter, which is mandatory."
-                            << SNAP_LOG_SEND;
-                        return;
-                    }
-                    base->set_connection_type(base_connection::connection_type_t::CONNECTION_TYPE_REMOTE);
-                    std::string const & remote_server_name(message.get_parameter("server_name"));
-                    base->set_server_name(remote_server_name);
-
-                    // reply to a CONNECT, this was to connect to another
-                    // snapcommunicator on another computer, retrieve the
-                    // data from that remote computer
-                    //
-                    base->connection_started();
-                    std::string const his_address(message.get_parameter("my_address"));
-                    base->set_my_address(his_address);
-
-                    if(message.has_parameter("services"))
-                    {
-                        base->set_services(message.get_parameter("services"));
-                    }
-                    if(message.has_parameter("heard_of"))
-                    {
-                        base->set_services_heard_of(message.get_parameter("heard_of"));
-                    }
-                    if(message.has_parameter("neighbors"))
-                    {
-                        add_neighbors(message.get_parameter("neighbors"));
-                    }
-
-                    // we just got some new services information,
-                    // refresh our cache
-                    //
-                    refresh_heard_of();
-
-                    // also request the COMMANDS of this connection
-                    //
-                    snap::snap_communicator_message help;
-                    help.set_command("HELP");
-                    //verify_command(base, help); -- precisely
-                    if(remote_conn != nullptr)
-                    {
-                        remote_conn->send_message(help);
-                    }
-                    else if(service_conn)
-                    {
-                        service_conn->send_message(help);
-                    }
-                    else
-                    {
-                        // we have to have a remote or service connection here
-                        //
-                        throw snap::snap_exception(QString("message \"%1\" sent on a \"weird\" connection.").arg(command));
-                    }
-
-                    // if a local service was interested in this specific
-                    // computer, then we have to start receiving LOADAVG
-                    // messages from it
-                    //
-                    register_for_loadavg(his_address);
-
-                    // now let local services know that we have a new
-                    // remote connections (which may be of interest
-                    // for that service--see snapmanagerdaemon)
-                    //
-                    // TODO: to be symmetrical, we should also have
-                    //       a message telling us when a remote
-                    //       connection goes down...
-                    //
-                    snap::snap_communicator_message new_remote_connection;
-                    new_remote_connection.set_command("NEWREMOTECONNECTION");
-                    new_remote_connection.set_service(".");
-                    new_remote_connection.add_parameter("server_name", remote_server_name);
-                    broadcast_message(new_remote_connection);
-                    return;
-                }
-            }
-            break;
-
-        case 'C':
-            if(command == "CLUSTERSTATUS")
-            {
-                if(udp)
-                {
-                    SNAP_LOG_ERROR("CLUSTERSTATUS is only accepted over a TCP connection.");
-                    return;
-                }
-
-                if(base != nullptr)
-                {
-                    cluster_status(connection);
-                    return;
-                }
-            }
-            else if(command == "COMMANDS")
-            {
-                if(udp)
-                {
-                    SNAP_LOG_ERROR("COMMANDS is only accepted over a TCP connection.");
-                    return;
-                }
-
-                if(base != nullptr)
-                {
-                    if(message.has_parameter("list"))
-                    {
-                        base->set_commands(message.get_parameter("list"));
-
-                        // here we verify that a few commands are properly
-                        // defined, for some becausesince we already sent
-                        // them to that connection and thus it should
-                        // understand them; and a few more that are very
-                        // possibly going to be sent
-                        //
-                        if(f_server->is_debug())
-                        {
-                            bool ok(true);
-                            if(!base->understand_command("HELP"))
-                            {
-                                SNAP_LOG_FATAL("connection \"")(connection->get_name())("\" does not understand HELP.");
-                                ok = false;
-                            }
-                            if(!base->understand_command("QUITTING"))
-                            {
-                                SNAP_LOG_FATAL("connection \"")(connection->get_name())("\" does not understand QUITTING.");
-                                ok = false;
-                            }
-                            // on a remote we get ACCEPT instead of READY
-                            if(remote_conn != nullptr
-                            || base->is_remote())
-                            {
-                                if(!base->understand_command("ACCEPT"))
-                                {
-                                    SNAP_LOG_FATAL("connection \"")(connection->get_name())("\" does not understand ACCEPT.");
-                                    ok = false;
-                                }
-                            }
-                            else
-                            {
-                                if(!base->understand_command("READY"))
-                                {
-                                    SNAP_LOG_FATAL("connection \"")(connection->get_name())("\" does not understand READY.");
-                                    ok = false;
-                                }
-                            }
-                            if(!base->understand_command("STOP"))
-                            {
-                                SNAP_LOG_FATAL("connection \"")(connection->get_name())("\" does not understand STOP.");
-                                ok = false;
-                            }
-                            if(!base->understand_command("UNKNOWN"))
-                            {
-                                SNAP_LOG_FATAL("connection \"")(connection->get_name())("\" does not understand UNKNOWN.");
-                                ok = false;
-                            }
-                            if(!ok)
-                            {
-                                // end the process so developers can fix their
-                                // problems (this is only if --debug was
-                                // specified)
-                                //
-                                throw snap::snap_exception(QString("Connection %1 does not implement some required commands.").arg(connection->get_name()));
-                            }
-                        }
-                    }
-                    else
-                    {
-                        SNAP_LOG_ERROR("COMMANDS was sent without a \"list\" parameter.");
-                    }
-                    return;
-                }
-            }
-            else if(command == "CONNECT")
-            {
-                if(udp)
-                {
-                    SNAP_LOG_ERROR("CONNECT is only accepted over a TCP connection.");
-                    return;
-                }
-
-                if(base)
-                {
-                    // first we verify that we have a valid version to
-                    // communicate between two snapcommunicators
-                    //
-                    if(!message.has_parameter("version")
-                    || !message.has_parameter("my_address")
-                    || !message.has_parameter("server_name"))
-                    {
-                        SNAP_LOG_ERROR("CONNECT was sent without a \"version\", or \"my_address\" parameter, both are mandatory.");
-                        return;
-                    }
-                    if(!message.check_version_parameter())
-                    {
-                        SNAP_LOG_ERROR
-                            << "CONNECT was sent with an incompatible version. Expected "
-                            << ed::MESSAGE_VERSION
-                            << ", received "
-                            << message.get_message_version()
-                            << '.'
-                            << SNAP_LOG_SEND;
-                        return;
-                    }
-
-                    snap::snap_communicator_message reply;
-                    snap::snap_communicator_message new_remote_connection;
-
-                    std::string const remote_server_name(message.get_parameter("server_name"));
-                    snap::snap_communicator::snap_connection::vector_t const all_connections(f_communicator->get_connections());
-                    snap::snap_communicator::snap_connection::pointer_t snap_conn(std::dynamic_pointer_cast<snap::snap_communicator::snap_connection>(base));
-                    auto const & name_match(std::find_if(
-                            all_connections.begin(),
-                            all_connections.end(),
-                            [remote_server_name, snap_conn](auto const & it)
-                            {
-                                // ignore ourselves
-                                //
-                                if(it == snap_conn)
-                                {
-                                    return false;
-                                }
-                                base_connection::pointer_t b(std::dynamic_pointer_cast<base_connection>(it));
-                                if(!b)
-                                {
-                                    return false;
-                                }
-                                return remote_server_name == b->get_server_name();
-                            }));
-
-                    bool refuse(name_match != all_connections.end());
-                    if(refuse)
-                    {
-                        SNAP_LOG_ERROR
-                            << "CONNECT from \""
-                            << remote_server_name
-                            << "\" but we already have another computer using that same name."
-                            << SNAP_LOG_SEND;
-
-                        reply.set_command("REFUSE");
-                        reply.add_parameter("conflict", "name");
-
-                        // we may also be shutting down
-                        //
-                        // Note: we cannot get here if f_shutdown is true...
-                        //
-                        if(f_shutdown)
-                        {
-                            reply.add_parameter("shutdown", "true");
-                        }
-                    }
-                    else
-                    {
-                        base->set_server_name(remote_server_name);
-
-                        // add neighbors with which the guys asking to
-                        // connect can attempt to connect with...
-                        //
-                        if(!f_explicit_neighbors.isEmpty())
-                        {
-                            reply.add_parameter("neighbors", f_explicit_neighbors);
-                        }
-
-                        // Note: we cannot get here if f_shutdown is true...
-                        //
-                        refuse = f_shutdown;
-                        if(refuse)
-                        {
-                            // okay, this guy wants to connect to us but we
-                            // are shutting down, so refuse and put the shutdown
-                            // flag to true
-                            //
-                            reply.set_command("REFUSE");
-                            reply.add_parameter("shutdown", "true");
-                        }
-                        else
-                        {
-                            // cool, a remote snapcommunicator wants to connect
-                            // with us, make sure we did not reach the maximum
-                            // number of connections though...
-                            //
-                            refuse = f_communicator->get_connections().size() >= f_max_connections;
-                            if(refuse)
-                            {
-                                // too many connections already, refuse this new
-                                // one from a remove system
-                                //
-                                reply.set_command("REFUSE");
-                            }
-                            else
-                            {
-                                // set the connection type if we are not refusing it
-                                //
-                                base->set_connection_type(base_connection::connection_type_t::CONNECTION_TYPE_REMOTE);
-
-                                // same as ACCEPT (see above) -- maybe we could have
-                                // a sub-function...
-                                //
-                                base->connection_started();
-
-                                if(message.has_parameter("services"))
-                                {
-                                    base->set_services(message.get_parameter("services"));
-                                }
-                                if(message.has_parameter("heard_of"))
-                                {
-                                    base->set_services_heard_of(message.get_parameter("heard_of"));
-                                }
-                                if(message.has_parameter("neighbors"))
-                                {
-                                    add_neighbors(message.get_parameter("neighbors"));
-                                }
-
-                                // we just got some new services information,
-                                // refresh our cache
-                                //
-                                refresh_heard_of();
-
-                                // the message expects the ACCEPT reply
-                                //
-                                reply.set_command("ACCEPT");
-                                reply.add_parameter("server_name", f_server_name);
-                                reply.add_parameter("my_address", f_my_address.to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_PORT));
-
-                                // services
-                                //
-                                if(!f_local_services.isEmpty())
-                                {
-                                    reply.add_parameter("services", f_local_services);
-                                }
-
-                                // heard of
-                                //
-                                if(!f_services_heard_of.isEmpty())
-                                {
-                                    reply.add_parameter("heard_of", f_services_heard_of);
-                                }
-
-                                QString const his_address(message.get_parameter("my_address"));
-                                base->set_my_address(his_address);
-
-                                // if a local service was interested in this specific
-                                // computer, then we have to start receiving LOADAVG
-                                // messages from it
-                                //
-                                register_for_loadavg(his_address);
-
-                                // he is a neighbor too, make sure to add it
-                                // in our list of neighbors (useful on a restart
-                                // to connect quickly)
-                                //
-                                add_neighbors(his_address);
-
-                                // since we are accepting a CONNECT we have to make
-                                // sure we cancel the GOSSIP events to that remote
-                                // connection; it won't hurt, but it is a waste if
-                                // we do not need it
-                                //
-                                // Note: the name of the function is "GOSSIP"
-                                //       received because if the "RECEIVED"
-                                //       message was sent back from that remote
-                                //       snapcommunicator then it means that
-                                //       remote daemon received our GOSSIP message
-                                //       and receiving the "CONNECT" message is
-                                //       very similar to receiving the "RECEIVED"
-                                //       message after a "GOSSIP"
-                                //
-                                f_remote_snapcommunicators->gossip_received(his_address);
-
-                                // now let local services know that we have a new
-                                // remote connections (which may be of interest
-                                // for that service--see snapmanagerdaemon)
-                                //
-                                // TODO: to be symmetrical, we should also have
-                                //       a message telling us when a remote
-                                //       connection goes down...
-                                //
-                                new_remote_connection.set_command("NEWREMOTECONNECTION");
-                                new_remote_connection.set_service(".");
-                                new_remote_connection.add_parameter("server_name", remote_server_name);
-                            }
-                        }
-                    }
-
-                    //verify_command(base, reply); -- we do not yet have a list of commands understood by the other snapcommunicator daemon
-
-                    // also request the COMMANDS of this connection with a HELP
-                    // if the connection was not refused
-                    //
-                    snap::snap_communicator_message help;
-                    help.set_command("HELP");
-                    //verify_command(base, help); -- precisely
-                    if(remote_conn != nullptr)
-                    {
-                        remote_conn->send_message(reply);
-                        if(!refuse)
-                        {
-                            remote_conn->send_message(help);
-                            broadcast_message(new_remote_connection);
-                        }
-                    }
-                    else if(service_conn)
-                    {
-                        service_conn->send_message(reply);
-                        if(!refuse)
-                        {
-                            service_conn->send_message(help);
-                            broadcast_message(new_remote_connection);
-                        }
-                    }
-                    else
-                    {
-                        // we have to have a remote or service connection here
-                        //
-                        throw snap::snap_exception("CONNECT sent on a \"weird\" connection.");
-                    }
-
-                    // if not refused, then we may have a QUORUM now, check
-                    // that; the function we call takes care of knowing
-                    // whether we reach cluster status or not
-                    //
-                    if(!refuse)
-                    {
-                        cluster_status(nullptr);
-                    }
-
-                    // status changed for this connection
-                    //
-                    send_status(connection);
-                    return;
-                }
-            }
-            break;
-
-        case 'D':
-            if(command == "DISCONNECT")
-            {
-                if(udp)
-                {
-                    SNAP_LOG_ERROR("DISCONNECT is only accepted over a TCP connection.");
-                    return;
-                }
-
-                if(base)
-                {
-                    base->connection_ended();
-
-                    // this has to be another snapcommunicator
-                    // (i.e. an object that sent ACCEPT or CONNECT)
-                    //
-                    base_connection::connection_type_t const type(base->get_connection_type());
-                    if(type == base_connection::connection_type_t::CONNECTION_TYPE_REMOTE)
-                    {
-                        // we must ignore and we do ignore connections with a
-                        // type of "" since they represent an uninitialized
-                        // connection item (unconnected)
-                        //
-                        base->set_connection_type(base_connection::connection_type_t::CONNECTION_TYPE_DOWN);
-
-                        if(remote_conn == nullptr)
-                        {
-                            // disconnecting means it is gone so we can remove
-                            // it from the communicator since the other end
-                            // will reconnect (we are never responsible
-                            // for that in this case)
-                            //
-                            // Note: this one happens when the computer that
-                            //       sent us a CONNECT later sends us the
-                            //       DISCONNECT
-                            //
-                            f_communicator->remove_connection(connection);
-                        }
-                        else
-                        {
-                            // in this case we are in charge of attempting
-                            // to reconnect until it works... however, it
-                            // is likely that the other side just shutdown
-                            // so we want to "induce a long enough pause"
-                            // to avoid attempting to reconnect like crazy
-                            //
-                            remote_conn->disconnect();
-                            f_remote_snapcommunicators->shutting_down(remote_conn->get_address());
-                        }
-
-                        // we just got some new services information,
-                        // refresh our cache
-                        //
-                        refresh_heard_of();
-
-                        if(!base->get_server_name().isEmpty())
-                        {
-                            snap::snap_communicator_message disconnected;
-                            disconnected.set_command("DISCONNECTED");
-                            disconnected.set_service(".");
-                            disconnected.add_parameter("server_name", base->get_server_name());
-                            broadcast_message(disconnected);
-                        }
-
-                        cluster_status(nullptr);
-                    }
-                    else
-                    {
-                        SNAP_LOG_ERROR("DISCONNECT was sent from a connection which is not of the right type (")
-                                      (type == base_connection::connection_type_t::CONNECTION_TYPE_DOWN ? "down" : "client")
-                                      (").");
-                    }
-
-                    // status changed for this connection
-                    //
-                    send_status(connection);
-                    return;
-                }
-            }
-            break;
-
-        case 'F':
-            if(command == "FORGET")
-            {
-                // whenever computers connect between each others, their
-                // IP address gets added to our list of neighbors; this
-                // means that the IP address is now stuck in the
-                // computer's brain "forever"
-                //
-                QString const forget_ip(message.get_parameter("ip"));
-
-                // self is not a connection that get broadcast messages
-                // for snapcommunicator, so we also call the remove_neighbor()
-                // function now
-                //
-                remove_neighbor(forget_ip);
-
-                // once you notice many connection errors to other computers
-                // that have been removed from your cluster, you want the
-                // remaining computers to forget about that IP address and
-                // it is done by broadcasting a FORGET message to everyone
-                //
-                if(!message.has_parameter("broadcast_hops"))
-                {
-                    // this was sent directly to this instance only,
-                    // make sure to broadcast the message instead
-                    //
-                    snap::snap_communicator_message forget;
-                    forget.set_command("FORGET");
-                    forget.set_server("*");
-                    forget.set_service("snapcommunicator");
-                    forget.add_parameter("ip", forget_ip);
-                    broadcast_message(forget);
-                }
-                return;
-            }
-            break;
-
-        case 'G':
-            if(command == "GOSSIP")
-            {
-                if(udp)
-                {
-                    SNAP_LOG_ERROR("GOSSIP is only accepted over a TCP connection.");
-                    break;
-                }
-
-                if(base)
-                {
-                    // we got a GOSSIP message, this one will have addresses
-                    // with various neighbors; we have two modes:
-                    //
-                    // 1) my_address=... is defined -- in this case the
-                    //    remote host sent us his address because he was
-                    //    not sure whether we knew about him; add that
-                    //    address as a neighbor and go on as normal
-                    //
-                    // 2) heard_of=... is defined -- in this case, the
-                    //    remote host received a GOSSIP from any one
-                    //    snapcommunicator and it is propagating the
-                    //    message; check all the IPs in that list and
-                    //    if all are present in our list of neighbors,
-                    //    do nothing; if all are not present, proceed
-                    //    as normal in regard to attempt connections
-                    //    and also forward our own GOSSIP to others
-                    //    since we just heard of some new neighbors!
-                    //
-                    //    Note that at this point we use the Flooding
-                    //    scheme and we implemented the Eventual
-                    //    Consistency (because at some point in time
-                    //    we eventually have an exact result.)
-                    //
-                    // When using (2) we are using what is called
-                    // Gossiping in Computer Science. At thist time
-                    // we use what is called the Flooding Algorithm.
-                    //
-                    // https://en.wikipedia.org/wiki/Flooding_(computer_networking)
-                    //
-                    // See also doc/focs2003-gossip.pdf
-                    //
-                    // We add two important features: (a) the list of
-                    // nodes we already sent the message to, in
-                    // order to avoid sending it to the same node
-                    // over and over again; and (b) a serial number
-                    // to be able to identify the message.
-                    //
-                    // Two other features that could be added are:
-                    // (c) counting hops, after X hops were reached,
-                    // stop forwarding the message because we should
-                    // already have reached all nodes; (d) a specific
-                    // date when the message times out.
-                    //
-                    // The serial number is used to know whether we
-                    // already received a certain message. These can
-                    // expire after a while (we may actually want to
-                    // implement (d) from the get go so we know
-                    // exactly when such expires).
-                    //
-                    // Our GOSSIP has one advantage, it is used to
-                    // connect all the snapcommunicators together
-                    // once. After that, the GOSSIP messages stop,
-                    // no matter what (i.e. if a new snapcommunicator
-                    // daemon is started, then the GOSSIP restart
-                    // for that instance, but that's it.)
-                    //
-                    // However, we also offer a way to broadcast
-                    // messages and these happen all the time
-                    // (i.e. think of the snaplock broadcast messages).
-                    // In those cases, we do not need to use the same
-                    // algorithm because at that point we are expected
-                    // to have a complete list of all the
-                    // snapcommunicators available.
-                    //
-                    // (TODO: only we may not be connected to all of them,
-                    // so we need to keep track of the snapcommunicators
-                    // we are not connected to and ask others to do some
-                    // forwarding!)
-                    //
-                    if(message.has_parameter("my_address"))
-                    {
-                        // this is a "simple" GOSSIP of a snapcommunicator
-                        // telling us it exists and expects a connection
-                        // from us
-                        //
-                        // in this case we just reply with RECEIVED to
-                        // confirm that we get the GOSSIP message
-                        //
-                        std::string const reply_to(message.get_parameter("my_address"));
-                        add_neighbors(reply_to);
-                        f_remote_snapcommunicators->add_remote_communicator(reply_to);
-
-                        snap::snap_communicator_message reply;
-                        reply.set_command("RECEIVED");
-                        //verify_command(base, reply); -- in this case the remote snapcommunicator is not connected, so no HELP+COMMANDS and thus no verification possible
-                        if(remote_conn)
-                        {
-                            remote_conn->send_message(reply);
-                        }
-                        else if(service_conn)
-                        {
-                            // Should this be an error instead since we only
-                            // expect this message from remote snapcommunicators?
-                            service_conn->send_message(reply);
-                        }
-                        else
-                        {
-                            // we have to have a remote or service connection here
-                            //
-                            throw snap::snap_exception("GOSSIP sent on a \"weird\" connection.");
-                        }
-                        return;
-                    }
-SNAP_LOG_ERROR("GOSSIP is not yet fully implemented.");
-                    return;
-                }
-            }
-            break;
-
-        case 'H':
-            if(command == "HELP")
-            {
-                if(udp)
-                {
-                    SNAP_LOG_ERROR("HELP is only accepted over a TCP connection.");
-                    break;
-                }
-
-                if(base)
-                {
-                    // reply with COMMANDS
-                    //
-                    snap::snap_communicator_message reply;
-                    reply.set_command("COMMANDS");
-
-                    // list of commands understood by snapcommunicator
-                    reply.add_parameter("list", "ACCEPT,CLUSTERSTATUS,COMMANDS,CONNECT,DISCONNECT,FORGET,GOSSIP,HELP,LISTENLOADAVG,LOADAVG,LOG,PUBLIC_IP,QUITTING,REFUSE,REGISTER,REGISTERFORLOADAVG,RELOADCONFIG,SERVICES,SHUTDOWN,STOP,UNKNOWN,UNREGISTER,UNREGISTERFORLOADAVG");
-
-                    //verify_command(base, reply); -- this verification does not work with remote snap communicator connections
-                    if(remote_conn)
-                    {
-                        remote_conn->send_message(reply);
-                    }
-                    else if(service_conn)
-                    {
-                        service_conn->send_message(reply);
-                    }
-                    else
-                    {
-                        // we have to have a remote or service connection here
-                        //
-                        throw snap::snap_exception("HELP sent on a \"weird\" connection.");
-                    }
-                    return;
-                }
-            }
-            break;
-
-        case 'L':
-            if(command == "LOADAVG")
-            {
-                save_loadavg(message);
-                return;
-            }
-            else if(command == "LISTENLOADAVG")
-            {
-                listen_loadavg(message);
-                return;
-            }
-            else if(command == "LOG")
-            {
-                SNAP_LOG_INFO("Logging reconfiguration.");
-                snap::logging::reconfigure();
-                return;
-            }
-            else if(command == "LISTSERVICES")
-            {
-                snap::snap_communicator::snap_connection::vector_t const & all_connections(f_communicator->get_connections());
-                std::string list;
-                std::for_each(
-                        all_connections.begin(),
-                        all_connections.end(),
-                        [&list](auto const & c)
-                        {
-                            if(!list.empty())
-                            {
-                                list += ", ";
-                            }
-                            list += c->get_name();
-                        });
-                SNAP_LOG_INFO("current list of connections: ")(list);
-                return;
-            }
-            break;
-
-        case 'P':
-            if(command == "PUBLIC_IP")
-            {
-                if(service_conn)
-                {
-                    snap::snap_communicator_message reply;
-                    reply.set_command("SERVER_PUBLIC_IP");
-                    reply.add_parameter("public_ip", QString::fromUtf8(f_public_ip.c_str()));
-                    verify_command(base, reply);
-                    service_conn->send_message(reply);
-                    return;
-                }
-                else
-                {
-                    // we have to have a remote or service connection here
-                    //
-                    throw snap::snap_exception("PUBLIC_IP sent on a \"weird\" connection.");
-                }
-            }
-            break;
-
-        case 'Q':
-            if(command == "QUITTING")
-            {
-                // if this becomes problematic, we may need to serialize
-                // our messages to know which was ignored...
-                //
-                SNAP_LOG_INFO("Received a QUITTING as a reply to a message.");
-                return;
-            }
-            break;
-
-        case 'R':
-            if(command == "REFUSE")
-            {
-                if(udp)
-                {
-                    SNAP_LOG_ERROR("REFUSE is only accepted over a TCP connection.");
-                    break;
-                }
-
-                // we were not connected so we do not have to
-                // disconnect; mark that corresponding server
-                // as too busy and try connecting again much
-                // later...
-                //
-                addr::addr peer_addr;
-                if(remote_conn)
-                {
-                    peer_addr = remote_conn->get_address();
-                }
-                //else if(service_conn) -- this should not happen
-                //{
-                //    peer_addr = service_conn->get_remote/peer_addr();
-                //}
-                else
-                {
-                    // we have to have a remote or service connection here
-                    //
-                    throw snap::snap_exception("REFUSE sent on a \"weird\" connection.");
-                }
-                //std::string const addr(peer_addr.to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_PORT));
-                if(message.has_parameter("shutdown"))
-                {
-                    f_remote_snapcommunicators->shutting_down(peer_addr);
-                }
-                else
-                {
-                    f_remote_snapcommunicators->too_busy(peer_addr);
-                }
-
-                // we are responsible to try again later, so we do not
-                // lose the connection, but we need to disconnect
-                //
-                //f_communicator->remove_connection(connection);
-                remote_conn->disconnect();
-                return;
-            }
-            else if(command == "REGISTER")
-            {
-                if(udp)
-                {
-                    SNAP_LOG_ERROR
-                        << "REGISTER is only accepted over a TCP or Unix connection."
-                        << SNAP_LOG_SEND;
-                    break;
-                }
-
-                if(base)
-                {
-                    if(!message.has_parameter("service")
-                    || !message.has_parameter("version"))
-                    {
-                        SNAP_LOG_ERROR
-                            << "REGISTER was called without a \"service\" and/or a \"version\" parameter, both are mandatory."
-                            << SNAP_LOG_SEND;
-                        return;
-                    }
-                    if(!message.check_version_parameter())
-                    {
-                        SNAP_LOG_ERROR
-                            << "REGISTER was called with an incompatible version; expected "
-                            << ed::MESSAGE_VERSION
-                            << ", received "
-                            << message.get_message_version()
-                            << '.'
-                            << SNAP_LOG_SEND;
-                        return;
-                    }
-                    // the "service" parameter is the name of the service,
-                    // now we can process messages for this service
-                    //
-                    std::string const service_name(message.get_parameter("service"));
-                    connection->set_name(service_name);
-                    if(service_conn)
-                    {
-                        service_conn->properly_named();
-                    }
-
-                    base->set_connection_type(base_connection::connection_type_t::CONNECTION_TYPE_LOCAL);
-
-                    // connection is up now
-                    //
-                    base->connection_started();
-
-                    // request the COMMANDS of this connection
-                    //
-                    ed::message help;
-                    help.set_command("HELP");
-                    //verify_command(base, help); -- we cannot do that here since we did not yet get the COMMANDS reply
-                    if(remote_conn)
-                    {
-                        remote_conn->send_message(help);
-                    }
-                    else if(service_conn)
-                    {
-                        service_conn->send_message(help);
-                    }
-                    else
-                    {
-                        // we have to have a remote or service connection here
-                        //
-                        throw unexpected_message_parameter("REGISTER sent on a \"weird\" connection (1).");
-                    }
-
-                    // tell the connection we are ready
-                    // (many connections use that as a trigger to start work)
-                    //
-                    ed::message reply;
-                    reply.set_command("READY");
-                    //verify_command(base, reply); -- we cannot do that here since we did not yet get the COMMANDS reply
-                    if(remote_conn)
-                    {
-                        remote_conn->send_message(reply);
-                    }
-                    else if(service_conn)
-                    {
-                        service_conn->send_message(reply);
-                    }
-                    else
-                    {
-                        // we have to have a remote or service connection here
-                        //
-                        throw unexpected_message_parameter("REGISTER sent on a \"weird\" connection (2).");
-                    }
-
-                    // status changed for this connection
-                    //
-                    send_status(connection);
-
-                    // if we have local messages that were cached, then
-                    // forward them now
-                    //
-                    f_local_message_cache.process_messages(
-                        [service_name, remote_conn, service_conn](ed::message const & msg)
-                        {
-                            if(msg.get_service() != service_name)
-                            {
-                                return false;
-                            }
-
-                            if(remote_conn)
-                            {
-                                remote_conn->send_message(msg);
-                            }
-                            else if(service_conn)
-                            {
-                                service_conn->send_message(msg);
-                            }
-                            else
-                            {
-                                // we have to have a remote or service connection here
-                                //
-                                throw unexpected_message_parameter("REGISTER sent on a \"weird\" connection (3).");
-                            }
-
-                            return true;
-                        });
-                    return;
-                }
-            }
-            else if(command == "REGISTERFORLOADAVG")
-            {
-                if(udp)
-                {
-                    SNAP_LOG_ERROR("REGISTERFORLOADAVG is only accepted over a TCP connection.");
-                    return;
-                }
-
-                if(base)
-                {
-                    base->set_wants_loadavg(true);
-                    f_loadavg_timer->set_enable(true);
-                    return;
-                }
-            }
-            else if(command == "RELOADCONFIG")
-            {
-                // we need a full restart in this case (because when we
-                // restart snapcommunicator it also automatically restart
-                // all of its dependencies!)
-                //
-                // also if you are a programmer we cannot do a systemctl
-                // restart so we just skip the feature...
-                //
-                f_force_restart = true;
-                shutdown(false);
-                return;
-            }
-            break;
-
-        case 'S':
-            if(command == "SHUTDOWN")
-            {
-                shutdown(true);
-                return;
-            }
-            else if(command == "STOP")
-            {
-                shutdown(false);
-                return;
-            }
-            else if(command == "SERVICESTATUS")
-            {
-                QString const & service_name(message.get_parameter("service"));
-                if(service_name.isEmpty())
-                {
-                    SNAP_LOG_ERROR("The SERVICESTATUS service parameter cannot be an empty string.");
-                    return;
-                }
-                snap::snap_communicator::snap_connection::vector_t const & named_connections(f_communicator->get_connections());
-                auto const named_service(std::find_if(
-                              named_connections.begin()
-                            , named_connections.end()
-                            , [service_name](auto const & named_connection)
-                            {
-                                return named_connection->get_name() == service_name;
-                            }));
-                if(named_service == named_connections.end())
-                {
-                    // service is totally unknown
-                    //
-                    // create a fake connection so we can call the
-                    // send_status() function
-                    //
-                    snap::snap_communicator::snap_connection::pointer_t fake_connection(std::make_shared<snap::snap_communicator::snap_timer>(0));
-                    fake_connection->set_name(service_name);
-                    send_status(fake_connection, &connection);
-                }
-                else
-                {
-                    send_status(*named_service, &connection);
-                }
-                return;
-            }
-            break;
-
-        case 'U':
-            if(command == "UNKNOWN")
-            {
-                SNAP_LOG_ERROR("we sent command \"")
-                              (message.get_parameter("command"))
-                              ("\" to \"")
-                              (connection->get_name())
-                              ("\" which told us it does not know that command so we probably did not get the expected result.");
-                return;
-            }
-            else if(command == "UNREGISTER")
-            {
-                if(udp)
-                {
-                    SNAP_LOG_ERROR("UNREGISTER is only accepted over a TCP connection.");
-                    return;
-                }
-
-                if(base)
-                {
-                    if(!message.has_parameter("service"))
-                    {
-                        SNAP_LOG_ERROR("UNREGISTER was called without a \"service\" parameter, which is mandatory.");
-                        return;
-                    }
-                    // also remove all the connection types
-                    // an empty string represents an unconnected item
-                    //
-                    base->set_connection_type(base_connection::connection_type_t::CONNECTION_TYPE_DOWN);
-
-                    // connection is down now
-                    //
-                    base->connection_ended();
-
-                    // status changed for this connection
-                    //
-                    send_status(connection);
-
-                    // now remove the service name
-                    // (send_status() needs the name to still be in place!)
-                    //
-                    QString const save_name(connection->get_name());
-                    connection->set_name("");
-
-                    // get rid of that connection now (it is faster than
-                    // waiting for the HUP because it will not be in the
-                    // list of connections on the next loop.)
-                    //
-                    f_communicator->remove_connection(connection);
-
-                    return;
-                }
-            }
-            else if(command == "UNREGISTERFORLOADAVG")
-            {
-                if(udp)
-                {
-                    SNAP_LOG_ERROR("UNREGISTERFORLOADAVG is only accepted over a TCP connection.");
-                    break;
-                }
-
-                if(base)
-                {
-                    base->set_wants_loadavg(false);
-                    snap::snap_communicator::snap_connection::vector_t const & all_connections(f_communicator->get_connections());
-                    if(all_connections.end() == std::find_if(
-                            all_connections.begin(),
-                            all_connections.end(),
-                            [](auto const & c)
-                            {
-                                base_connection::pointer_t b(std::dynamic_pointer_cast<base_connection>(c));
-                                return b->wants_loadavg();
-                            }))
-                    {
-                        // no more connection requiring LOADAVG messages
-                        // so stop the timer
-                        //
-                        f_loadavg_timer->set_enable(false);
-                    }
-                    return;
-                }
-            }
-            break;
-
-        }
-
-        // if they used a TCP connection to send this message, let the caller
-        // know that we do not understand his message
-        //
-        if(!udp)
-        {
-            snap::snap_communicator_message reply;
-            reply.set_command("UNKNOWN");
-            reply.add_parameter("command", command);
-            verify_command(base, reply);
-            if(remote_conn)
-            {
-                remote_conn->send_message(reply);
-            }
-            else if(service_conn)
-            {
-                service_conn->send_message(reply);
-            }
-            else
-            {
-                // we have to have a remote or service connection here
-                //
-                throw snap::snap_exception("HELP sent on a \"weird\" connection.");
-            }
-        }
-
-        // done
-        SNAP_LOG_ERROR("unknown command \"")(command)("\" or not sent from what is considered the correct connection for that message.");
-        return;
-    }
-
     //
     // the message includes a service name, so we want to forward that
     // message to that service
@@ -2162,13 +1035,19 @@ SNAP_LOG_ERROR("GOSSIP is not yet fully implemented.");
 
 //SNAP_LOG_TRACE("---------------- got message for [")(server_name)("] / [")(service)("]");
 
+    // if the destination server was specified, we have to forward
+    // the message to that specific server
+    //
+    std::string const server_name(msg.get_server() == "." ? f_server_name : msg.get_server());
+    std::string const service(msg.get_service());
+
     // broadcasting?
     //
     if(service == "*"
     || service == "?"
     || service == ".")
     {
-        if(!server_name.isEmpty()
+        if(!server_name.empty()
         && server_name != "*"
         && (service == "*" || service == "?"))
         {
@@ -2178,197 +1057,1494 @@ SNAP_LOG_ERROR("GOSSIP is not yet fully implemented.");
             // and broadcast it to other servers... it is contradictory;
             // either set the server to "*" or empty, or do not broadcast
             //
-            SNAP_LOG_ERROR("you cannot at the same time specify a server name (")(server_name)(") and \"*\" or \"?\" as the service.");
+            SNAP_LOG_ERROR
+                << "you cannot at the same time specify a server name ("
+                << server_name
+                << ") and \"*\" or \"?\" as the service."
+                << SNAP_LOG_SEND;
             return;
         }
-        broadcast_message(message);
+        broadcast_message(msg);
         return;
     }
 
-    base_connection_vector_t accepting_remote_connections;
-    bool const all_servers(server_name.isEmpty() || server_name == "*");
+    base_connection::vector_t accepting_remote_connections;
+    bool const all_servers(server_name.empty() || server_name == "*");
+
+    // service is local, check whether the service is registered,
+    // if registered, forward the message immediately
+    //
+    ed::connection::vector_t const & connections(f_communicator->get_connections());
+    for(auto const & nc : connections)
     {
-        // service is local, check whether the service is registered,
-        // if registered, forward the message immediately
-        //
-        snap::snap_communicator::snap_connection::vector_t const & connections(f_communicator->get_connections());
-        for(auto const & nc : connections)
+        base_connection::pointer_t base_conn(std::dynamic_pointer_cast<base_connection>(nc));
+        if(base_conn == nullptr)
         {
-            base_connection::pointer_t base_conn(std::dynamic_pointer_cast<base_connection>(nc));
-            if(base_conn)
+            continue;
+        }
+
+        // verify that there is a server name in all connections
+        // (if not we have a bug somewhere else)
+        //
+        if(base_conn->get_server_name().empty())
+        {
+            if(!is_debug())
             {
-                // verify that there is a server name in all connections
-                // (if not we have a bug somewhere else)
+                // ignore in non-debug versions because a throw
+                // completely breaks snapcommunicatord... and it
+                // is not that important at this point without
+                // a programmer debugging this software
                 //
-                if(base_conn->get_server_name().isEmpty())
-                {
-                    if(!f_server->is_debug())
-                    {
-                        // ignore in non-debug versions because a throw
-                        // completely breaks snapcommunicator... and it
-                        // is not that important at this point without
-                        // a programmer debugging this software
-                        //
-                        continue;
-                    }
-                    service_connection::pointer_t conn(std::dynamic_pointer_cast<service_connection>(nc));
-                    if(conn)
-                    {
-                        throw std::runtime_error("server name missing in connection " + conn->get_name().toStdString() + "...");
-                    }
-                    switch(base_conn->get_connection_type())
-                    {
-                    case base_connection::connection_type_t::CONNECTION_TYPE_DOWN:
-                        // not connected yet, forget about it
-                        continue;
-
-                    case base_connection::connection_type_t::CONNECTION_TYPE_LOCAL:
-                        throw std::runtime_error("server name missing in connection \"local service\"...");
-
-                    case base_connection::connection_type_t::CONNECTION_TYPE_REMOTE:
-                        throw std::runtime_error("server name missing in connection \"remote snapcommunicator\"...");
-
-                    }
-                }
-
-                if(all_servers
-                || server_name == base_conn->get_server_name())
-                {
-                    service_connection::pointer_t conn(std::dynamic_pointer_cast<service_connection>(nc));
-                    if(conn)
-                    {
-                        if(conn->get_name() == service)
-                        {
-                            // we have such a service, just forward to it now
-                            //
-                            // TBD: should we remove the service name before forwarding?
-                            //
-                            try
-                            {
-                                verify_command(conn, message);
-                                conn->send_message(message);
-                            }
-                            catch(std::runtime_error const & e)
-                            {
-                                // ignore the error because this can come from an
-                                // external source (i.e. snapsignal) where an end
-                                // user may try to break the whole system!
-                                //
-                                SNAP_LOG_DEBUG("snapcommunicator failed to send a message to connection \"")
-                                              (conn->get_name())
-                                              ("\" (error: ")
-                                              (e.what())
-                                              (")");
-                            }
-                            // we found a specific service to which we could
-                            // forward the message so we can stop here
-                            //
-                            return;
-                        }
-                        else
-                        {
-                            // if not a local connection with the proper name,
-                            // still send it to that connection but only if it
-                            // is a remote connection
-                            //
-                            base_connection::connection_type_t const type(base_conn->get_connection_type());
-                            if(type == base_connection::connection_type_t::CONNECTION_TYPE_REMOTE)
-                            {
-                                accepting_remote_connections.push_back(conn);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        remote_snap_communicator_pointer_t new_remote_connection(std::dynamic_pointer_cast<remote_connection>(nc));
-                        // TODO: limit sending to remote only if they have that service?
-                        //       (if we have the 'all_servers' set, otherwise it is not
-                        //       required, for sure... also, if we have multiple remote
-                        //       connections that support the same service we should
-                        //       randomize which one is to receive that message--or
-                        //       even better, check the current server load--but
-                        //       seriously, if none of our direct connections know
-                        //       of that service, we need to check for those that heard
-                        //       of that service, and if that is also empty, send to
-                        //       all... for now we send to all anyway)
-                        //
-                        if(new_remote_connection != nullptr /*&& new_remote_connection->has_service(service)*/)
-                        {
-                            accepting_remote_connections.push_back(new_remote_connection);
-                        }
-                    }
-                }
+                continue;
             }
-        }
-
-        auto transmission_report = [&message, &base, &remote_conn, &service_conn]()
-        {
-            if(message.has_parameter("transmission_report"))
+            service_connection::pointer_t conn(std::dynamic_pointer_cast<service_connection>(nc));
+            if(conn != nullptr)
             {
-                std::string const report(message.get_parameter("transmission_report"));
-                if(report == "failure")
-                {
-                    snap::snap_communicator_message reply;
-                    reply.set_command("TRANSMISSIONREPORT");
-                    reply.add_parameter("status", "failed");
-                    //verify_command(base, reply);
-                    if(remote_conn)
-                    {
-                        remote_conn->send_message(reply);
-                    }
-                    else if(service_conn)
-                    {
-                        service_conn->send_message(reply);
-                    }
-                    else
-                    {
-                        // we have to have a remote or service connection here
-                        //
-                        throw snap::snap_exception("No valid connection to send a reply.");
-                    }
-                }
+                throw sc::missing_name(
+                          "server name missing in connection "
+                        + conn->get_name()
+                        + "...");
             }
-        };
 
-        if((all_servers || server_name == f_server_name)
-        && f_local_services_list.find(service) != f_local_services_list.end())
-        {
-            // its a service that is expected on this computer, but it is not
-            // running right now... so cache the message
-            //
-            cache_message(message);
-            transmission_report();
-            return;
+            switch(base_conn->get_connection_type())
+            {
+            case connection_type_t::CONNECTION_TYPE_DOWN:
+                // not connected yet, forget about it
+                continue;
+
+            case connection_type_t::CONNECTION_TYPE_LOCAL:
+                throw sc::missing_name(
+                          "server name missing in connection \"local service\"...");
+
+            case connection_type_t::CONNECTION_TYPE_REMOTE:
+                throw sc::missing_name(
+                          "server name missing in connection \"remote snapcommunicator\"...");
+
+            }
         }
 
-        // if attempting to send to self, we cannot go on from here
+        if(all_servers
+        || server_name == base_conn->get_server_name())
+        {
+            service_connection::pointer_t conn(std::dynamic_pointer_cast<service_connection>(nc));
+            if(conn)
+            {
+                if(conn->get_name() == service)
+                {
+                    // we have such a service, just forward to it now
+                    //
+                    // TBD: should we remove the service name from the
+                    //      message before forwarding?
+                    //
+                    try
+                    {
+                        verify_command(conn, msg);
+                        conn->send_message(msg);
+                    }
+                    catch(std::runtime_error const & e)
+                    {
+                        // ignore the error because this can come from an
+                        // external source (i.e. snapsignal) where an end
+                        // user may try to break the whole system!
+                        //
+                        SNAP_LOG_DEBUG
+                            << "snapcommunicator failed to send a message to connection \""
+                            << conn->get_name()
+                            << "\" (error: "
+                            << e.what()
+                            << ")"
+                            << SNAP_LOG_SEND;
+                    }
+                    // we found a specific service to which we could
+                    // forward the message so we can stop here
+                    //
+                    return;
+                }
+
+                // if not a local connection with the proper name,
+                // still send it to that connection but only if it
+                // is a remote connection
+                //
+                connection_type_t const type(base_conn->get_connection_type());
+                if(type == connection_type_t::CONNECTION_TYPE_REMOTE)
+                {
+                    accepting_remote_connections.push_back(conn);
+                }
+            }
+            else
+            {
+                remote_connection::pointer_t new_remote_connection(std::dynamic_pointer_cast<remote_connection>(nc));
+                // TODO: limit sending to remote only if they have that service?
+                //       (if we have the 'all_servers' set, otherwise it is not
+                //       required, for sure... also, if we have multiple remote
+                //       connections that support the same service we should
+                //       randomize which one is to receive that message--or
+                //       even better, check the current server load--but
+                //       seriously, if none of our direct connections know
+                //       of that service, we need to check for those that heard
+                //       of that service, and if that is also empty, send to
+                //       all... for now we send to all anyway)
+                //
+                if(new_remote_connection != nullptr /*&& new_remote_connection->has_service(service)*/)
+                {
+                    accepting_remote_connections.push_back(new_remote_connection);
+                }
+            }
+        }
+    }
+
+    if((all_servers || server_name == f_server_name)
+    && f_local_services_list.find(service) != f_local_services_list.end())
+    {
+        // its a service that is expected on this computer, but it is not
+        // running right now... so cache the message
         //
-        if(server_name == f_server_name)
-        {
-            if(!service.startsWith("lock_"))
-            {
-                SNAP_LOG_DEBUG
-                    << "received event \""
-                    << command
-                    << "\" for local service \""
-                    << service
-                    << "\", which is not currently registered. Dropping message."
-                    << SNAP_LOG_SEND;
-            }
-            transmission_report();
-            return;
-        }
+        f_local_message_cache.cache_message(msg);
+        transmission_report(msg);
+        return;
+    }
+
+    // if attempting to send to self, we cannot go on from here
+    //
+    if(server_name == f_server_name)
+    {
+        SNAP_LOG_DEBUG
+            << "received event \""
+            << msg.get_command()
+            << "\" for local service \""
+            << service
+            << "\", which is not currently registered with this"
+               " snapcommunicatord. Dropping message."
+            << SNAP_LOG_SEND;
+
+        transmission_report(msg);
+        return;
     }
 
     if(!accepting_remote_connections.empty())
     {
-        broadcast_message(message, accepting_remote_connections);
+        broadcast_message(msg, accepting_remote_connections);
     }
 }
 
 
+void server::transmission_report(ed::message & msg)
+{
+    base_connection::pointer_t conn(msg.user_data<base_connection>());
+    if(conn == nullptr)
+    {
+        return;
+    }
+
+    if(!msg.has_parameter("transmission_report"))
+    {
+        return;
+    }
+
+    std::string const report(msg.get_parameter("transmission_report"));
+    if(report != "failure")
+    {
+        return;
+    }
+
+    ed::message reply;
+    reply.set_command("TRANSMISSIONREPORT");
+    reply.add_parameter("status", "failed");
+    //verify_command(conn, reply);
+    conn->send_message(reply);
+}
+
+
+bool server::check_broadcast_message(ed::message const & msg)
+{
+    // messages being broadcast to us have a unique ID, if that ID is
+    // one we already received we must ignore the message altogether;
+    // also, a broadcast message has a timeout, we must ignore the
+    // message if it already timed out
+    //
+    if(!msg.has_parameter("broadcast_msgid"))
+    {
+        return false;
+    }
+
+    // check whether the message already timed out
+    //
+    // this is a safety feature of our broadcasting capability
+    // which should rarely be activated unless you have multiple
+    // data center locations
+    //
+    time_t const timeout(msg.get_integer_parameter("broadcast_timeout"));
+    time_t const now(time(nullptr));
+    if(timeout < now)
+    {
+        return true;
+    }
+
+    // check whether we already received that message, if so ignore
+    // the second instance (it should not happen with the list of
+    // neighbors included in the message, but just in case...)
+    //
+    std::string const broadcast_msgid(msg.get_parameter("broadcast_msgid"));
+    auto const received_it(f_received_broadcast_messages.find(broadcast_msgid));
+    if(received_it != f_received_broadcast_messages.cend())     // message arrived again?
+    {
+        // note that although we include neighbors it is normal that
+        // this happens in a cluster where some computers are not
+        // aware of certain nodes; for example, if A sends a
+        // message to B and C, both B and C know of a node D
+        // which is unknown to A, then both B and C end up
+        // forwarding that same message to D, so D will discard
+        // the second instance it receives.
+        //
+        return true;
+    }
+
+    return false;
+}
+
+
+bool server::snapcommunicator_message(ed::message & msg)
+{
+    std::string const server_name(msg.get_server());
+    if(!server_name.empty() 
+    && server_name != "."       // this is an abbreviation meaning "f_server_name"
+    && server_name != "*")
+    {
+        // message is not for the snapcommunicator server
+        //
+        return false;
+    }
+
+    std::string const service(msg.get_service());
+    if(!service.empty()
+    && service != "snapcommunicator")
+    {
+        // message is directed to another service
+        //
+        return false;
+    }
+
+    return true;
+}
+
+
+bool server::shutting_down(ed::message & msg)
+{
+    if(!f_shutdown)
+    {
+        return false;
+    }
+
+    base_connection::pointer_t conn(msg.user_data<base_connection>());
+    if(conn->is_udp())
+    {
+        return true;
+    }
+
+    // if the user sent us an UNREGISTER we should not generate a
+    // QUITTING because the UNREGISTER is in reply to our STOP
+    // TBD: we may want to implement the UNREGISTER in this
+    //      situation?
+    //
+    if(msg.get_command() != "UNREGISTER")
+    {
+        // we are shutting down so just send a quick QUTTING reply
+        // letting the other process know about it
+        //
+        ed::message reply;
+        reply.set_command("QUITTING");
+        if(verify_command(conn, reply))
+        {
+            conn->send_message(reply);
+        }
+    }
+
+    // get rid of that connection now, we don't need any more
+    // messages coming from it
+    //
+    f_communicator->remove_connection(msg.user_data<ed::connection>());
+
+    return true;
+}
+
+
+bool server::dispatch_message(ed::message & msg)
+{
+    // check whether this is a timed out or already processed broadcast
+    // message
+    //
+    if(check_broadcast_message(msg))
+    {
+        // pretend the message was processed
+        //
+        return true;
+    }
+
+    // we are shutting down, ignore further messages
+    //
+    if(shutting_down(msg))
+    {
+        // pretend the message was processed
+        //
+        return true;
+    }
+
+    // if this message is directed to the snapcommunicator daemon itself
+    // then dispatcher it through our own dispatcher
+    //
+    if(snapcommunicator_message(msg))
+    {
+        return dispatcher_support::dispatch_message(msg);
+    }
+
+    // otherwise return false which means `process_message()` will be called
+    //
+    return false;
+}
+
+
+bool server::is_tcp_connection(ed::message & msg)
+{
+    if(msg.user_data<base_connection>()->is_udp())
+    {
+        SNAP_LOG_ERROR
+            << msg.get_command()
+            << " is only accepted over a TCP connection."
+            << SNAP_LOG_SEND;
+        return false;
+    }
+
+    return true;
+}
+
+
+void server::msg_accept(ed::message & msg)
+{
+    if(!is_tcp_connection(msg))
+    {
+        return;
+    }
+
+    base_connection::pointer_t conn(msg.user_data<base_connection>());
+    if(conn == nullptr)
+    {
+        return;
+    }
+
+    // the type is mandatory in an ACCEPT message
+    //
+    if(!msg.has_parameter("server_name")
+    || !msg.has_parameter("my_address"))
+    {
+        SNAP_LOG_ERROR
+            << "ACCEPT was received without the \"server_name\" and \"my_address\" parameters, which are mandatory."
+            << SNAP_LOG_SEND;
+        return;
+    }
+
+    // get the remote server name
+    //
+    conn->set_connection_type(connection_type_t::CONNECTION_TYPE_REMOTE);
+    std::string const & remote_server_name(msg.get_parameter("server_name"));
+    conn->set_server_name(remote_server_name);
+
+    // reply to a CONNECT, this was to connect to another
+    // snapcommunicator on another computer, retrieve the
+    // data from that remote computer
+    //
+    conn->connection_started();
+    std::string const his_address_str(msg.get_parameter("my_address"));
+    addr::addr his_address(addr::string_to_addr(
+              his_address_str
+            , "255.255.255.255"
+            , 4040
+            , "tcp"));
+    conn->set_my_address(his_address);
+
+    if(msg.has_parameter("services"))
+    {
+        conn->set_services(msg.get_parameter("services"));
+    }
+    if(msg.has_parameter("heard_of"))
+    {
+        conn->set_services_heard_of(msg.get_parameter("heard_of"));
+    }
+    if(msg.has_parameter("neighbors"))
+    {
+        add_neighbors(msg.get_parameter("neighbors"));
+    }
+
+    // we just got some new services information,
+    // refresh our cache
+    //
+    refresh_heard_of();
+
+    // also request the COMMANDS of this connection with a HELP message
+    //
+    ed::message help;
+    help.set_command("HELP");
+    //verify_command(base, help); -- precisely
+    conn->send_message(help);
+
+    // if a local service was interested in this specific
+    // computer, then we have to start receiving LOADAVG
+    // messages from it
+    //
+    register_for_loadavg(his_address_str);
+
+    // now let local services know that we have a new
+    // remote connections (which may be of interest
+    // for that service--see snapmanagerdaemon)
+    //
+    // TODO: to be symmetrical, we should also have
+    //       a message telling us when a remote
+    //       connection goes down...
+    //
+    ed::message new_remote_connection;
+    new_remote_connection.set_command("NEWREMOTECONNECTION");
+    new_remote_connection.set_service(".");
+    new_remote_connection.add_parameter("server_name", remote_server_name);
+    broadcast_message(new_remote_connection);
+}
+
+
+void server::msg_clusterstatus(ed::message & msg)
+{
+    if(!is_tcp_connection(msg))
+    {
+        return;
+    }
+
+    base_connection::pointer_t conn(msg.user_data<base_connection>());
+    if(conn == nullptr)
+    {
+        return;
+    }
+
+    cluster_status(msg.user_data<ed::connection>());
+}
+
+
+void server::msg_commands(ed::message & msg)
+{
+    if(!is_tcp_connection(msg))
+    {
+        return;
+    }
+
+    base_connection::pointer_t conn(msg.user_data<base_connection>());
+    if(conn == nullptr)
+    {
+        return;
+    }
+
+    if(!msg.has_parameter("list"))
+    {
+        SNAP_LOG_ERROR
+            << "COMMANDS was sent without a \"list\" parameter."
+            << SNAP_LOG_SEND;
+        return;
+    }
+    conn->set_commands(msg.get_parameter("list"));
+
+    // in normal circumstances, we're done
+    //
+    if(!is_debug())
+    {
+        return;
+    }
+
+    // here we verify that a few commands are properly defined; for some,
+    // we already sent them to that connection and thus it should understand
+    // them no matter what; and a few more that are very possibly going to
+    // be sent later (i.e. all are part of the snapcommunicator protocol)
+    //
+    bool ok(true);
+    if(!conn->understand_command("HELP"))
+    {
+        SNAP_LOG_FATAL
+            << "connection \""
+            << msg.user_data<ed::connection>()->get_name()
+            << "\" does not understand HELP."
+            << SNAP_LOG_SEND;
+        ok = false;
+    }
+    if(!conn->understand_command("QUITTING"))
+    {
+        SNAP_LOG_FATAL
+            << "connection \""
+            << msg.user_data<ed::connection>()->get_name()
+            << "\" does not understand QUITTING."
+            << SNAP_LOG_SEND;
+        ok = false;
+    }
+    // on a remote we get ACCEPT instead of READY
+    if(std::dynamic_pointer_cast<remote_connection>(conn) != nullptr
+    || conn->is_remote())
+    {
+        if(!conn->understand_command("ACCEPT"))
+        {
+            SNAP_LOG_FATAL
+                << "connection \""
+                << msg.user_data<ed::connection>()->get_name()
+                << "\" does not understand ACCEPT."
+                << SNAP_LOG_SEND;
+            ok = false;
+        }
+    }
+    else
+    {
+        if(!conn->understand_command("READY"))
+        {
+            SNAP_LOG_FATAL
+                << "connection \""
+                << msg.user_data<ed::connection>()->get_name()
+                << "\" does not understand READY."
+                << SNAP_LOG_SEND;
+            ok = false;
+        }
+    }
+    if(!conn->understand_command("STOP"))
+    {
+        SNAP_LOG_FATAL
+            << "connection \""
+            << msg.user_data<ed::connection>()->get_name()
+            << "\" does not understand STOP."
+            << SNAP_LOG_SEND;
+        ok = false;
+    }
+    if(!conn->understand_command("UNKNOWN"))
+    {
+        SNAP_LOG_FATAL
+            << "connection \""
+            << msg.user_data<ed::connection>()->get_name()
+            << "\" does not understand UNKNOWN."
+            << SNAP_LOG_SEND;
+        ok = false;
+    }
+    if(!ok)
+    {
+        // end the process so developers can fix their problems
+        // (this is only if --debug-all-messages was specified)
+        //
+        throw sc::missing_message(
+                  "Connection \""
+                + msg.user_data<ed::connection>()->get_name()
+                + "\" does not implement some of the required commands. See logs for more details.");
+    }
+}
+
+
+void server::msg_connect(ed::message & msg)
+{
+    if(!is_tcp_connection(msg))
+    {
+        return;
+    }
+
+    base_connection::pointer_t conn(msg.user_data<base_connection>());
+    if(conn == nullptr)
+    {
+        return;
+    }
+
+    // the CONNECT message has three mandatory parameters
+    //
+    if(!msg.has_parameter("version")
+    || !msg.has_parameter("my_address")
+    || !msg.has_parameter("server_name"))
+    {
+        SNAP_LOG_ERROR
+            << "CONNECT was sent without a \"version\", \"my_address\", or \"server_name\" parameter, all are mandatory."
+            << SNAP_LOG_SEND;
+        return;
+    }
+
+    // first we verify that we have a compatible version to
+    // communicate between two snapcommunicators
+    //
+    if(!msg.check_version_parameter())
+    {
+        SNAP_LOG_ERROR
+            << "CONNECT was sent with an incompatible version. Expected "
+            << ed::MESSAGE_VERSION
+            << ", received "
+            << msg.get_message_version()
+            << '.'
+            << SNAP_LOG_SEND;
+        return;
+    }
+
+    ed::message reply;
+    ed::message new_remote_connection;
+
+    std::string const remote_server_name(msg.get_parameter("server_name"));
+    ed::connection::vector_t const all_connections(f_communicator->get_connections());
+    ed::connection::pointer_t snap_conn(std::dynamic_pointer_cast<ed::connection>(conn));
+    auto const & name_match(std::find_if(
+            all_connections.begin(),
+            all_connections.end(),
+            [remote_server_name, snap_conn](auto const & it)
+            {
+                // ignore ourselves
+                //
+                if(it == snap_conn)
+                {
+                    return false;
+                }
+                base_connection::pointer_t b(std::dynamic_pointer_cast<base_connection>(it));
+                if(!b)
+                {
+                    return false;
+                }
+                return remote_server_name == b->get_server_name();
+            }));
+    bool refuse(name_match != all_connections.end());
+
+    if(refuse)
+    {
+        SNAP_LOG_ERROR
+            << "CONNECT from \""
+            << remote_server_name
+            << "\" but we already have another computer using that same name."
+            << SNAP_LOG_SEND;
+
+        reply.set_command("REFUSE");
+        reply.add_parameter("conflict", "name");
+
+        // we may also be shutting down
+        //
+        // Note: we cannot get here if f_shutdown is true...
+        //
+        if(f_shutdown)
+        {
+            reply.add_parameter("shutdown", "true");
+        }
+    }
+    else
+    {
+        conn->set_server_name(remote_server_name);
+
+        // add neighbors with which the guys asking to
+        // connect can attempt to connect with...
+        //
+        if(!f_explicit_neighbors.empty())
+        {
+            reply.add_parameter("neighbors", f_explicit_neighbors);
+        }
+
+        // Note: we cannot get here if f_shutdown is true...
+        //
+        refuse = f_shutdown;
+        if(refuse)
+        {
+            // okay, this guy wants to connect to us but we
+            // are shutting down, so refuse and put the shutdown
+            // flag to true
+            //
+            reply.set_command("REFUSE");
+            reply.add_parameter("shutdown", "true");
+        }
+        else
+        {
+            // cool, a remote snapcommunicator wants to connect
+            // with us, make sure we did not reach the maximum
+            // number of connections though...
+            //
+            refuse = all_connections.size() >= f_max_connections;
+            if(refuse)
+            {
+                // too many connections already, refuse this new
+                // one from a remove system
+                //
+                reply.set_command("REFUSE");
+            }
+            else
+            {
+                // set the connection type if we are not refusing it
+                //
+                conn->set_connection_type(connection_type_t::CONNECTION_TYPE_REMOTE);
+
+                // same as ACCEPT (see above) -- maybe we could have
+                // a sub-function...
+                //
+                conn->connection_started();
+
+                if(msg.has_parameter("services"))
+                {
+                    conn->set_services(msg.get_parameter("services"));
+                }
+                if(msg.has_parameter("heard_of"))
+                {
+                    conn->set_services_heard_of(msg.get_parameter("heard_of"));
+                }
+                if(msg.has_parameter("neighbors"))
+                {
+                    add_neighbors(msg.get_parameter("neighbors"));
+                }
+
+                // we just got some new services information,
+                // refresh our cache
+                //
+                refresh_heard_of();
+
+                // the message expects the ACCEPT reply
+                //
+                reply.set_command("ACCEPT");
+                reply.add_parameter("server_name", f_server_name);
+                reply.add_parameter("my_address", f_my_address.to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_PORT));
+
+                // services
+                //
+                if(!f_local_services.empty())
+                {
+                    reply.add_parameter("services", f_local_services);
+                }
+
+                // heard of
+                //
+                if(!f_services_heard_of.empty())
+                {
+                    reply.add_parameter("heard_of", f_services_heard_of);
+                }
+
+                std::string const his_address_str(msg.get_parameter("my_address"));
+                addr::addr his_address(addr::string_to_addr(
+                          his_address_str
+                        , "255.255.255.255"
+                        , 4040
+                        , "tcp"));
+
+                conn->set_my_address(his_address);
+
+                // if a local service was interested in this specific
+                // computer, then we have to start receiving LOADAVG
+                // messages from it
+                //
+                register_for_loadavg(his_address_str);
+
+                // he is a neighbor too, make sure to add it
+                // in our list of neighbors (useful on a restart
+                // to connect quickly)
+                //
+                add_neighbors(his_address_str);
+
+                // since we are accepting a CONNECT we have to make
+                // sure we cancel the GOSSIP events to that remote
+                // connection; it won't hurt, but it is a waste if
+                // we do not need it
+                //
+                // Note: the name of the function is "GOSSIP"
+                //       received because if the "RECEIVED"
+                //       message was sent back from that remote
+                //       snapcommunicator then it means that
+                //       remote daemon received our GOSSIP message
+                //       and receiving the "CONNECT" message is
+                //       very similar to receiving the "RECEIVED"
+                //       message after a "GOSSIP"
+                //
+                f_remote_snapcommunicators->gossip_received(his_address);
+
+                // now let local services know that we have a new
+                // remote connections (which may be of interest
+                // for that service--see snapmanagerdaemon)
+                //
+                // TODO: to be symmetrical, we should also have
+                //       a message telling us when a remote
+                //       connection goes down...
+                //
+                new_remote_connection.set_command("NEWREMOTECONNECTION");
+                new_remote_connection.set_service(".");
+                new_remote_connection.add_parameter("server_name", remote_server_name);
+            }
+        }
+    }
+
+    //verify_command(base, reply); -- we do not yet have a list of commands understood by the other snapcommunicator daemon
+
+    // also request the COMMANDS of this connection with a HELP
+    // if the connection was not refused
+    //
+    ed::message help;
+    help.set_command("HELP");
+    //verify_command(base, help); -- precisely
+    conn->send_message(reply);
+    if(!refuse)
+    {
+        conn->send_message(help);
+        broadcast_message(new_remote_connection);
+    }
+
+    // if not refused, then we may have a QUORUM now, check
+    // that; the function we call takes care of knowing
+    // whether we reach cluster status or not
+    //
+    if(!refuse)
+    {
+        cluster_status(nullptr);
+    }
+
+    // status changed for this connection
+    //
+    send_status(msg.user_data<ed::connection>());
+}
+
+
+void server::msg_disconnect(ed::message & msg)
+{
+    if(!is_tcp_connection(msg))
+    {
+        return;
+    }
+
+    base_connection::pointer_t conn(msg.user_data<base_connection>());
+    if(conn == nullptr)
+    {
+        return;
+    }
+
+    conn->connection_ended();
+
+    // this has to be another snapcommunicator
+    // (i.e. an object that sent ACCEPT or CONNECT)
+    //
+    connection_type_t const type(conn->get_connection_type());
+    if(type == connection_type_t::CONNECTION_TYPE_REMOTE)
+    {
+        // we must ignore and we do ignore connections with a
+        // type of "" since they represent an uninitialized
+        // connection item (unconnected)
+        //
+        conn->set_connection_type(connection_type_t::CONNECTION_TYPE_DOWN);
+
+        remote_connection::pointer_t remote_conn(msg.user_data<remote_connection>());
+        if(remote_conn == nullptr)
+        {
+            // disconnecting means it is gone so we can remove
+            // it from the communicator since the other end
+            // will reconnect (we are never responsible
+            // for that in this case)
+            //
+            // Note: this one happens when the computer that
+            //       sent us a CONNECT later sends us the
+            //       DISCONNECT
+            //
+            f_communicator->remove_connection(msg.user_data<ed::connection>());
+        }
+        else
+        {
+            // in this case we are in charge of attempting
+            // to reconnect until it works... however, it
+            // is likely that the other side just shutdown
+            // so we want to "induce a long enough pause"
+            // to avoid attempting to reconnect like crazy
+            //
+            remote_conn->disconnect();
+            f_remote_snapcommunicators->shutting_down(remote_conn->get_address());
+        }
+
+        // we may have lost some services information,
+        // refresh our cache
+        //
+        refresh_heard_of();
+
+        if(!conn->get_server_name().empty())
+        {
+            ed::message disconnected;
+            disconnected.set_command("DISCONNECTED");
+            disconnected.set_service(".");
+            disconnected.add_parameter("server_name", conn->get_server_name());
+            broadcast_message(disconnected);
+        }
+
+        cluster_status(nullptr);
+    }
+    else
+    {
+        SNAP_LOG_ERROR
+            << "DISCONNECT was sent from a connection which is not of the right type ("
+            << (type == connection_type_t::CONNECTION_TYPE_DOWN ? "down" : "client")
+            << ")."
+            << SNAP_LOG_SEND;
+    }
+
+    // status changed for this connection
+    //
+    send_status(msg.user_data<ed::connection>());
+}
+
+
+void server::msg_forget(ed::message & msg)
+{
+    if(!msg.has_parameter("ip"))
+    {
+        SNAP_LOG_ERROR
+            << "the ip=... parameter is missing of the FORGET message"
+            << SNAP_LOG_SEND;
+        return;
+    }
+
+    // whenever computers connect between each others, their
+    // IP address gets added to our list of neighbors; this
+    // means that the IP address is now stuck in the
+    // computer's brain "forever"
+    //
+    std::string const forget_ip(msg.get_parameter("ip"));
+
+    // self is not a connection that get broadcast messages
+    // for snapcommunicator, so we also call the remove_neighbor()
+    // function now
+    //
+    remove_neighbor(forget_ip);
+
+    // once you notice many connection errors to other computers
+    // that have been removed from your cluster, you want the
+    // remaining computers to forget about that IP address and
+    // it is done by broadcasting a FORGET message to everyone
+    //
+    if(msg.has_parameter("broadcast_hops"))
+    {
+        return;
+    }
+
+    // this was sent directly to this instance only,
+    // make sure to broadcast the message instead
+    //
+    ed::message forget;
+    forget.set_command("FORGET");
+    forget.set_server("*");
+    forget.set_service("snapcommunicator");
+    forget.add_parameter("ip", forget_ip);
+    broadcast_message(forget);
+}
+
+
+void server::msg_gossip(ed::message & msg)
+{
+    if(!is_tcp_connection(msg))
+    {
+        return;
+    }
+
+    base_connection::pointer_t conn(msg.user_data<base_connection>());
+    if(conn == nullptr)
+    {
+        return;
+    }
+
+    // we got a GOSSIP message, this one will have addresses
+    // with various neighbors; we have two modes:
+    //
+    // 1) my_address=... is defined -- in this case the
+    //    remote host sent us his address because he was
+    //    not sure whether we knew about him; add that
+    //    address as a neighbor and go on as normal
+    //
+    // 2) heard_of=... is defined -- in this case, the
+    //    remote host received a GOSSIP from any one
+    //    snapcommunicator and it is propagating the
+    //    message; check all the IPs in that list and
+    //    if all are present in our list of neighbors,
+    //    do nothing; if all are not present, proceed
+    //    as normal in regard to attempt connections
+    //    and also forward our own GOSSIP to others
+    //    since we just heard of some new neighbors!
+    //
+    //    Note that at this point we use the Flooding
+    //    scheme and we implemented the Eventual
+    //    Consistency (because at some point in time
+    //    we eventually have an exact result.)
+    //
+    // When using (2) we are using what is called
+    // Gossiping in Computer Science. At thist time
+    // we use what is called the Flooding Algorithm.
+    //
+    // https://en.wikipedia.org/wiki/Flooding_(computer_networking)
+    //
+    // See also doc/focs2003-gossip.pdf
+    //
+    // We add two important features: (a) the list of
+    // nodes we already sent the message to, in
+    // order to avoid sending it to the same node
+    // over and over again; and (b) a serial number
+    // to be able to identify the message.
+    //
+    // Two other features that could be added are:
+    // (c) counting hops, after X hops were reached,
+    // stop forwarding the message because we should
+    // already have reached all nodes; (d) a specific
+    // date when the message times out.
+    //
+    // The serial number is used to know whether we
+    // already received a certain message. These can
+    // expire after a while (we may actually want to
+    // implement (d) from the get go so we know
+    // exactly when such expires).
+    //
+    // Our GOSSIP has one advantage, it is used to
+    // connect all the snapcommunicators together
+    // once. After that, the GOSSIP messages stop,
+    // no matter what (i.e. if a new snapcommunicator
+    // daemon is started, then the GOSSIP restart
+    // for that instance, but that's it.)
+    //
+    // However, we also offer a way to broadcast
+    // messages and these happen all the time
+    // (i.e. think of the snaplock broadcast messages).
+    // In those cases, we do not need to use the same
+    // algorithm because at that point we are expected
+    // to have a complete list of all the
+    // snapcommunicators available.
+    //
+    // (TODO: only we may not be directly connected to all of them,
+    // so we need to keep track of the snapcommunicators
+    // we are not connected to and ask others to do some
+    // forwarding!)
+    //
+    if(msg.has_parameter("my_address"))
+    {
+        // this is a "simple" GOSSIP of a snapcommunicator
+        // telling us it exists and expects a connection
+        // from us
+        //
+        // in this case we just reply with RECEIVED to
+        // confirm that we get the GOSSIP message
+        //
+        std::string const reply_to(msg.get_parameter("my_address"));
+        add_neighbors(reply_to);
+        f_remote_snapcommunicators->add_remote_communicator(reply_to);
+
+        ed::message reply;
+        reply.set_command("RECEIVED");
+        //verify_command(base, reply); -- in this case the remote snapcommunicator is not connected, so no HELP+COMMANDS and thus no verification possible
+        conn->send_message(reply);
+        return;
+    }
+
+    if(msg.has_parameter("heard_of"))
+    {
+        SNAP_LOG_ERROR
+            << snaplogger::section(snaplogger::g_not_implemented_component)
+            << snaplogger::section(snaplogger::g_debug_component)
+            << "GOSSIP is not yet fully implemented. heard_of=... not available."
+            << SNAP_LOG_SEND;
+        return;
+    }
+
+    SNAP_LOG_ERROR
+        << "GOSSIP must have my_address=... or heard_of=... defined."
+        << SNAP_LOG_SEND;
+}
+
+
+void server::msg_list_services(ed::message & msg)
+{
+    snapdev::NOT_USED(msg);
+
+    ed::connection::vector_t const & all_connections(f_communicator->get_connections());
+    std::string list;
+    std::for_each(
+            all_connections.begin(),
+            all_connections.end(),
+            [&list](auto const & c)
+            {
+                if(!list.empty())
+                {
+                    list += ", ";
+                }
+                list += c->get_name();
+            });
+    SNAP_LOG_INFO
+        << "current list of connections: "
+        << list
+        << SNAP_LOG_SEND;
+
+    // TODO: send a reply so communicators can know of discrepancies
+}
+
+
+void server::msg_log_unknown(ed::message & msg)
+{
+    // we sent a command that the other end did not understand
+    // and got an UNKNOWN reply
+    //
+    std::string name("<unknown-connection>");
+    ed::connection::pointer_t conn(msg.user_data<ed::connection>());
+    if(conn != nullptr)
+    {
+        name = conn->get_name();
+    }
+
+    if(msg.has_parameter("command"))
+    {
+        SNAP_LOG_ERROR
+            << "we sent command \""
+            << msg.get_parameter("command")
+            << "\" to \""
+            << name
+            << "\" which told us it does not know that command"
+               " so we probably did not get the expected result."
+            << SNAP_LOG_SEND;
+    }
+    else
+    {
+        SNAP_LOG_ERROR
+            << "we sent a command (name of which was not reported in"
+               " the \"command\" paramter) to "
+            << msg.get_parameter("command")
+            << "\" to \""
+            << name
+            << "\" which told us it does not know that command"
+               " so we probably did not get the expected result."
+            << SNAP_LOG_SEND;
+    }
+}
+
+
+void server::msg_public_ip(ed::message & msg)
+{
+    base_connection::pointer_t conn(msg.user_data<base_connection>());
+    if(conn == nullptr)
+    {
+        return;
+    }
+
+    ed::message reply;
+    reply.set_command("SERVER_PUBLIC_IP");
+    if(!f_public_ip.empty())
+    {
+        reply.add_parameter("public_ip", f_public_ip);
+    }
+    if(!f_secure_ip.empty())
+    {
+        reply.add_parameter("secure_ip", f_secure_ip);
+    }
+    if(verify_command(conn, reply))
+    {
+        conn->send_message(reply);
+    }
+}
+
+
+void server::msg_quitting(ed::message & msg)
+{
+    snapdev::NOT_USED(msg);
+
+    // the other services will call their stop() function, but the
+    // snapcommunicator does not do that on this message; just inform
+    // the admin with a quick log message
+    //
+    SNAP_LOG_INFO
+        << "Received a QUITTING as a reply to a message."
+        << SNAP_LOG_SEND;
+}
+
+
+void server::msg_refuse(ed::message & msg)
+{
+    if(!is_tcp_connection(msg))
+    {
+        return;
+    }
+
+    base_connection::pointer_t conn(msg.user_data<base_connection>());
+    if(conn == nullptr)
+    {
+        return;
+    }
+
+    remote_connection::pointer_t remote_conn(msg.user_data<remote_connection>());
+    if(remote_conn == nullptr)
+    {
+        // we have to have a remote connection
+        //
+        SNAP_LOG_ERROR
+            << "REFUSE sent on a connection which is not a remote connection (another snapcommunicator)."
+            << SNAP_LOG_SEND;
+        return;
+    }
+
+    // we were not connected so we do not have to
+    // disconnect; mark that corresponding server
+    // as too busy or as shutting down and try
+    // connecting again later...
+    //
+    addr::addr peer_addr(remote_conn->get_address());
+    if(msg.has_parameter("shutdown"))
+    {
+        f_remote_snapcommunicators->shutting_down(peer_addr);
+    }
+    else
+    {
+        f_remote_snapcommunicators->too_busy(peer_addr);
+    }
+
+    // we are responsible to try again later, so we do not
+    // lose the connection (remove it from the ed::communicator),
+    // but we need to disconnect
+    //
+    remote_conn->disconnect();
+}
+
+
+void server::msg_register(ed::message & msg)
+{
+    if(!is_tcp_connection(msg))
+    {
+        return;
+    }
+
+    base_connection::pointer_t conn(msg.user_data<base_connection>());
+    if(conn == nullptr)
+    {
+        return;
+    }
+
+    if(!msg.has_parameter("service")
+    || !msg.has_parameter("version"))
+    {
+        SNAP_LOG_ERROR
+            << "REGISTER was called without a \"service\" and/or a \"version\" parameter, both are mandatory."
+            << SNAP_LOG_SEND;
+        return;
+    }
+
+    if(!msg.check_version_parameter())
+    {
+        SNAP_LOG_ERROR
+            << "REGISTER was called with an incompatible version; expected "
+            << ed::MESSAGE_VERSION
+            << ", received "
+            << msg.get_message_version()
+            << '.'
+            << SNAP_LOG_SEND;
+        return;
+    }
+
+    // the "service" parameter is the name of the service,
+    // now we can process messages for this service
+    //
+    std::string const service_name(msg.get_parameter("service"));
+    if(service_name.empty())
+    {
+        SNAP_LOG_ERROR
+            << "REGISTER had a \"service\" parameter, but it is empty, which is not valid."
+            << SNAP_LOG_SEND;
+        return;
+    }
+
+    service_connection::pointer_t service_conn(msg.user_data<service_connection>());
+    if(service_conn == nullptr)
+    {
+        SNAP_LOG_ERROR
+            << "only local services are expected to REGISTER with the snapcommunicatord service."
+            << SNAP_LOG_SEND;
+        return;
+    }
+
+    service_conn->set_name(service_name);
+    if(service_conn)
+    {
+        service_conn->properly_named();
+    }
+
+    service_conn->set_connection_type(connection_type_t::CONNECTION_TYPE_LOCAL);
+
+    // connection is up now
+    //
+    service_conn->connection_started();
+
+    // request the COMMANDS of this connection
+    //
+    ed::message help;
+    help.set_command("HELP");
+    //verify_command(base, help); -- we cannot do that here since we did not yet get the COMMANDS reply
+    conn->send_message(help);
+
+    // tell the connection we are ready
+    // (many connections use that as a trigger to start work)
+    //
+    ed::message reply;
+    reply.set_command("READY");
+    //verify_command(base, reply); -- we cannot do that here since we did not yet get the COMMANDS reply
+    conn->send_message(reply);
+
+    // status changed for this connection
+    //
+    send_status(service_conn);
+
+    // if we have local messages that were cached, then
+    // forward them now
+    //
+    f_local_message_cache.process_messages(
+        [service_name, service_conn](ed::message & cached_msg)
+        {
+            if(cached_msg.get_service() != service_name)
+            {
+                return false;
+            }
+
+            service_conn->send_message(cached_msg);
+            return true;
+        });
+}
+
+
+void server::msg_registerforloadavg(ed::message & msg)
+{
+    if(!is_tcp_connection(msg))
+    {
+        return;
+    }
+
+    base_connection::pointer_t conn(msg.user_data<base_connection>());
+    if(conn == nullptr)
+    {
+        return;
+    }
+
+    conn->set_wants_loadavg(true);
+    f_loadavg_timer->set_enable(true);
+}
+
+
+void server::msg_servicestatus(ed::message & msg)
+{
+    std::string const & service_name(msg.get_parameter("service"));
+    if(service_name.empty())
+    {
+        SNAP_LOG_ERROR
+            << "The SERVICESTATUS service parameter cannot be an empty string."
+            << SNAP_LOG_SEND;
+        return;
+    }
+
+    ed::connection::pointer_t conn(msg.user_data<ed::connection>());
+    if(conn == nullptr)
+    {
+        return;
+    }
+
+    ed::connection::vector_t const & named_connections(f_communicator->get_connections());
+    auto const named_service(std::find_if(
+                  named_connections.begin()
+                , named_connections.end()
+                , [service_name](auto const & named_connection)
+                {
+                    return named_connection->get_name() == service_name;
+                }));
+    if(named_service == named_connections.end())
+    {
+        // service is totally unknown
+        //
+        // create a fake connection so we can call the
+        // send_status() function
+        //
+        ed::connection::pointer_t fake_connection(std::make_shared<ed::timer>(0));
+        fake_connection->set_name(service_name);
+        send_status(fake_connection, &conn);
+    }
+    else
+    {
+        send_status(*named_service, &conn);
+    }
+}
+
+
+void server::msg_shutdown(ed::message & msg)
+{
+    snapdev::NOT_USED(msg);
+
+    stop(true);
+}
+
+
+void server::msg_unregister(ed::message & msg)
+{
+    if(!is_tcp_connection(msg))
+    {
+        return;
+    }
+
+    ed::connection::pointer_t conn(msg.user_data<ed::connection>());
+    if(conn == nullptr)
+    {
+        return;
+    }
+
+    if(!msg.has_parameter("service"))
+    {
+        SNAP_LOG_ERROR
+            << "UNREGISTER was called without a \"service\" parameter, which is mandatory."
+            << SNAP_LOG_SEND;
+        return;
+    }
+
+    // also remove all the connection types
+    // an empty string represents an unconnected item
+    //
+    msg.user_data<base_connection>()->set_connection_type(connection_type_t::CONNECTION_TYPE_DOWN);
+
+    // connection is down now
+    //
+    msg.user_data<base_connection>()->connection_ended();
+
+    // status changed for this connection
+    //
+    send_status(conn);
+
+    // now remove the service name
+    // (send_status() needs the name to still be in place!)
+    //
+    conn->set_name(std::string());
+
+    // get rid of that connection now (it is faster than
+    // waiting for the HUP because it will not be in the
+    // list of connections on the next loop).
+    //
+    f_communicator->remove_connection(conn);
+}
+
+
+void server::msg_unregisterforloadavg(ed::message & msg)
+{
+    if(!is_tcp_connection(msg))
+    {
+        return;
+    }
+
+    base_connection::pointer_t conn(msg.user_data<base_connection>());
+    if(conn == nullptr)
+    {
+        return;
+    }
+
+    conn->set_wants_loadavg(false);
+
+    // check whether all connections are now unregistered
+    //
+    ed::connection::vector_t const & all_connections(f_communicator->get_connections());
+    if(all_connections.end() == std::find_if(
+            all_connections.begin(),
+            all_connections.end(),
+            [](auto const & c)
+            {
+                base_connection::pointer_t b(std::dynamic_pointer_cast<base_connection>(c));
+                return b->wants_loadavg();
+            }))
+    {
+        // no more connections requiring LOADAVG messages
+        // so stop the timer
+        //
+        f_loadavg_timer->set_enable(false);
+    }
+}
+
+
+
+
 void server::broadcast_message(
-      ed::message const & message
+      ed::message & msg
     , base_connection::vector_t const & accepting_remote_connections)
 {
     std::string broadcast_msgid;
@@ -2382,7 +2558,7 @@ void server::broadcast_message(
     //       already checked, so we probably would not need it to do
     //       it again?
     //
-    if(message.has_parameter("broadcast_msgid"))
+    if(msg.has_parameter("broadcast_msgid"))
     {
         // check whether the message already timed out
         //
@@ -2390,7 +2566,7 @@ void server::broadcast_message(
         // which should rarely be activated unless you have multiple
         // data center locations
         //
-        timeout = message.get_integer_parameter("broadcast_timeout");
+        timeout = msg.get_integer_parameter("broadcast_timeout");
         time_t const now(time(nullptr));
         if(timeout < now)
         {
@@ -2401,7 +2577,7 @@ void server::broadcast_message(
         // the second instance (it should not happen with the list of
         // neighbors included in the message, but just in case...)
         //
-        broadcast_msgid = message.get_parameter("broadcast_msgid");
+        broadcast_msgid = msg.get_parameter("broadcast_msgid");
         auto const received_it(f_received_broadcast_messages.find(broadcast_msgid));
         if(received_it != f_received_broadcast_messages.cend())     // message arrived again?
         {
@@ -2449,29 +2625,33 @@ void server::broadcast_message(
         //       that message and we know that it is already
         //       canonicalized here
         //
-        informed_neighbors = message.get_parameter("broadcast_informed_neighbors");
+        informed_neighbors = msg.get_parameter("broadcast_informed_neighbors");
 
         // get the number of hops this message already performed
         //
-        hops = message.get_integer_parameter("broadcast_hops");
+        hops = msg.get_integer_parameter("broadcast_hops");
     }
 
     sorted_list_of_strings_t informed_neighbors_list;
-    snapdev::tokenize_string(informed_neighbors, informed_neighbors_list, { "," }, true);
+    snapdev::tokenize_string(
+              informed_neighbors_list
+            , informed_neighbors
+            , { "," }
+            , true);
 
     // we always broadcast to all local services
-    snap::snap_communicator::snap_connection::vector_t broadcast_connection;
+    ed::connection::vector_t broadcast_connection;
 
     if(accepting_remote_connections.empty())
     {
         std::string destination("?");
-        std::string const service(message.get_service());
+        std::string const service(msg.get_service());
         if(service != "."
         && service != "?"
         && service != "*")
         {
-            destination = message.get_server();
-            if(destination.isEmpty())
+            destination = msg.get_server();
+            if(destination.empty())
             {
                 destination = "?";
             }
@@ -2483,7 +2663,7 @@ void server::broadcast_message(
         bool const all(hops < 5 && destination == "*");
         bool const remote(hops < 5 && (all || destination == "?"));
 
-        snap::snap_communicator::snap_connection::vector_t const & connections(f_communicator->get_connections());
+        ed::connection::vector_t const & connections(f_communicator->get_connections());
         for(auto const & nc : connections)
         {
             // try for a service or snapcommunicator that connected to us
@@ -2504,10 +2684,10 @@ void server::broadcast_message(
                     // message is the destination does not know the
                     // command
                     //
-                    if(conn->understand_command(message.get_command())) // destination: "*" or "?" or "."
+                    if(conn->understand_command(msg.get_command())) // destination: "*" or "?" or "."
                     {
                         //verify_command(conn, message); -- we reach this line only if the command is understood, it is therefore good
-                        conn->send_message(message);
+                        conn->send_message(msg);
                     }
                     break;
 
@@ -2543,7 +2723,9 @@ void server::broadcast_message(
                         if(!warned)
                         {
                             warned = true;
-                            SNAP_LOG_WARNING("remote snap communicator was connected on a LOOPBACK IP address...");
+                            SNAP_LOG_WARNING
+                                << "remote snap communicator was connected on a LOOPBACK IP address..."
+                                << SNAP_LOG_SEND;
                         }
                     }
                     break;
@@ -2603,8 +2785,8 @@ void server::broadcast_message(
                 service_connection::pointer_t conn(std::dynamic_pointer_cast<service_connection>(nc));
                 if(conn)
                 {
-                    QString const address(QString::fromUtf8(conn->get_address().to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_ONLY).c_str()));
-                    auto it(informed_neighbors_list.find(address))
+                    std::string const address(conn->get_address().to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_ONLY));
+                    auto it(informed_neighbors_list.find(address));
                     if(it == informed_neighbors_list.end())
                     {
                         // not in the list of informed neighbors, add it and
@@ -2617,11 +2799,11 @@ void server::broadcast_message(
                 }
                 else
                 {
-                    remote_snap_communicator_pointer_t remote_conn(std::dynamic_pointer_cast<remote_connection>(nc));
+                    remote_connection::pointer_t remote_conn(std::dynamic_pointer_cast<remote_connection>(nc));
                     if(remote_conn != nullptr)
                     {
                         std::string const address(remote_conn->get_address().to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_ONLY));
-                        auto it(informed_neighbors_list.find(address))
+                        auto it(informed_neighbors_list.find(address));
                         if(it == informed_neighbors_list.end())
                         {
                             // not in the list of informed neighbors, add it and
@@ -2654,7 +2836,7 @@ void server::broadcast_message(
 
         // message is 'const', so we need to create a copy
         //
-        ed::message broadcast_msg(message);
+        ed::message broadcast_msg(msg);
 
         // generate a unique broadcast message identifier if we did not
         // yet have one, it is very important to NOT generate a new message
@@ -2746,16 +2928,16 @@ void server::send_status(
     {
         // include the server name
         //
-        QString const server_name(base_connection->get_server_name());
-        if(!server_name.isEmpty())
+        std::string const server_name(base_connection->get_server_name());
+        if(!server_name.empty())
         {
             reply.add_parameter("server_name", server_name);
         }
 
         // check whether the connection is now up or down
         //
-        base_connection::connection_type_t const type(base_connection->get_connection_type());
-        reply.add_parameter("status", type == base_connection::connection_type_t::CONNECTION_TYPE_DOWN ? "down" : "up");
+        connection_type_t const type(base_connection->get_connection_type());
+        reply.add_parameter("status", type == connection_type_t::CONNECTION_TYPE_DOWN ? "down" : "up");
 
         // get the time when it was considered up
         //
@@ -2782,8 +2964,10 @@ void server::send_status(
             // if the verify_command() fails then it means the caller has to
             // create a handler for the STATUS message
             //
-            verify_command(sc, reply);
-            sc->send_message(reply);
+            if(verify_command(sc, reply))
+            {
+                sc->send_message(reply);
+            }
         }
     }
     else
@@ -2951,14 +3135,14 @@ void server::cluster_status(ed::connection::pointer_t reply_connection)
  * request to listen to the LOADAVG messages of a specific
  * snapcommunicator.
  *
- * \param[in] message  The LISTENLOADAVG message.
+ * \param[in] msg  The LISTENLOADAVG message.
  */
-void server::listen_loadavg(ed::message const & message)
+void server::msg_listen_loadavg(ed::message & msg)
 {
-    std::string const ips(message.get_parameter("ips"));
+    std::string const ips(msg.get_parameter("ips"));
 
     std::vector<std::string> ip_list;
-    std::tokenize_string(ip_list, ips, { "," });
+    snapdev::tokenize_string(ip_list, ips, { "," });
 
     // we have to save those as IP addresses since the remote
     // snapcommunicators come and go and we have to make sure
@@ -2982,23 +3166,24 @@ void server::listen_loadavg(ed::message const & message)
 
 void server::register_for_loadavg(std::string const & ip)
 {
+    addr::addr address(addr::string_to_addr(ip, "127.0.0.1", 4040, "tcp"));
     ed::connection::vector_t const & all_connections(f_communicator->get_connections());
     auto const & it(std::find_if(
             all_connections.begin(),
             all_connections.end(),
-            [ip](auto const & connection)
+            [address](auto const & connection)
             {
                 remote_connection::pointer_t remote_conn(std::dynamic_pointer_cast<remote_connection>(connection));
                 if(remote_conn != nullptr)
                 {
-                    return remote_conn->get_my_address() == ip;
+                    return remote_conn->get_my_address() == address;
                 }
                 else
                 {
                     service_connection::pointer_t service_conn(std::dynamic_pointer_cast<service_connection>(connection));
                     if(service_conn != nullptr)
                     {
-                        return service_conn->get_my_address() == ip;
+                        return service_conn->get_my_address() == address;
                     }
                 }
 
@@ -3030,35 +3215,32 @@ void server::register_for_loadavg(std::string const & ip)
 }
 
 
-void server::save_loadavg(ed::message const & msg)
+void server::msg_save_loadavg(ed::message & msg)
 {
     std::string const avg_str(msg.get_parameter("avg"));
     std::string const my_address(msg.get_parameter("my_address"));
     std::string const timestamp_str(msg.get_parameter("timestamp"));
 
-    snap::loadavg_item item;
+    sc::loadavg_item item;
 
     // Note: we do not use the port so whatever number here is fine
-    addr::addr a(addr::string_to_addr(my_address.toUtf8().data(), "127.0.0.1", 4040, "tcp"));
+    addr::addr a(addr::string_to_addr(my_address, "127.0.0.1", 4040, "tcp"));
     a.set_port(4040); // actually force the port so in effect it is ignored
     a.get_ipv6(item.f_address);
 
-    bool ok(false);
-    item.f_avg = avg_str.toFloat(&ok);
-    if(!ok
-    || item.f_avg < 0.0)
+    item.f_avg = std::stof(avg_str);
+    if(item.f_avg < 0.0)
     {
         return;
     }
 
-    item.f_timestamp = timestamp_str.toLongLong(&ok, 10);
-    if(!ok
-    || item.f_timestamp < SNAP_UNIX_TIMESTAMP(2016, 1, 1, 0, 0, 0))
+    item.f_timestamp = std::stoll(timestamp_str);
+    if(item.f_timestamp < SERVERPLUGINS_UNIX_TIMESTAMP(2016, 1, 1, 0, 0, 0))
     {
         return;
     }
 
-    snapdev::loadavg_file file;
+    sc::loadavg_file file;
     file.load();
     file.add(item);
     file.save();
@@ -3123,7 +3305,7 @@ void server::process_load_balancing()
         std::for_each(
                 all_connections.begin(),
                 all_connections.end(),
-                [load_avg](auto const & connection)
+                [&load_avg](auto const & connection)
                 {
                     base_connection::pointer_t base(std::dynamic_pointer_cast<base_connection>(connection));
                     if(base
@@ -3397,6 +3579,17 @@ void server::refresh_heard_of()
 }
 
 
+bool server::send_message(ed::message & msg, bool cache)
+{
+    snapdev::NOT_USED(msg, cache);
+
+    // TBD: I'm not sure whether I'm supposed to send the message to the
+    //      connection defined in `msg`?
+    //
+    throw sc::snapcommunicator_logic_error("server::send_message() called; only connection's send_message() should be called.");
+}
+
+
 /** \brief This snapcommunicator received the SHUTDOWN or a STOP command.
  *
  * This function processes the SHUTDOWN or STOP commands. It is a bit of
@@ -3405,7 +3598,7 @@ void server::refresh_heard_of()
  *
  * \param[in] quitting  Do a full shutdown (true) or just a stop (false).
  */
-void server::shutdown(bool quitting)
+void server::stop(bool quitting)
 {
     // from now on, we are shutting down; use this flag to make sure we
     // do not accept any more REGISTER, CONNECT and other similar
@@ -3515,8 +3708,10 @@ void server::shutdown(bool quitting)
                             reply.set_command("DISCONNECT");
                         }
 
-                        verify_command(c, reply);
-                        c->send_message(reply);
+                        if(verify_command(c, reply))
+                        {
+                            c->send_message(reply);
+                        }
 
                         // we cannot yet remove the connection from the
                         // communicator or the message would never be sent...
@@ -3601,7 +3796,13 @@ void server::shutdown(bool quitting)
 }
 
 
-void server::process_connected(ed::connection::pointer_t connection)
+bool server::is_debug() const
+{
+    return f_debug;
+}
+
+
+void server::process_connected(ed::connection::pointer_t conn)
 {
     ed::message connect;
     connect.set_command("CONNECT");
@@ -3620,23 +3821,15 @@ void server::process_connected(ed::connection::pointer_t connection)
     {
         connect.add_parameter("heard_of", f_services_heard_of);
     }
-    service_connection::pointer_t service_conn(std::dynamic_pointer_cast<service_connection>(connection));
-    if(service_conn != nullptr)
+    base_connection::pointer_t base(std::dynamic_pointer_cast<base_connection>(conn));
+    if(base != nullptr)
     {
-        service_conn->send_message(connect);
-    }
-    else
-    {
-        remote_connection::pointer_t remote_conn(std::dynamic_pointer_cast<remote_connection>(connection));
-        if(remote_conn != nullptr)
-        {
-            remote_conn->send_message(connect);
-        }
+        base->send_message(connect);
     }
 
     // status changed for this connection
     //
-    send_status(connection);
+    send_status(conn);
 }
 
 

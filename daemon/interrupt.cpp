@@ -122,7 +122,7 @@ void interrupt::process_signal()
 {
     // we simulate the STOP, so pass 'false' (i.e. not quitting)
     //
-    f_server->shutdown(false);
+    f_server->stop(false);
 }
 
 
