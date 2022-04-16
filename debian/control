@@ -1,4 +1,4 @@
-Source: eventdispatcher
+Source: snapcommunicator
 Priority: extra
 Maintainer: Alexis Wilke <alexis@m2osw.com>
 Build-Depends: cmake,
@@ -25,108 +25,23 @@ Homepage: https://snapwebsites.org/
 Vcs-Git: https://github.com/m2osw/snapcpp.git
 Vcs-Browser: https://github.com/m2osw/eventdispatcher
 
-Package: eventdispatcher-doc
+Package: snapcommunicator-doc
 Section: doc
 Architecture: all
 Depends: ${misc:Depends}
-Description: Documentation for the C++ Event Dispatcher library.
- This library provides advance network and event support.
+Description: Documentation for the Snap! C++ Communicator.
+ The snapcommunicator service is a deamon allowing RPC like communication
+ between services running in a cluster of servers. This package holds the
+ documentation of the service.
 
-Package: eventdispatcher-dev
-Section: libdevel
-Architecture: any
-Suggests: eventdispatcher-doc
-Depends: eventdispatcher (= ${binary:Version}), ${misc:Depends}
-Description: Development package for the C++ Event Dispatcher library.
- This library provides advance network and event support.
-
-Package: eventdispatcher
+Package: snapcommunicator
 Section: libs
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: C++ library for easy event based networking and communication.
- This library provides advance network and event support.
-
-Package: eventdispatcher-qt-dev
-Section: libdevel
-Architecture: any
-Suggests: eventdispatcher-doc
-Depends: eventdispatcher-dev (= ${binary:Version}),
- eventdispatcher-qt (= ${binary:Version}), ${misc:Depends}
-Description: Development package for the C++ Event Dispatcher library.
- This library provides an additional connection to support Qt as one of the
- input sockets.
-
-Package: eventdispatcher-qt
-Section: libs
-Architecture: any
-Depends: eventdispatcher (= ${binary:Version}), ${shlibs:Depends},
- ${misc:Depends}
-Description: C++ library for easy event based networking and communication.
- This library provides an additional connection to support Qt as one of the
- input sockets.
-
-Package: cppprocess
-Section: libs
-Architecture: any
-Depends: eventdispatcher (= ${binary:Version}), ${shlibs:Depends},
- ${misc:Depends}
-Description: Run processes with pipes in and out.
- This library is capable of running processes like a Unix shell. It starts
- them with a pipe as input and a pipe as output to send and collect data
- and it supports piping between multiple processes.
-
-Package: cppprocess-dev
-Section: libs
-Architecture: any
-Depends: cppprocess (= ${binary:Version}), ${shlibs:Depends},
- ${misc:Depends}
-Description: Run processes with pipes in and out.
- This is the cppprocess development library and headers.
-
-Package: cppprocess-doc
-Section: libs
-Architecture: any
-Suggests: cppprocess
-Description: Documentation about the cppprocess with pipes in and out.
- This is the cppprocess documentation.
-
-Package: snaplogger-network
-Section: libs
-Architecture: any
-Depends: eventdispatcher (= ${binary:Version}), ${shlibs:Depends},
- ${misc:Depends}
-Description: C++ library to extend the logger to the network
- This library offers a TCP and a UDP appender to be able to send the snaplogger
- output to other computers via the network.
-
-Package: snaplogger-network-dev
-Section: libdevel
-Architecture: any
-Suggests: snaplogger-network-doc
-Depends: snaplogger-network (= ${binary:Version}), ${shlibs:Depends},
- ${misc:Depends}
-Description: C++ library to extend the logger to the network
- This library offers a TCP and a UDP appender to be able to send the snaplogger
- output to other computers via the network. This includes the development
- files (headers, library to link against).
-
-Package: snaplogger-network-doc
-Section: doc
-Architecture: any
-Depends: ${misc:Depends}
-Description: C++ library to extend the logger to the network
- This package includes the documentation of the C++ library extension to
- offer network capabilities in the snaplogger project.
-
-Package: snaploggerd
-Section: libs
-Architecture: any
-Depends: eventdispatcher (= ${binary:Version}), ${shlibs:Depends},
- ${misc:Depends}
-Description: Daemon to collect logs on a remote computer
- This service is expected to be installed on one computer that will then
- automatically receive logs from other computer. This is an extension to
- the snaplogger package which only saves logs locally.
+Description: The Snap! C++ Communicator, an advanced RPC system.
+ This package holds the snapcommmunicator service which runs on all your
+ computers in your cluster and allows free communication between all the
+ services running on those computers without the need to graph the location
+ of each service (auto-discovery).
 
 # vim: ts=4 sw=4 et
