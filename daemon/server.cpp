@@ -79,9 +79,10 @@
 
 // snaplogger
 //
-#include <snaplogger/exception.h>
-#include <snaplogger/message.h>
-#include <snaplogger/options.h>
+#include    <snaplogger/exception.h>
+#include    <snaplogger/logger.h>
+#include    <snaplogger/message.h>
+#include    <snaplogger/options.h>
 
 
 // sitter
@@ -96,24 +97,19 @@
 
 // C++ lib
 //
-//#include <atomic>
-#include <cmath>
-//#include <fstream>
-//#include <iomanip>
-//#include <sstream>
-#include <thread>
+#include    <cmath>
+#include    <thread>
 
 
 // C lib
 //
-#include <grp.h>
-#include <pwd.h>
-//#include <sys/resource.h>
+#include    <grp.h>
+#include    <pwd.h>
 
 
 // included last
 //
-#include <snapdev/poison.h>
+#include    <snapdev/poison.h>
 
 
 
@@ -129,7 +125,7 @@ namespace
 {
 
 
-char const *        g_status_filename = "/var/lib/snapwebsites/cluster-status.txt";
+char const *        g_status_filename = "/var/lib/snapcommunicator/cluster-status.txt";
 
 
 /** \brief The sequence number of a message being broadcast.
@@ -161,6 +157,7 @@ const advgetopt::option g_options[] =
         , advgetopt::Flags(advgetopt::all_flags<
               advgetopt::GETOPT_FLAG_REQUIRED
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
+        , advgetopt::DefaultValue("")
         , advgetopt::Help("certificate for --secure-listen connections.")
     ),
     advgetopt::define_option(
@@ -169,15 +166,17 @@ const advgetopt::option g_options[] =
               advgetopt::GETOPT_FLAG_REQUIRED
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
         , advgetopt::DefaultValue("/var/lib/snapcommunicator")
-        , advgetopt::Help("a path where the snapcommunicator saves data it uses between runs such as the list of IP address of other snapcommunicators.")
+        , advgetopt::Help("a path where the snapcommunicator saves data it uses between runs such as the list of IP addresses of other snapcommunicators.")
     ),
     advgetopt::define_option(
           advgetopt::Name("debug-all-messages")
-        , advgetopt::Flags(advgetopt::all_flags<
-              advgetopt::GETOPT_FLAG_REQUIRED
-            , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
-        , advgetopt::DefaultValue("false")
-        , advgetopt::Help("log all the messages received by the snapcommunicator (except lock & log related because it creates issues).")
+        , advgetopt::Flags(advgetopt::command_flags<
+              advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
+#ifdef _DEBUG
+        , advgetopt::Help("log all the messages received by the snapcommunicator and verify them (as per the COMMAND message).")
+#else
+        , advgetopt::Help("verify the incoming messages (as per the COMMAND message).")
+#endif
     ),
     advgetopt::define_option(
           advgetopt::Name("group-name")
@@ -192,6 +191,7 @@ const advgetopt::option g_options[] =
         , advgetopt::Flags(advgetopt::all_flags<
               advgetopt::GETOPT_FLAG_REQUIRED
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
+        , advgetopt::DefaultValue("127.0.0.1:4040")
         , advgetopt::Help("<IP:port> to open a local TCP connection (no encryption).")
     ),
     advgetopt::define_option(
@@ -229,6 +229,7 @@ const advgetopt::option g_options[] =
         , advgetopt::Flags(advgetopt::all_flags<
               advgetopt::GETOPT_FLAG_REQUIRED
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
+        , advgetopt::DefaultValue("")
         , advgetopt::Help("private key for --secure-listen connections.")
     ),
     advgetopt::define_option(
@@ -236,6 +237,7 @@ const advgetopt::option g_options[] =
         , advgetopt::Flags(advgetopt::all_flags<
               advgetopt::GETOPT_FLAG_REQUIRED
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
+        , advgetopt::DefaultValue("0.0.0.0:4040")
         , advgetopt::Help("<IP:port> to open a remote TCP connection (no encryption).")
     ),
     advgetopt::define_option(
@@ -257,7 +259,7 @@ const advgetopt::option g_options[] =
         , advgetopt::Flags(advgetopt::all_flags<
               advgetopt::GETOPT_FLAG_REQUIRED
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
-        , advgetopt::DefaultValue("/usr/share/snapwebsites/services")
+        , advgetopt::DefaultValue("/usr/share/snapcommunicator/services")
         , advgetopt::Help("path to the list of service files.")
     ),
     advgetopt::define_option(
@@ -265,6 +267,7 @@ const advgetopt::option g_options[] =
         , advgetopt::Flags(advgetopt::all_flags<
               advgetopt::GETOPT_FLAG_REQUIRED
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
+        , advgetopt::DefaultValue("127.0.0.1:4041")
         , advgetopt::Help("an address accepting UDP messages (signals); these messages do not get acknowledged.")
     ),
     advgetopt::define_option(
@@ -309,7 +312,7 @@ advgetopt::group_description const g_group_descriptions[] =
 
 constexpr char const * const g_configuration_files[] =
 {
-    "/etc/eventdispatcher/ed-signal.conf",
+    "/etc/snapcommunicator/snapcommunicator.conf",
     nullptr
 };
 
@@ -319,7 +322,7 @@ constexpr char const * const g_configuration_files[] =
 advgetopt::options_environment const g_options_environment =
 {
     .f_project_name = "snapcommunicator",
-    .f_group_name = "eventdispatcher",
+    .f_group_name = "snapcommunicator",
     .f_options = g_options,
     .f_options_files_directory = nullptr,
     .f_environment_variable_name = "SNAPCOMMUNICATOR",
@@ -492,8 +495,10 @@ server::server(int argc, char * argv[])
     f_logrotate.process_logrotate_options();
 
     f_dispatcher->add_communicator_commands();
+
+    f_debug_all_messages = f_opts.is_defined("debug_all_messages");
 #ifdef _DEBUG
-    if(advgetopt::is_true(f_opts.get_string("debug_all_messages")))
+    if(f_debug_all_messages)
     {
         f_dispatcher->set_trace();
     }
@@ -532,9 +537,6 @@ int server::init()
 
     f_number_of_processors = std::max(1U, std::thread::hardware_concurrency());
 
-    f_debug = advgetopt::is_true(f_opts.get_string("debug"));
-    f_debug_all_messages = advgetopt::is_true(f_opts.get_string("debug_all_messages"));
-
     // check a user defined maximum number of connections
     // by default this is set to SNAP_COMMUNICATOR_MAX_CONNECTIONS,
     // which at this time is 100
@@ -554,6 +556,9 @@ int server::init()
         {
             // we have some local services (note that snapcommunicator is
             // not added as a local service)
+            //
+            // at the moment we do not load those files, these could include
+            // data such as the service description
             //
             for(auto const & p : dir)
             {
@@ -606,7 +611,7 @@ int server::init()
     {
         addr::addr local_listen(addr::string_to_addr(
                   f_opts.get_string("local_listen")
-                , "0.0.0.0"
+                , "127.0.0.1"
                 , 4040
                 , "tcp"));
         if(local_listen.get_network_type() != addr::addr::network_type_t::NETWORK_TYPE_LOOPBACK)
@@ -670,7 +675,7 @@ int server::init()
         else
         {
             SNAP_LOG_WARNING
-                << "remote \"listen\" parameter is \""
+                << "\"remote_listen\" parameter is \""
                 << listen_str
                 << "\" (local loopback) so it is ignored and no remote connections will be possible."
                 << SNAP_LOG_SEND;
@@ -731,7 +736,10 @@ int server::init()
                         , "udp"));
 
         ping::pointer_t p(std::make_shared<ping>(shared_from_this(), signal_address));
-        p->set_secret_code(f_opts.get_string("signal_secret"));
+        if(f_opts.is_defined("signal_secret"))
+        {
+            p->set_secret_code(f_opts.get_string("signal_secret"));
+        }
         p->set_name("snap communicator messenger (UDP)");
         f_ping = p;
         if(!f_communicator->add_connection(f_ping))
@@ -755,7 +763,7 @@ int server::init()
                 , std::string()
                 , listen_addr.get_port()
                 , "tcp"));
-    if(addr::find_addr_interface(f_my_address, false) != nullptr)
+    if(addr::find_addr_interface(f_my_address, false) == nullptr)
     {
         std::string msg("my_address \"");
         msg += f_my_address.to_ipv6_string(addr::addr::string_ip_t::STRING_IP_BRACKETS);
@@ -3412,7 +3420,7 @@ void server::add_neighbors(std::string const & new_neighbors)
  *
  * This function removes a neighbor from the cache of this machine. If
  * the neighbor is also defined in the configuration file, such as
- * /etc/snapwebsites/snapcommunicator.conf, then the IP will not be
+ * /etc/snapcommunicator/snapcommunicator.conf, then the IP will not be
  * forgotten any time soon.
  *
  * \param[in] neighbor  The neighbor to be removed.
@@ -3466,7 +3474,7 @@ void server::read_neighbors()
         return;
     }
 
-    // get the path to the dynamic snapwebsites data files
+    // get the path to the dynamic snapcommunicator data files
     //
     f_neighbors_cache_filename = f_opts.get_string("data_path");
     f_neighbors_cache_filename += "/neighbors.txt";
@@ -3798,7 +3806,7 @@ void server::stop(bool quitting)
 
 bool server::is_debug() const
 {
-    return f_debug;
+    return snaplogger::logger::get_instance()->get_lowest_severity() <= snaplogger::severity_t::SEVERITY_DEBUG;
 }
 
 

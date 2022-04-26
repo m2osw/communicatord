@@ -175,7 +175,6 @@ private:
     size_t                          f_max_connections = SNAP_COMMUNICATOR_MAX_CONNECTIONS;
     size_t                          f_total_count_sent = 0; // f_all_neighbors.size() sent along CLUSTERUP/DOWN/COMPLETE/INCOMPLETE
     bool                            f_shutdown = false;
-    bool                            f_debug = false;
     bool                            f_debug_all_messages = false;
     bool                            f_force_restart = false;
     cache                           f_local_message_cache = cache();

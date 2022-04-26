@@ -10,16 +10,16 @@ then
 
     # delete a cache file
     #
-    rm -f /var/cache/snapwebsites/neighbors.txt
+    rm -f /var/cache/snapcommunicator/neighbors.txt
 
     # delete the logs
     #
-    rm -f /var/log/snapwebsites/${PACKAGENAME}.log*
-    shredlog -fu /var/log/snapwebsites/secure/${PACKAGENAME}.log*
+    rm -f /var/log/snapcommunicator/${PACKAGENAME}.log*
+    shredlog -fu /var/log/snapcommunicator/secure/${PACKAGENAME}.log*
 
     # delete the user configuration file
     #
-    rm -f /etc/snapwebsites/snapwebsites.d/${PACKAGENAME}.conf
+    rm -f /etc/snapcommunicator/snapcommunicator.d/${PACKAGENAME}.conf
 
     # delete override.d of snapcommunicator
     #
@@ -27,7 +27,7 @@ then
 
     # delete the snapcommunicator SSL files
     #
-    SNAPSSL=/etc/snapwebsites/ssl
+    SNAPSSL=/etc/snapcommunicator/ssl
     rm -f $SNAPSSL/${PACKAGENAME}.key
     rm -f $SNAPSSL/${PACKAGENAME}.crt
 

@@ -13,7 +13,7 @@ then
     # Create a default user editable snapmanager.conf file if it does not
     # exist yet
     #
-    SNAPCOMMUNICATOR_USER_CONFIGURATION_FILE=/etc/snapwebsites/snapwebsites.d/${PACKAGENAME}.conf
+    SNAPCOMMUNICATOR_USER_CONFIGURATION_FILE=/etc/snapcommunicator/snapcommunicator.d/${PACKAGENAME}.conf
     if test ! -f $SNAPCOMMUNICATOR_USER_CONFIGURATION_FILE
     then
         # When first installing, we do not have the public IP address
@@ -37,19 +37,19 @@ then
         echo "#listen=" >>$SNAPCOMMUNICATOR_USER_CONFIGURATION_FILE
     fi
 
-    # Create the logfile because the snapwebsites user may have
+    # Create the logfile because the snapcommunicator user may have
     # difficulties with it otherwise during logrotate.
     #
-    SNAPLOGDIR=/var/log/snapwebsites
+    SNAPLOGDIR=/var/log/snapcommunicator
     LOGFILE=${SNAPLOGDIR}/${PACKAGENAME}.log
     touch ${LOGFILE}
-    chown snapwebsites:snapwebsites ${LOGFILE}
+    chown snapcommunicator:snapcommunicator ${LOGFILE}
     chmod 640 ${LOGFILE}
 
-    SNAPSECURELOGDIR=/var/log/snapwebsites/secure
+    SNAPSECURELOGDIR=/var/log/snapcommunicator/secure
     SECURELOGFILE=${SNAPSECURELOGDIR}/${PACKAGENAME}.log
     touch ${SECURELOGFILE}
-    chown snapwebsites:snapwebsites ${SECURELOGFILE}
+    chown snapcommunicator:snapcommunicator ${SECURELOGFILE}
     chmod 640 ${SECURELOGFILE}
 
     # generate a private key and a certificate for remote snapcommunicators
@@ -58,8 +58,8 @@ then
     # here we fix the ownship of the directory (since it is not just
     # root:root, we cannot really do it in the rules)
     #
-    SNAPSSL=/etc/snapwebsites/ssl
-    chown snapwebsites:snapwebsites ${SNAPSSL}
+    SNAPSSL=/etc/snapcommunicator/ssl
+    chown snapcommunicator:snapcommunicator ${SNAPSSL}
     if test ! -f ${SNAPSSL}/${PACKAGENAME}.key \
          -o ! -f ${SNAPSSL}/${PACKAGENAME}.crt
     then
