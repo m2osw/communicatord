@@ -312,7 +312,7 @@ advgetopt::group_description const g_group_descriptions[] =
 
 constexpr char const * const g_configuration_files[] =
 {
-    "/etc/snapcommunicator/snapcommunicator.conf",
+    "/etc/snapcommunicatord/snapcommunicatord.conf",
     nullptr
 };
 
@@ -321,8 +321,8 @@ constexpr char const * const g_configuration_files[] =
 #pragma GCC diagnostic ignored "-Wpedantic"
 advgetopt::options_environment const g_options_environment =
 {
-    .f_project_name = "snapcommunicator",
-    .f_group_name = "snapcommunicator",
+    .f_project_name = "snapcommunicatord",
+    .f_group_name = "snapcommunicatord",
     .f_options = g_options,
     .f_options_files_directory = nullptr,
     .f_environment_variable_name = "SNAPCOMMUNICATOR",
@@ -487,7 +487,7 @@ server::server(int argc, char * argv[])
     snaplogger::add_logger_options(f_opts);
     f_logrotate.add_logrotate_options();
     f_opts.finish_parsing(argc, argv);
-    if(!snaplogger::process_logger_options(f_opts, "/etc/snapcommunicator/logger"))
+    if(!snaplogger::process_logger_options(f_opts, "/etc/snapcommunicatord/logger"))
     {
         // exit on any error
         throw advgetopt::getopt_exit("logger options generated an error.", 1);
@@ -562,7 +562,15 @@ int server::init()
             //
             for(auto const & p : dir)
             {
-                f_local_services_list.insert(snapdev::pathinfo::basename(p, ".service"));
+                std::string const service_name(snapdev::pathinfo::basename(p, ".service"));
+                f_local_services_list.insert(service_name);
+
+std::cerr << "got a name here!?!? " << service_name << "\n";
+                SNAP_LOG_DEBUG
+                    << "Known local service: \""
+                    << service_name
+                    << "\"."
+                    << SNAP_LOG_SEND;
             }
         }
         else
@@ -3420,7 +3428,7 @@ void server::add_neighbors(std::string const & new_neighbors)
  *
  * This function removes a neighbor from the cache of this machine. If
  * the neighbor is also defined in the configuration file, such as
- * /etc/snapcommunicator/snapcommunicator.conf, then the IP will not be
+ * /etc/snapcommunicatord/snapcommunicatord.conf, then the IP will not be
  * forgotten any time soon.
  *
  * \param[in] neighbor  The neighbor to be removed.
