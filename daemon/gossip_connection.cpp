@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicator
+// https://snapwebsites.org/project/snapcommunicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -55,7 +55,7 @@ namespace scd
 
 
 /** \class gossip_connection
- * \brief To send a GOSSIP to a remote snapcommunicator.
+ * \brief To send a GOSSIP to a remote snapcommunicatord.
  *
  * This class defines a connection used to send a GOSSIP message
  * to a remote communicator. Once the GOSSIP worked at least once,
@@ -80,7 +80,7 @@ namespace scd
  *
  * This object is actually a timer. Each time we get a tick
  * (i.e. process_timeout() callback gets called), a connection
- * is attempted against the remote snapcommunicator daemon
+ * is attempted against the remote snapcommunicatord daemon
  * specified by the addr and port parameters.
  *
  * The addr and port are both mandatory to this constructor.
@@ -118,7 +118,7 @@ gossip_connection::gossip_connection(
  * However, we want to increase the delay between attempts. For that,
  * we use this function and double the delay on each timeout until
  * it reaches about 1h. Then we stop doubling that delay. If the
- * remote snapcommunicator never makes it, we won't swamp the network
+ * remote snapcommunicatord never makes it, we won't swamp the network
  * by false attempts to connect to a dead computer.
  *
  * \todo
@@ -151,7 +151,7 @@ void gossip_connection::process_timeout()
  *
  * We currently really only expect RECEIVED as a reply.
  *
- * \param[in] message  The message received from the remote snapcommunicator.
+ * \param[in] message  The message received from the remote snapcommunicatord.
  */
 void gossip_connection::process_message(ed::message & msg)
 {
@@ -215,7 +215,7 @@ void gossip_connection::process_connected()
     // any further process_timeout() calls until we completely
     // lose the connection. This is possibly not what we want, or
     // at least we should let the snapwatchdog know that we were
-    // connected to a snapcommunicator, yes, sent the GOSSIP,
+    // connected to a snapcommunicatord, yes, sent the GOSSIP,
     // all good up to here, but never got a reply! Not getting
     // a reply is likely to mean that the connection we establish
     // is somehow bogus even if it does not Hang Up on us.

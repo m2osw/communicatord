@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicator
+// https://snapwebsites.org/project/snapcommunicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -29,17 +29,6 @@
 #include    "utils.h"
 
 
-//// snapwebsites lib
-////
-//#include <snapwebsites/chownnm.h>
-//#include <snapwebsites/flags.h>
-//#include <snapwebsites/glob_dir.h>
-//#include <snapwebsites/loadavg.h>
-//#include <snapwebsites/log.h>
-//#include <snapwebsites/qcompatibility.h>
-//#include <snapwebsites/snap_communicator.h>
-//#include <snapwebsites/snapwebsites.h>
-
 
 // snapdev
 //
@@ -49,9 +38,7 @@
 
 // libaddr lib
 //
-//#include <libaddr/addr_exception.h>
 #include <libaddr/addr_parser.h>
-//#include <libaddr/iface.h>
 
 
 // snaplogger
@@ -59,29 +46,9 @@
 #include    <snaplogger/message.h>
 
 
-//// C++ lib
-////
-//#include <atomic>
-//#include <cmath>
-//#include <fstream>
-//#include <iomanip>
-//#include <sstream>
-//#include <thread>
-//
-//
-//// C lib
-////
-//#include <grp.h>
-//#include <pwd.h>
-//#include <sys/resource.h>
-
-
 // included last
 //
 #include    <snapdev/poison.h>
-
-
-
 
 
 

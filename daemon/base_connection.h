@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicator
+// https://snapwebsites.org/project/snapcommunicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -47,7 +47,7 @@ enum class connection_type_t
 {
     CONNECTION_TYPE_DOWN,   // not connected
     CONNECTION_TYPE_LOCAL,  // a service on this computer
-    CONNECTION_TYPE_REMOTE  // another snapcommunicator on another computer
+    CONNECTION_TYPE_REMOTE  // another snapcommunicatord on another computer
 };
 
 

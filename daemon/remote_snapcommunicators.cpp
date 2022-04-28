@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicator
+// https://snapwebsites.org/project/snapcommunicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -40,12 +40,6 @@
 // snapdev
 //
 #include    <snapdev/gethostname.h>
-//#include <snapwebsites/glob_dir.h>
-//#include <snapwebsites/loadavg.h>
-//#include <snapwebsites/log.h>
-//#include <snapwebsites/qcompatibility.h>
-//#include <snapwebsites/snap_communicator.h>
-//#include <snapwebsites/snapwebsites.h>
 
 
 // snaplogger
@@ -55,35 +49,18 @@
 
 // libaddr lib
 //
-//#include <libaddr/addr_exception.h>
 #include <libaddr/addr_parser.h>
-//#include <libaddr/iface.h>
 
 
 // C++ lib
 //
-//#include <atomic>
-//#include <cmath>
-//#include <fstream>
 #include <iomanip>
-//#include <sstream>
 #include <thread>
-
-
-//// C lib
-////
-//#include <grp.h>
-//#include <pwd.h>
-//#include <sys/resource.h>
 
 
 // included last
 //
 #include <snapdev/poison.h>
-
-
-
-
 
 
 
@@ -126,7 +103,7 @@ void remote_snapcommunicators::add_remote_communicator(std::string const & addr_
         //      right back to us!)
         //
         SNAP_LOG_WARNING
-            << "address of remote snapcommunicator, \""
+            << "address of remote snapcommunicatord, \""
             << addr_port
             << "\", is the same as my address, which means it is not remote."
             << SNAP_LOG_SEND;
@@ -247,7 +224,7 @@ void remote_snapcommunicators::add_remote_communicator(std::string const & addr_
     }
     else //if(remote_addr != f_my_address) -- already tested at the beginning of the function
     {
-        // in case the remote snapcommunicator has a larger address
+        // in case the remote snapcommunicatord has a larger address
         // it is expected to CONNECT to us; however, it may not yet
         // know about us so we want to send a GOSSIP message; this
         // means creating a special connection which attempts to
@@ -292,7 +269,7 @@ void remote_snapcommunicators::add_remote_communicator(std::string const & addr_
  * This function can be called to remove all the gossip connections
  * at once.
  *
- * In most cases this function is called whenever the snapcommunicator
+ * In most cases this function is called whenever the snapcommunicatord
  * daemon receives a STOP or a SHUTDOWN.
  *
  * Also these connections do not support any other messages than the
@@ -325,7 +302,7 @@ void remote_snapcommunicators::stop_gossiping()
  * At some point we may want to look into having seeds instead
  * of allowing connections to all the nodes.
  *
- * \param[in] address  The address of the snapcommunicator that refused a
+ * \param[in] address  The address of the snapcommunicatord that refused a
  *                     CONNECT because it is too busy.
  */
 void remote_snapcommunicators::too_busy(addr::addr const & address)
@@ -350,7 +327,7 @@ void remote_snapcommunicators::too_busy(addr::addr const & address)
  * This function makes sure we wait for some time, instead of waisting
  * our time trying to reconnect again and again.
  *
- * \param[in] addr  The address of the snapcommunicator that refused a
+ * \param[in] addr  The address of the snapcommunicatord that refused a
  *                  CONNECT because it is shutting down.
  */
 void remote_snapcommunicators::shutting_down(addr::addr const & address)
@@ -376,7 +353,7 @@ void remote_snapcommunicators::shutting_down(addr::addr const & address)
 
 void remote_snapcommunicators::server_unreachable(addr::addr const & address)
 {
-    // we do not have the name of the computer in snapcommunicator so
+    // we do not have the name of the computer in snapcommunicatord so
     // we just broadcast the IP address of the non-responding computer
     //
     ed::message unreachable;

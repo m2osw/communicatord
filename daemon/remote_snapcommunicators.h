@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicator
+// https://snapwebsites.org/project/snapcommunicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -24,7 +24,7 @@
  * to the other snapcommunicators on your network.
  *
  * When the IP address is smaller than ours, then we connect to that
- * snapcommunicator. When the IP address is larger than ours, then we
+ * snapcommunicatord. When the IP address is larger than ours, then we
  * instead connect to send a GOSSIP message. The GOSSIP is a mean to
  * connect to new servers without the need to define them on all your
  * servers. Defining it on one server is enough to get things started.

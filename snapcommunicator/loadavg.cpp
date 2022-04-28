@@ -341,7 +341,7 @@ std::string get_loadavg_path()
 {
     if(g_filename.empty())
     {
-        g_filename = "/var/lib/snapcommunicator/loadavg.lavg";
+        g_filename = "/var/lib/snapcommunicatord/loadavg.lavg";
     }
 
     return g_filename;

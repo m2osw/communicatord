@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicator
+// https://snapwebsites.org/project/snapcommunicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -17,9 +17,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 /** \file
- * \brief Implementation of the remote snapcommunicator connection.
+ * \brief Implementation of the remote snapcommunicatord connection.
  *
- * This is the implementation of the remote snapcommunicator connection.
+ * This is the implementation of the remote snapcommunicatord connection.
  * Connection used to communicate with other snapcommunicators running
  * on other servers.
  */
@@ -61,9 +61,9 @@ namespace scd
 
 
 /** \class remote_connection
- * \brief Describe a remove snapcommunicator by IP address, etc.
+ * \brief Describe a remove snapcommunicatord by IP address, etc.
  *
- * This class defines a snapcommunicator server. Mainly we include
+ * This class defines a snapcommunicatord server. Mainly we include
  * the IP address of the server to connect to.
  *
  * The object also maintains the status of that server. Whether we
@@ -72,7 +72,7 @@ namespace scd
  * just go to sleep and try again "much" later saving many CPU
  * cycles.)
  *
- * It also gives us a way to quickly track snapcommunicator objects
+ * It also gives us a way to quickly track snapcommunicatord objects
  * that REFUSE our connection.
  */
 
@@ -81,8 +81,8 @@ namespace scd
  *
  * This initialization function sets up the attached snap_timer
  * to 1 second delay before we try to connect to this remote
- * snapcommunicator. The timer is reused later when the connection
- * is lost, a snapcommunicator returns a REFUSE message to our
+ * snapcommunicatord. The timer is reused later when the connection
+ * is lost, a snapcommunicatord returns a REFUSE message to our
  * CONNECT message, and other similar errors.
  *
  * \param[in] cs  The snap communicator server shared pointer.
@@ -220,7 +220,7 @@ void remote_connection::process_connection_failed(std::string const & error_mess
               " from the list of neighbors AND THE FIREWALL if it is there too.";
 
         sitter::flag::pointer_t flag(SITTER_FLAG_UP(
-                      "snapcommunicator"
+                      "snapcommunicatord"
                     , "remote-connection"
                     , "connection-failed"
                     , ss.str()
@@ -253,7 +253,7 @@ void remote_connection::process_connected()
         f_flagged = false;
 
         sitter::flag::pointer_t flag(SITTER_FLAG_DOWN(
-                           "snapcommunicator"
+                           "snapcommunicatord"
                          , "remote-connection"
                          , "connection-failed")
                      );

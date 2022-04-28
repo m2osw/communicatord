@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicator
+// https://snapwebsites.org/project/snapcommunicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -27,50 +27,9 @@
 #include    "interrupt.h"
 
 
-//// snapwebsites lib
-////
-//#include <snapwebsites/chownnm.h>
-//#include <snapwebsites/flags.h>
-//#include <snapwebsites/glob_dir.h>
-//#include <snapwebsites/loadavg.h>
-//#include <snapwebsites/log.h>
-//#include <snapwebsites/qcompatibility.h>
-//#include <snapwebsites/snap_communicator.h>
-//#include <snapwebsites/snapwebsites.h>
-//
-//
-//// snapdev lib
-////
-//#include <snapdev/not_used.h>
-//#include <snapdev/tokenize_string.h>
-//
-//
-//// libaddr lib
-////
-//#include <libaddr/addr_exception.h>
-//#include <libaddr/addr_parser.h>
-//#include <libaddr/iface.h>
-//
-//
-//// Qt lib
-////
-//#include <QFile>
-//
-//
-//// C++ lib
-////
-//#include <atomic>
-//#include <cmath>
-//#include <fstream>
-//#include <iomanip>
-//#include <sstream>
-//#include <thread>
-
 
 // C lib
 //
-//#include <grp.h>
-//#include <pwd.h>
 #include    <signal.h>
 
 
@@ -102,7 +61,7 @@ namespace scd
  * Specifically, it listens on the SIGINT signal, which is the equivalent
  * to the Ctrl-C.
  *
- * \param[in] cs  The snapcommunicator we are listening for.
+ * \param[in] cs  The snapcommunicatord we are listening for.
  */
 interrupt::interrupt(server::pointer_t cs)
     : signal(SIGINT)
@@ -113,7 +72,7 @@ interrupt::interrupt(server::pointer_t cs)
 }
 
 
-/** \brief Call the stop function of the snapcommunicator object.
+/** \brief Call the stop function of the snapcommunicatord object.
  *
  * When this function is called, the signal was received and thus we are
  * asked to quit as soon as possible.

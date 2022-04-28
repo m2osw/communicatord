@@ -1,6 +1,6 @@
 # Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 #
-# https://snapwebsites.org/project/snapcommunicator
+# https://snapwebsites.org/project/snapcommunicatord
 # contact@m2osw.com
 #
 # This program is free software: you can redistribute it and/or modify

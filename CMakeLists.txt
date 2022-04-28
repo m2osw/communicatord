@@ -45,6 +45,7 @@ include_directories(
 add_subdirectory(snapcommunicator)      # helper library
 add_subdirectory(daemon          )      # actual snapcommunicator service
 add_subdirectory(cmake           )      # find helper library
+#add_subdirectory(conf            )      # configuration files
 add_subdirectory(doc             )      # various docs
 add_subdirectory(tools           )      # various tools
 add_subdirectory(tests           )      # unit tests
