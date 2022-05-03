@@ -443,7 +443,7 @@ public:
     virtual ~network_connection() override
     {
         // calling disconnect() is "too late" because the connection is
-        // part of the snap communicator and needs to be removed from
+        // part of the ed::communicator and needs to be removed from
         // there before the destructor gets called...
         //disconnect();
     }
@@ -464,6 +464,10 @@ public:
 
     bool set_address(std::string const & address)
     {
+        // clear old connection first, just in case
+        //
+        disconnect();
+
         // we allow the user to connect to any one of the allowed socket
         // that the snapcommunicator listens on
         //
@@ -478,7 +482,6 @@ public:
         //     scu:///run/snapcommunicatord/datagram.sock -- a plain local datagram connection (Unix)
         //     scb://<ip>:<port> -- a broadcasting UDP connection
         //
-        f_prompt.clear();
         try
         {
             if(!f_uri.set_uri(address, true, true))
@@ -677,10 +680,6 @@ public:
 
     void create_tcp_connection()
     {
-        // clear old connection first, just in case
-        //
-        disconnect();
-
         // create new connection
         //
         ed::mode_t const mode(f_selected_connection_type == connection_t::SECURE_TCP
@@ -717,10 +716,6 @@ public:
 
     void create_udp_connection()
     {
-        // clear old connection first, just in case
-        //
-        disconnect();
-
         // create new connection
         // -- at this point we only deal with client connections here and
         //    the following creates a UDP server; to send data we just use
@@ -790,6 +785,7 @@ public:
                 break;
 
             case connection_t::LOCAL_STREAM:   // local (unix) stream
+                create_local_stream_connection();
                 break;
 
             case connection_t::LOCAL_DGRAM:    // local (unix) datagram
@@ -1111,7 +1107,7 @@ public:
         if(command == "/disconnect")
         {
             c->disconnect();
-            return false;
+            return true;
         }
 
         // "/.*" is not a valid message beginning, we suspect that the user
