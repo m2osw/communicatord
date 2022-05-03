@@ -1,8 +1,8 @@
 debian/tmp/usr/bin/snapclusterstatus                                     usr/bin/
-debian/tmp/usr/bin/snapstop                                              usr/bin/
-debian/tmp/usr/bin/snapsignal                                            usr/bin/
-debian/tmp/usr/sbin/snapcommunicator                                     usr/sbin/
+debian/tmp/usr/bin/snapmessage                                           usr/bin/
+debian/tmp/usr/sbin/snapcommunicatord                                    usr/sbin/
 #debian/tmp/usr/lib/snapmanager/manager_plugins/libcommunicator.so       usr/lib/snapmanager/manager_plugins/
+debian/tmp/usr/lib/libsnapcommunicator.so.*                              usr/lib
 debian/tmp/usr/share/snapcommunicator/services/README.md                 usr/share/snapcommunicator/services/
 debian/tmp/usr/share/snapcommunicator/logger/snapcommunicator.properties usr/share/snapcommunicator/logger/
 snapcommunicator/conf/snapcommunicator.conf                              etc/snapcommunicator/

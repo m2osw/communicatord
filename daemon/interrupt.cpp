@@ -82,6 +82,7 @@ void interrupt::process_signal()
     // we simulate the STOP, so pass 'false' (i.e. not quitting)
     //
     f_server->stop(false);
+    ed::communicator::instance()->remove_connection(shared_from_this());
 }
 
 

@@ -33,8 +33,10 @@
 // eventdispatcher
 //
 #include    <eventdispatcher/connection.h>
+#include    <eventdispatcher/connection_with_send_message.h>
 #include    <eventdispatcher/communicator.h>
-#include    <eventdispatcher/logrotate_udp_messenger.h>
+#include    <eventdispatcher/dispatcher.h>
+#include    <eventdispatcher/dispatcher_support.h>
 
 
 // advgetopt
@@ -54,6 +56,7 @@ namespace scd
 
 class base_connection;
 class remote_snapcommunicators;
+
 
 
 #pragma GCC diagnostic push
@@ -143,7 +146,6 @@ private:
     //snap::server::pointer_t   f_server = snap::server::pointer_t(); -- this was the snapwebsites server
 
     advgetopt::getopt               f_opts;
-    ed::logrotate_extension         f_logrotate;
     ed::dispatcher<server>::pointer_t
                                     f_dispatcher = ed::dispatcher<server>::pointer_t();
     std::string                     f_server_name = std::string();
@@ -154,7 +156,7 @@ private:
     std::string                     f_public_ip = std::string();        // f_listener IP address for plain connections
     std::string                     f_secure_ip = std::string();        // f_listener IP address with TLS
     ed::communicator::pointer_t     f_communicator = ed::communicator::pointer_t();
-    ed::connection::pointer_t       f_interrupt = ed::connection::pointer_t();        // TCP/IP
+    ed::connection::weak_pointer_t  f_interrupt = ed::connection::pointer_t();        // signalfd
     ed::connection::pointer_t       f_local_listener = ed::connection::pointer_t();   // TCP/IP
     ed::connection::pointer_t       f_remote_listener = ed::connection::pointer_t();  // TCP/IP
     ed::connection::pointer_t       f_secure_listener = ed::connection::pointer_t();  // TCP/IP

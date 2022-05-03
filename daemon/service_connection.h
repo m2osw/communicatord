@@ -55,7 +55,7 @@ public:
 
     // ed::tcp_server_client_message_connection implementation
     virtual void        process_message(ed::message & msg) override;
-    virtual bool        send_message(ed::message & msg, bool cache = false);
+    virtual bool        send_message(ed::message & msg, bool cache = false) override;
 
     void                send_status();
     virtual void        process_timeout() override;

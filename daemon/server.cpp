@@ -46,6 +46,7 @@
 //
 #include    <snapcommunicator/exception.h>
 #include    <snapcommunicator/loadavg.h>
+#include    <snapcommunicator/snapcommunicator.h>
 #include    <snapcommunicator/version.h>
 
 
@@ -479,20 +480,17 @@ ed::dispatcher<server>::dispatcher_match::vector_t const g_server_messages =
  */
 server::server(int argc, char * argv[])
     : f_opts(g_options_environment)
-    , f_logrotate(f_opts, "127.0.0.1", 4043)
     , f_dispatcher(std::make_shared<ed::dispatcher<server>>(
                           this
                         , g_server_messages))
 {
     snaplogger::add_logger_options(f_opts);
-    f_logrotate.add_logrotate_options();
     f_opts.finish_parsing(argc, argv);
     if(!snaplogger::process_logger_options(f_opts, "/etc/snapcommunicatord/logger"))
     {
         // exit on any error
         throw advgetopt::getopt_exit("logger options generated an error.", 1);
     }
-    f_logrotate.process_logrotate_options();
 
     f_dispatcher->add_communicator_commands();
 
@@ -503,6 +501,7 @@ server::server(int argc, char * argv[])
         f_dispatcher->set_trace();
     }
 #endif
+    set_dispatcher(f_dispatcher);
 }
 
 
@@ -592,8 +591,9 @@ std::cerr << "got a name here!?!? " << service_name << "\n";
 
     // capture Ctrl-C (SIGINT)
     //
-    f_interrupt = std::make_shared<interrupt>(shared_from_this());
-    f_communicator->add_connection(f_interrupt);
+    ed::connection::pointer_t interrupt(std::make_shared<interrupt>(shared_from_this()));
+    f_communicator->add_connection(interrupt);
+    f_interrupt = interrupt;
 
     int const max_pending_connections(f_opts.get_long("max_pending_connections"));
     if(max_pending_connections < 5
@@ -620,7 +620,7 @@ std::cerr << "got a name here!?!? " << service_name << "\n";
         addr::addr local_listen(addr::string_to_addr(
                   f_opts.get_string("local_listen")
                 , "127.0.0.1"
-                , 4040
+                , sc::LOCAL_PORT
                 , "tcp"));
         if(local_listen.get_network_type() != addr::addr::network_type_t::NETWORK_TYPE_LOOPBACK)
         {
@@ -660,7 +660,11 @@ std::cerr << "got a name here!?!? " << service_name << "\n";
     }
     // plain remote
     std::string const listen_str(f_opts.get_string("remote_listen"));
-    addr::addr listen_addr(addr::string_to_addr(listen_str, "0.0.0.0", 4040, "tcp"));
+    addr::addr listen_addr(addr::string_to_addr(
+                  listen_str
+                , "0.0.0.0"
+                , sc::REMOTE_PORT
+                , "tcp"));
     {
         // make this listener the remote listener, however, if the IP
         // address is 127.0.0.1 we skip on this one, we do not need
@@ -699,7 +703,7 @@ std::cerr << "got a name here!?!? " << service_name << "\n";
         addr::addr secure_listen(addr::string_to_addr(
                   f_opts.get_string("secure_listen")
                 , "0.0.0.0"
-                , 4041
+                , sc::SECURE_PORT
                 , "tcp"));
 
         // make this listener the remote listener, however, if the IP
@@ -740,7 +744,7 @@ std::cerr << "got a name here!?!? " << service_name << "\n";
         addr::addr signal_address(addr::string_to_addr(
                           f_opts.get_string("signal")
                         , "127.0.0.1"
-                        , 4041
+                        , sc::UDP_PORT
                         , "udp"));
 
         ping::pointer_t p(std::make_shared<ping>(shared_from_this(), signal_address));
@@ -1270,7 +1274,7 @@ void server::transmission_report(ed::message & msg)
     reply.set_command("TRANSMISSIONREPORT");
     reply.add_parameter("status", "failed");
     //verify_command(conn, reply);
-    conn->send_message(reply);
+    conn->send_message_to_connection(reply);
 }
 
 
@@ -1374,14 +1378,14 @@ bool server::shutting_down(ed::message & msg)
         reply.set_command("QUITTING");
         if(verify_command(conn, reply))
         {
-            conn->send_message(reply);
+            conn->send_message_to_connection(reply);
         }
     }
 
     // get rid of that connection now, we don't need any more
     // messages coming from it
     //
-    f_communicator->remove_connection(msg.user_data<ed::connection>());
+    f_communicator->remove_connection(std::dynamic_pointer_cast<ed::connection>(conn));
 
     return true;
 }
@@ -1476,7 +1480,7 @@ void server::msg_accept(ed::message & msg)
     addr::addr his_address(addr::string_to_addr(
               his_address_str
             , "255.255.255.255"
-            , 4040
+            , sc::REMOTE_PORT   // REMOTE_PORT or SECURE_PORT?
             , "tcp"));
     conn->set_my_address(his_address);
 
@@ -1503,7 +1507,7 @@ void server::msg_accept(ed::message & msg)
     ed::message help;
     help.set_command("HELP");
     //verify_command(base, help); -- precisely
-    conn->send_message(help);
+    conn->send_message_to_connection(help);
 
     // if a local service was interested in this specific
     // computer, then we have to start receiving LOADAVG
@@ -1540,7 +1544,7 @@ void server::msg_clusterstatus(ed::message & msg)
         return;
     }
 
-    cluster_status(msg.user_data<ed::connection>());
+    cluster_status(std::dynamic_pointer_cast<ed::connection>(conn));
 }
 
 
@@ -1556,6 +1560,7 @@ void server::msg_commands(ed::message & msg)
     {
         return;
     }
+    ed::connection::pointer_t c(std::dynamic_pointer_cast<ed::connection>(conn));
 
     if(!msg.has_parameter("list"))
     {
@@ -1583,7 +1588,7 @@ void server::msg_commands(ed::message & msg)
     {
         SNAP_LOG_FATAL
             << "connection \""
-            << msg.user_data<ed::connection>()->get_name()
+            << c->get_name()
             << "\" does not understand HELP."
             << SNAP_LOG_SEND;
         ok = false;
@@ -1592,7 +1597,7 @@ void server::msg_commands(ed::message & msg)
     {
         SNAP_LOG_FATAL
             << "connection \""
-            << msg.user_data<ed::connection>()->get_name()
+            << c->get_name()
             << "\" does not understand QUITTING."
             << SNAP_LOG_SEND;
         ok = false;
@@ -1605,7 +1610,7 @@ void server::msg_commands(ed::message & msg)
         {
             SNAP_LOG_FATAL
                 << "connection \""
-                << msg.user_data<ed::connection>()->get_name()
+                << c->get_name()
                 << "\" does not understand ACCEPT."
                 << SNAP_LOG_SEND;
             ok = false;
@@ -1617,7 +1622,7 @@ void server::msg_commands(ed::message & msg)
         {
             SNAP_LOG_FATAL
                 << "connection \""
-                << msg.user_data<ed::connection>()->get_name()
+                << c->get_name()
                 << "\" does not understand READY."
                 << SNAP_LOG_SEND;
             ok = false;
@@ -1627,7 +1632,7 @@ void server::msg_commands(ed::message & msg)
     {
         SNAP_LOG_FATAL
             << "connection \""
-            << msg.user_data<ed::connection>()->get_name()
+            << c->get_name()
             << "\" does not understand STOP."
             << SNAP_LOG_SEND;
         ok = false;
@@ -1636,7 +1641,7 @@ void server::msg_commands(ed::message & msg)
     {
         SNAP_LOG_FATAL
             << "connection \""
-            << msg.user_data<ed::connection>()->get_name()
+            << c->get_name()
             << "\" does not understand UNKNOWN."
             << SNAP_LOG_SEND;
         ok = false;
@@ -1648,7 +1653,7 @@ void server::msg_commands(ed::message & msg)
         //
         throw sc::missing_message(
                   "Connection \""
-                + msg.user_data<ed::connection>()->get_name()
+                + c->get_name()
                 + "\" does not implement some of the required commands. See logs for more details.");
     }
 }
@@ -1831,7 +1836,7 @@ void server::msg_connect(ed::message & msg)
                 addr::addr his_address(addr::string_to_addr(
                           his_address_str
                         , "255.255.255.255"
-                        , 4040
+                        , sc::REMOTE_PORT   // REMOTE_PORT or SECURE_PORT?
                         , "tcp"));
 
                 conn->set_my_address(his_address);
@@ -1887,10 +1892,10 @@ void server::msg_connect(ed::message & msg)
     ed::message help;
     help.set_command("HELP");
     //verify_command(base, help); -- precisely
-    conn->send_message(reply);
+    conn->send_message_to_connection(reply);
     if(!refuse)
     {
-        conn->send_message(help);
+        conn->send_message_to_connection(help);
         broadcast_message(new_remote_connection);
     }
 
@@ -1905,7 +1910,7 @@ void server::msg_connect(ed::message & msg)
 
     // status changed for this connection
     //
-    send_status(msg.user_data<ed::connection>());
+    send_status(std::dynamic_pointer_cast<ed::connection>(conn));
 }
 
 
@@ -1936,7 +1941,7 @@ void server::msg_disconnect(ed::message & msg)
         //
         conn->set_connection_type(connection_type_t::CONNECTION_TYPE_DOWN);
 
-        remote_connection::pointer_t remote_conn(msg.user_data<remote_connection>());
+        remote_connection::pointer_t remote_conn(std::dynamic_pointer_cast<remote_connection>(conn));
         if(remote_conn == nullptr)
         {
             // disconnecting means it is gone so we can remove
@@ -1948,7 +1953,14 @@ void server::msg_disconnect(ed::message & msg)
             //       sent us a CONNECT later sends us the
             //       DISCONNECT
             //
-            f_communicator->remove_connection(msg.user_data<ed::connection>());
+            f_communicator->remove_connection(std::dynamic_pointer_cast<ed::connection>(conn));
+
+// devise a test to verify this statement and if correct ensure we avoid the
+// extra call
+//
+SNAP_LOG_TODO
+<< "I think that since we remove the connection here, the send_status() at the bottom of the function is rendered useless since the connection will be gone, the write() to the socket will never happen."
+<< SNAP_LOG_SEND;
         }
         else
         {
@@ -1989,7 +2001,7 @@ void server::msg_disconnect(ed::message & msg)
 
     // status changed for this connection
     //
-    send_status(msg.user_data<ed::connection>());
+    send_status(std::dynamic_pointer_cast<ed::connection>(conn));
 }
 
 
@@ -2139,7 +2151,7 @@ void server::msg_gossip(ed::message & msg)
         //                                snapcommunicatord is not connected,
         //                                so no HELP+COMMANDS and thus no
         //                                verification possible
-        conn->send_message(reply);
+        conn->send_message_to_connection(reply);
         return;
     }
 
@@ -2191,10 +2203,14 @@ void server::msg_log_unknown(ed::message & msg)
     // and got an UNKNOWN reply
     //
     std::string name("<unknown-connection>");
-    ed::connection::pointer_t conn(msg.user_data<ed::connection>());
+    base_connection::pointer_t conn(msg.user_data<base_connection>());
     if(conn != nullptr)
     {
-        name = conn->get_name();
+        ed::connection::pointer_t c(std::dynamic_pointer_cast<ed::connection>(conn));
+        if(c != nullptr)
+        {
+            name = c->get_name();
+        }
     }
 
     if(msg.has_parameter("command"))
@@ -2243,7 +2259,7 @@ void server::msg_public_ip(ed::message & msg)
     }
     if(verify_command(conn, reply))
     {
-        conn->send_message(reply);
+        conn->send_message_to_connection(reply);
     }
 }
 
@@ -2275,7 +2291,7 @@ void server::msg_refuse(ed::message & msg)
         return;
     }
 
-    remote_connection::pointer_t remote_conn(msg.user_data<remote_connection>());
+    remote_connection::pointer_t remote_conn(std::dynamic_pointer_cast<remote_connection>(conn));
     if(remote_conn == nullptr)
     {
         // we have to have a remote connection
@@ -2355,7 +2371,7 @@ void server::msg_register(ed::message & msg)
         return;
     }
 
-    service_connection::pointer_t service_conn(msg.user_data<service_connection>());
+    service_connection::pointer_t service_conn(std::dynamic_pointer_cast<service_connection>(conn));
     if(service_conn == nullptr)
     {
         SNAP_LOG_ERROR
@@ -2381,7 +2397,7 @@ void server::msg_register(ed::message & msg)
     ed::message help;
     help.set_command("HELP");
     //verify_command(base, help); -- we cannot do that here since we did not yet get the COMMANDS reply
-    conn->send_message(help);
+    conn->send_message_to_connection(help);
 
     // tell the connection we are ready
     // (many connections use that as a trigger to start work)
@@ -2389,7 +2405,7 @@ void server::msg_register(ed::message & msg)
     ed::message reply;
     reply.set_command("READY");
     //verify_command(base, reply); -- we cannot do that here since we did not yet get the COMMANDS reply
-    conn->send_message(reply);
+    conn->send_message_to_connection(reply);
 
     // status changed for this connection
     //
@@ -2406,7 +2422,7 @@ void server::msg_register(ed::message & msg)
                 return false;
             }
 
-            service_conn->send_message(cached_msg);
+            service_conn->send_message_to_connection(cached_msg);
             return true;
         });
 }
@@ -2441,7 +2457,7 @@ void server::msg_servicestatus(ed::message & msg)
         return;
     }
 
-    ed::connection::pointer_t conn(msg.user_data<ed::connection>());
+    base_connection::pointer_t conn(msg.user_data<base_connection>());
     if(conn == nullptr)
     {
         return;
@@ -2455,6 +2471,7 @@ void server::msg_servicestatus(ed::message & msg)
                 {
                     return named_connection->get_name() == service_name;
                 }));
+    ed::connection::pointer_t c(std::dynamic_pointer_cast<ed::connection>(conn));
     if(named_service == named_connections.end())
     {
         // service is totally unknown
@@ -2464,11 +2481,11 @@ void server::msg_servicestatus(ed::message & msg)
         //
         ed::connection::pointer_t fake_connection(std::make_shared<ed::timer>(0));
         fake_connection->set_name(service_name);
-        send_status(fake_connection, &conn);
+        send_status(fake_connection, &c);
     }
     else
     {
-        send_status(*named_service, &conn);
+        send_status(*named_service, &c);
     }
 }
 
@@ -2488,7 +2505,7 @@ void server::msg_unregister(ed::message & msg)
         return;
     }
 
-    ed::connection::pointer_t conn(msg.user_data<ed::connection>());
+    base_connection::pointer_t conn(msg.user_data<base_connection>());
     if(conn == nullptr)
     {
         return;
@@ -2505,26 +2522,30 @@ void server::msg_unregister(ed::message & msg)
     // also remove all the connection types
     // an empty string represents an unconnected item
     //
-    msg.user_data<base_connection>()->set_connection_type(connection_type_t::CONNECTION_TYPE_DOWN);
+    conn->set_connection_type(connection_type_t::CONNECTION_TYPE_DOWN);
 
     // connection is down now
     //
-    msg.user_data<base_connection>()->connection_ended();
+    conn->connection_ended();
 
     // status changed for this connection
     //
-    send_status(conn);
+    ed::connection::pointer_t c(std::dynamic_pointer_cast<ed::connection>(conn));
+    if(c != nullptr)
+    {
+        send_status(c);
 
-    // now remove the service name
-    // (send_status() needs the name to still be in place!)
-    //
-    conn->set_name(std::string());
+        // now remove the service name
+        // (send_status() needs the name to still be in place!)
+        //
+        c->set_name(std::string());
 
-    // get rid of that connection now (it is faster than
-    // waiting for the HUP because it will not be in the
-    // list of connections on the next loop).
-    //
-    f_communicator->remove_connection(conn);
+        // get rid of that connection now (it is faster than
+        // waiting for the HUP because it will not be in the
+        // list of connections on the next loop).
+        //
+        f_communicator->remove_connection(c);
+    }
 }
 
 
@@ -3188,7 +3209,11 @@ void server::msg_listen_loadavg(ed::message & msg)
 
 void server::register_for_loadavg(std::string const & ip)
 {
-    addr::addr address(addr::string_to_addr(ip, "127.0.0.1", 4040, "tcp"));
+    addr::addr address(addr::string_to_addr(
+              ip
+            , "127.0.0.1"
+            , sc::LOCAL_PORT  // the port is ignore, use a safe default
+            , "tcp"));
     ed::connection::vector_t const & all_connections(f_communicator->get_connections());
     auto const & it(std::find_if(
             all_connections.begin(),
@@ -3246,8 +3271,12 @@ void server::msg_save_loadavg(ed::message & msg)
     sc::loadavg_item item;
 
     // Note: we do not use the port so whatever number here is fine
-    addr::addr a(addr::string_to_addr(my_address, "127.0.0.1", 4040, "tcp"));
-    a.set_port(4040); // actually force the port so in effect it is ignored
+    addr::addr a(addr::string_to_addr(
+                  my_address
+                , "127.0.0.1"
+                , sc::LOCAL_PORT  // the port is ignore, use a safe default
+                , "tcp"));
+    a.set_port(sc::LOCAL_PORT); // actually force the port so in effect it is ignored
     a.get_ipv6(item.f_address);
 
     item.f_avg = std::stof(avg_str);
@@ -3460,7 +3489,7 @@ void server::remove_neighbor(std::string const & neighbor)
     addr::addr n(addr::string_to_addr(
               neighbor
             , "255.255.255.255"
-            , 4040
+            , sc::REMOTE_PORT // if neighbor does not include a port, we may miss the SECURE_PORT...
             , "tcp"));
 
     // make sure we stop all gossiping toward that address
@@ -3599,12 +3628,13 @@ void server::refresh_heard_of()
 
 bool server::send_message(ed::message & msg, bool cache)
 {
-    snapdev::NOT_USED(msg, cache);
+    base_connection::pointer_t conn(msg.user_data<base_connection>());
+    if(conn == nullptr)
+    {
+        throw sc::snapcommunicator_logic_error("server::send_message() called with a missing user data connection pointer.");
+    }
 
-    // TBD: I'm not sure whether I'm supposed to send the message to the
-    //      connection defined in `msg`?
-    //
-    throw sc::snapcommunicator_logic_error("server::send_message() called; only connection's send_message() should be called.");
+    return conn->send_message_to_connection(msg, cache);
 }
 
 
@@ -3790,7 +3820,7 @@ void server::stop(bool quitting)
     // remove the two main servers; we will not respond to any more
     // requests anyway
     //
-    f_communicator->remove_connection(f_interrupt);         // TCP/IP
+    f_communicator->remove_connection(f_interrupt.lock());  // TCP/IP
     f_communicator->remove_connection(f_local_listener);    // TCP/IP
     f_communicator->remove_connection(f_remote_listener);   // TCP/IP
     f_communicator->remove_connection(f_secure_listener);   // TCP/IP
@@ -3842,7 +3872,7 @@ void server::process_connected(ed::connection::pointer_t conn)
     base_connection::pointer_t base(std::dynamic_pointer_cast<base_connection>(conn));
     if(base != nullptr)
     {
-        base->send_message(connect);
+        base->send_message_to_connection(connect);
     }
 
     // status changed for this connection

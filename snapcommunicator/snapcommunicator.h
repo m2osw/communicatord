@@ -33,6 +33,14 @@ namespace sc
 {
 
 
+
+constexpr const int     LOCAL_PORT = 4040;      // sc://<loopback-ip>
+constexpr const int     UDP_PORT = 4041;        // scu://<loopback-ip> (any IP is accepted at the moment, but it's expected to be local)
+constexpr const int     REMOTE_PORT = 4042;     // sc://<private-ip>
+constexpr const int     SECURE_PORT = 4043;     // scs://<public-ip>
+
+
+
 class snapcommunicator
 {
 public:

@@ -61,7 +61,8 @@ ping::ping(server::pointer_t cs, addr::addr const & address)
 void ping::process_message(ed::message & msg)
 {
     //f_server->process_message(shared_from_this(), msg, true);
-    msg.user_data(shared_from_this());
+    base_connection::pointer_t conn(std::dynamic_pointer_cast<base_connection>(shared_from_this()));
+    msg.user_data(conn);
     f_server->dispatch_message(msg);
 }
 

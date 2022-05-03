@@ -19,14 +19,22 @@
 
 // snapcommunicator
 //
+#include    <snapcommunicator/snapcommunicator.h>
 #include    <snapcommunicator/version.h>
 
 
 // eventdispatcher
 //
 #include    <eventdispatcher/cui_connection.h>
+#include    <eventdispatcher/local_stream_client_message_connection.h>
+#include    <eventdispatcher/local_dgram_server_message_connection.h>
 #include    <eventdispatcher/tcp_client_message_connection.h>
 #include    <eventdispatcher/udp_server_message_connection.h>
+
+
+// edhttp
+//
+#include    <edhttp/uri.h>
 
 
 // snaplogger
@@ -38,6 +46,7 @@
 // libaddr
 //
 #include    <libaddr/addr_parser.h>
+#include    <libaddr/iface.h>
 
 
 // snapdev
@@ -122,97 +131,118 @@ namespace
 
 
 
-char const * history_file = "~/.snapmessage_history";
+constexpr char const * g_history_file = "~/.snapmessage_history";
+constexpr char const * g_gui_command = "/var/lib/snapcommunicatord/sendmessage.gui";
 
 
 const advgetopt::option g_command_line_options[] =
 {
-    {
-        'a',
-        advgetopt::GETOPT_FLAG_COMMAND_LINE | advgetopt::GETOPT_FLAG_ENVIRONMENT_VARIABLE | advgetopt::GETOPT_FLAG_CONFIGURATION_FILE | advgetopt::GETOPT_FLAG_REQUIRED,
-        "address",
-        nullptr,
-        "the address and port to connect to (i.e. \"127.0.0.1:4040\")",
-        nullptr
-    },
-    {
-        '\0',
-        advgetopt::GETOPT_FLAG_COMMAND_LINE | advgetopt::GETOPT_FLAG_ENVIRONMENT_VARIABLE | advgetopt::GETOPT_FLAG_CONFIGURATION_FILE | advgetopt::GETOPT_FLAG_FLAG,
-        "cui",
-        nullptr,
-        "start in interactive mode in your console",
-        nullptr
-    },
-    {
-        '\0',
-        advgetopt::GETOPT_FLAG_COMMAND_LINE | advgetopt::GETOPT_FLAG_ENVIRONMENT_VARIABLE | advgetopt::GETOPT_FLAG_CONFIGURATION_FILE | advgetopt::GETOPT_FLAG_FLAG,
-        "gui",
-        nullptr,
-        "open a graphical window with an input and an output console",
-        nullptr
-    },
-    {
-        '\0',
-        advgetopt::GETOPT_FLAG_COMMAND_LINE | advgetopt::GETOPT_FLAG_ENVIRONMENT_VARIABLE | advgetopt::GETOPT_FLAG_FLAG,
-        "ssl",
-        nullptr,
-        "if specified, make a secure connection (with encryption)",
-        nullptr
-    },
-    {
-        '\0',
-        advgetopt::GETOPT_FLAG_COMMAND_LINE | advgetopt::GETOPT_FLAG_ENVIRONMENT_VARIABLE | advgetopt::GETOPT_FLAG_FLAG,
-        "tcp",
-        nullptr,
-        "send a TCP message; use --wait to also wait for a reply and display it in your console",
-        nullptr
-    },
-    {
-        '\0',
-        advgetopt::GETOPT_FLAG_COMMAND_LINE | advgetopt::GETOPT_FLAG_ENVIRONMENT_VARIABLE | advgetopt::GETOPT_FLAG_FLAG,
-        "udp",
-        nullptr,
-        "send a UDP message and quit",
-        nullptr
-    },
-    {
-        'v',
-        advgetopt::GETOPT_FLAG_COMMAND_LINE | advgetopt::GETOPT_FLAG_ENVIRONMENT_VARIABLE | advgetopt::GETOPT_FLAG_FLAG,
-        "verbose",
-        nullptr,
-        "make the output verbose",
-        nullptr
-    },
-    {
-        '\0',
-        advgetopt::GETOPT_FLAG_COMMAND_LINE | advgetopt::GETOPT_FLAG_FLAG | advgetopt::GETOPT_FLAG_ENVIRONMENT_VARIABLE,
-        "wait",
-        nullptr,
-        "in case you used --tcp, this tells sendmessage to wait for a reply before quiting",
-        nullptr
-    },
-    {
-        '\0',
-        advgetopt::GETOPT_FLAG_COMMAND_LINE | advgetopt::GETOPT_FLAG_REQUIRED | advgetopt::GETOPT_FLAG_MULTIPLE | advgetopt::GETOPT_FLAG_DEFAULT_OPTION,
-        "message",
-        nullptr,
-        nullptr, // hidden argument in --help screen
-        nullptr
-    },
-    {
-        '\0',
-        advgetopt::GETOPT_FLAG_END,
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr
-    }
+    advgetopt::define_option(
+          advgetopt::Name("address")
+        , advgetopt::ShortName('a')
+        , advgetopt::Flags(advgetopt::all_flags<
+              advgetopt::GETOPT_FLAG_GROUP_OPTIONS
+            , advgetopt::GETOPT_FLAG_REQUIRED>())
+        , advgetopt::Help("the address and port to connect to (i.e. \"127.0.0.1:4040\").")
+    ),
+    advgetopt::define_option(
+          advgetopt::Name("cui")
+        , advgetopt::Flags(advgetopt::any_flags<
+              advgetopt::GETOPT_FLAG_GROUP_COMMANDS
+            , advgetopt::GETOPT_FLAG_FLAG
+            , advgetopt::GETOPT_FLAG_COMMAND_LINE>())
+        , advgetopt::Help("start in interactive mode in your terminal.")
+    ),
+    advgetopt::define_option(
+          advgetopt::Name("gui")
+        , advgetopt::Flags(advgetopt::any_flags<
+              advgetopt::GETOPT_FLAG_GROUP_COMMANDS
+            , advgetopt::GETOPT_FLAG_FLAG
+            , advgetopt::GETOPT_FLAG_COMMAND_LINE>())
+        , advgetopt::Help("open a graphical window with an input and an output console.")
+    ),
+    advgetopt::define_option(
+          advgetopt::Name("tcp")
+        , advgetopt::Flags(advgetopt::any_flags<
+              advgetopt::GETOPT_FLAG_GROUP_OPTIONS
+            , advgetopt::GETOPT_FLAG_FLAG
+            , advgetopt::GETOPT_FLAG_COMMAND_LINE
+            , advgetopt::GETOPT_FLAG_ENVIRONMENT_VARIABLE>())
+        , advgetopt::Help("send a TCP message; use --wait to also wait for a reply and display it in your console; ignored in --gui or --cui mode.")
+    ),
+    advgetopt::define_option(
+          advgetopt::Name("tls")
+        , advgetopt::Flags(advgetopt::any_flags<
+              advgetopt::GETOPT_FLAG_GROUP_OPTIONS
+            , advgetopt::GETOPT_FLAG_FLAG
+            , advgetopt::GETOPT_FLAG_COMMAND_LINE
+            , advgetopt::GETOPT_FLAG_ENVIRONMENT_VARIABLE>())
+        , advgetopt::Help("when specified, attempt a secure connection with TLD encryption.")
+    ),
+    advgetopt::define_option(
+          advgetopt::Name("udp")
+        , advgetopt::Flags(advgetopt::any_flags<
+              advgetopt::GETOPT_FLAG_GROUP_OPTIONS
+            , advgetopt::GETOPT_FLAG_FLAG
+            , advgetopt::GETOPT_FLAG_COMMAND_LINE
+            , advgetopt::GETOPT_FLAG_ENVIRONMENT_VARIABLE>())
+        , advgetopt::Help("send a UDP message and quit.")
+    ),
+    advgetopt::define_option(
+          advgetopt::Name("unix")
+        , advgetopt::Flags(advgetopt::all_flags<
+              advgetopt::GETOPT_FLAG_GROUP_OPTIONS
+            , advgetopt::GETOPT_FLAG_FLAG>())
+        , advgetopt::Help("use a Data Stream (a.k.a. Unix socket).")
+    ),
+    advgetopt::define_option(
+          advgetopt::Name("verbose")
+        , advgetopt::ShortName('v')
+        , advgetopt::Flags(advgetopt::standalone_command_flags<
+              advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
+        , advgetopt::Help("make the output verbose.")
+    ),
+    advgetopt::define_option(
+          advgetopt::Name("wait")
+        , advgetopt::Flags(advgetopt::any_flags<
+              advgetopt::GETOPT_FLAG_GROUP_OPTIONS
+            , advgetopt::GETOPT_FLAG_FLAG
+            , advgetopt::GETOPT_FLAG_COMMAND_LINE
+            , advgetopt::GETOPT_FLAG_ENVIRONMENT_VARIABLE>())
+        , advgetopt::Help("in case you used --tcp, this tells %p to wait for a reply before quiting.")
+    ),
+    // default (anything goes in this)
+    advgetopt::define_option(
+          advgetopt::Name("message")
+        , advgetopt::Flags(advgetopt::command_flags<
+              advgetopt::GETOPT_FLAG_GROUP_OPTIONS
+            , advgetopt::GETOPT_FLAG_DEFAULT_OPTION
+            , advgetopt::GETOPT_FLAG_REQUIRED
+            , advgetopt::GETOPT_FLAG_MULTIPLE>())
+    ),
+    advgetopt::end_options()
+};
+
+
+advgetopt::group_description const g_group_descriptions[] =
+{
+    advgetopt::define_group(
+          advgetopt::GroupNumber(advgetopt::GETOPT_FLAG_GROUP_COMMANDS)
+        , advgetopt::GroupName("command")
+        , advgetopt::GroupDescription("Commands:")
+    ),
+    advgetopt::define_group(
+          advgetopt::GroupNumber(advgetopt::GETOPT_FLAG_GROUP_OPTIONS)
+        , advgetopt::GroupName("option")
+        , advgetopt::GroupDescription("Options:")
+    ),
+    advgetopt::end_groups()
 };
 
 
 char const * const g_configuration_directories[] =
 {
-    "/etc/snapwebsites",
+    "/etc/snapmessage",
     nullptr
 };
 
@@ -222,7 +252,7 @@ char const * const g_configuration_directories[] =
 #pragma GCC diagnostic ignored "-Wpedantic"
 advgetopt::options_environment const g_command_line_options_environment =
 {
-    .f_project_name = "snapwebsites",
+    .f_project_name = "snapmessage",
     .f_group_name = nullptr,
     .f_options = g_command_line_options,
     .f_options_files_directory = nullptr,
@@ -237,12 +267,13 @@ advgetopt::options_environment const g_command_line_options_environment =
                      "where -<opt> is one or more of:",
     .f_help_footer = "%c",
     .f_version = SNAPCOMMUNICATOR_VERSION_STRING,
-    .f_license = "GNU GPL v2",
+    .f_license = "GNU GPL v3",
     .f_copyright = "Copyright (c) 2013-"
                    BOOST_PP_STRINGIZE(UTC_BUILD_YEAR)
                    " by Made to Order Software Corporation -- All Rights Reserved",
-    //.f_build_date = UTC_BUILD_DATE,
-    //.f_build_time = UTC_BUILD_TIME
+    .f_build_date = UTC_BUILD_DATE,
+    .f_build_time = UTC_BUILD_TIME,
+    .f_groups = g_group_descriptions,
 };
 #pragma GCC diagnostic pop
 
@@ -254,6 +285,13 @@ advgetopt::options_environment const g_command_line_options_environment =
 //namespace
 
 
+class connection_lost
+{
+public:
+    virtual ~connection_lost() {}
+
+    virtual void    lost_connection() = 0;
+};
 
 
 
@@ -264,20 +302,30 @@ class tcp_message_connection
 public:
     typedef std::shared_ptr<tcp_message_connection> message_pointer_t;
 
-    tcp_message_connection(addr::addr const & address, ed::mode_t const mode)
+    tcp_message_connection(
+              connection_lost * cl
+            , addr::addr const & address
+            , ed::mode_t const mode)
         : tcp_client_message_connection(address, mode, false)
+        , f_connection_lost(cl)
     {
     }
+
+    tcp_message_connection(tcp_message_connection const &) = delete;
 
     virtual ~tcp_message_connection()
     {
     }
+
+    tcp_message_connection operator = (tcp_message_connection const &) = delete;
 
     virtual void process_error() override
     {
         tcp_client_message_connection::process_error();
 
         std::cerr << "error: an error occurred while handling a message." << std::endl;
+
+        f_connection_lost->lost_connection();
     }
 
     virtual void process_hup() override
@@ -285,6 +333,8 @@ public:
         tcp_client_message_connection::process_hup();
 
         std::cerr << "error: the connection hang up on us, while handling a message." << std::endl;
+
+        f_connection_lost->lost_connection();
     }
 
     virtual void process_invalid() override
@@ -292,21 +342,87 @@ public:
         tcp_client_message_connection::process_invalid();
 
         std::cerr << "error: the connection is invalid." << std::endl;
+
+        f_connection_lost->lost_connection();
     }
 
     virtual void process_message(ed::message & msg) override
     {
         std::cout << "success: received message: "
                   << msg.to_message()
-                  << '\n';
+                  << std::endl;
     }
 
 private:
+    connection_lost *       f_connection_lost = nullptr;
+};
+
+
+
+class local_message_connection
+    : public ed::local_stream_client_message_connection
+{
+public:
+    typedef std::shared_ptr<local_message_connection> message_pointer_t;
+
+    local_message_connection(
+              connection_lost * cl
+            , addr::unix const & address)
+        : local_stream_client_message_connection(address, false, false)
+        , f_connection_lost(cl)
+    {
+    }
+
+    local_message_connection(local_message_connection const &) = delete;
+
+    virtual ~local_message_connection() override
+    {
+    }
+
+    local_message_connection operator = (local_message_connection const &) = delete;
+
+    virtual void process_error() override
+    {
+        local_stream_client_message_connection::process_error();
+
+        std::cerr << "error: an error occurred while handling a message." << std::endl;
+
+        f_connection_lost->lost_connection();
+    }
+
+    virtual void process_hup() override
+    {
+        local_stream_client_message_connection::process_hup();
+
+        std::cerr << "error: the connection hang up on us, while handling a message." << std::endl;
+
+        f_connection_lost->lost_connection();
+    }
+
+    virtual void process_invalid() override
+    {
+        local_stream_client_message_connection::process_invalid();
+
+        std::cerr << "error: the connection is invalid." << std::endl;
+
+        f_connection_lost->lost_connection();
+    }
+
+    virtual void process_message(ed::message & msg) override
+    {
+        std::cout << "success: received message: "
+                  << msg.to_message()
+                  << std::endl;
+    }
+
+private:
+    connection_lost *       f_connection_lost = nullptr;
 };
 
 
 
 class network_connection
+    : public connection_lost
 {
 public:
     typedef std::shared_ptr<network_connection>     pointer_t;
@@ -315,11 +431,16 @@ public:
     enum class connection_t
     {
         NONE,
-        TCP,
-        UDP
+        TCP,            // local TCP
+        REMOTE_TCP,     // non-secure, private TCP
+        SECURE_TCP,     // secure private or public TCP
+        UDP,            // local (or not) UDP
+        BROADCAST_UDP,  // UDP in broadcast mode
+        LOCAL_STREAM,   // local (unix) stream
+        LOCAL_DGRAM,    // local (unix) datagram
     };
 
-    ~network_connection()
+    virtual ~network_connection() override
     {
         // calling disconnect() is "too late" because the connection is
         // part of the snap communicator and needs to be removed from
@@ -327,16 +448,231 @@ public:
         //disconnect();
     }
 
+    void lost_connection()
+    {
+        disconnect();
+    }
+
     void disconnect()
     {
         ed::communicator::instance()->remove_connection(f_tcp_connection);
+        ed::communicator::instance()->remove_connection(f_unix_connection);
         f_tcp_connection = nullptr;
         f_connection_type = connection_t::NONE;
+        f_prompt.clear();
     }
 
-    void set_address(std::string const & addr)
+    bool set_address(std::string const & address)
     {
-        f_address = addr;
+        // we allow the user to connect to any one of the allowed socket
+        // that the snapcommunicator listens on
+        //
+        // the type is 100% defined by the address which is expected to
+        // include a protocol, when no protocol is defined, "sc:" is used
+        // as the default.
+        //
+        //     sc://<ip>:<port> -- a plain TCP connection
+        //     sc:///run/snapcommunicatod/stream.sock -- a plain local stream connection (Unix)
+        //     scs://<ip>:<port> -- a secure TCP connection
+        //     scu://<ip>:<port> -- a plain UDP connection
+        //     scu:///run/snapcommunicatord/datagram.sock -- a plain local datagram connection (Unix)
+        //     scb://<ip>:<port> -- a broadcasting UDP connection
+        //
+        f_prompt.clear();
+        try
+        {
+            if(!f_uri.set_uri(address, true, true))
+            {
+                std::cerr
+                    << "error: unsupported address \""
+                    << address
+                    << "\": "
+                    << f_uri.get_last_error_message()
+                    << std::endl;
+                return false;
+            }
+        }
+        catch(std::exception const & e)
+        {
+            std::cerr
+                << "error: an exception occurred parsing URI \""
+                << address
+                << "\": "
+                << e.what()
+                << std::endl;
+            return false;
+        }
+        std::string const & protocol(f_uri.protocol());
+        if(protocol == "sc")
+        {
+            if(f_uri.domain().empty())
+            {
+                // Unix Stream
+                //
+                f_unix_address = addr::unix(address);
+                f_prompt = "local/stream> ";
+                f_selected_connection_type = connection_t::LOCAL_STREAM;
+            }
+            else
+            {
+                // TCP in plain mode
+                //
+                addr::addr const a(addr::string_to_addr(
+                          f_uri.domain()
+                        , "127.0.0.1"
+                        , sc::LOCAL_PORT
+                        , "tcp"));
+                switch(a.get_network_type())
+                {
+                case addr::addr::network_type_t::NETWORK_TYPE_LOOPBACK:
+                    f_selected_connection_type = connection_t::TCP;
+                    break;
+
+                case addr::addr::network_type_t::NETWORK_TYPE_PUBLIC:
+                    std::cerr << "warning: remote TCP without encryption is expected to use a private network IP address." << std::endl;
+                    [[fallthrough]];
+                case addr::addr::network_type_t::NETWORK_TYPE_PRIVATE:
+                    f_selected_connection_type = connection_t::REMOTE_TCP;
+                    break;
+
+                default:
+                    std::cerr << "error: unsupported network type of a Plain TCP/IP connection." << std::endl;
+                    return false;
+
+                }
+                f_prompt = "tcp/ip> ";
+                f_ip_address = a;
+            }
+        }
+        else if(protocol == "scs")
+        {
+            if(f_uri.domain().empty())
+            {
+                std::cerr << "error: invalid use of 'scs:' protocol; an IP address was expected." << std::endl;
+                return false;
+            }
+            // TCP in secure mode
+            //
+            addr::addr const a(addr::string_to_addr(
+                      address
+                    , "127.0.0.1"
+                    , sc::SECURE_PORT
+                    , "tcp"));
+            switch(a.get_network_type())
+            {
+            case addr::addr::network_type_t::NETWORK_TYPE_LOOPBACK:
+                std::cerr << "error: invalid use of 'scs:' protocol; it cannot work on a loopback address." << std::endl;
+                return false;
+
+            case addr::addr::network_type_t::NETWORK_TYPE_PUBLIC:
+            case addr::addr::network_type_t::NETWORK_TYPE_PRIVATE:
+                break;
+
+            default:
+                std::cerr << "error: unsupported network type for a Secure TCP/IP connection." << std::endl;
+                return false;
+
+            }
+            f_prompt = "tcp/ip(tls)> ";
+            f_ip_address = a;
+            f_selected_connection_type = connection_t::SECURE_TCP;
+        }
+        else if(protocol == "scu")
+        {
+            if(f_uri.domain().empty())
+            {
+                // Unix Datagram
+                //
+                f_unix_address = addr::unix(address);
+                f_prompt = "local/dgram> ";
+                f_selected_connection_type = connection_t::LOCAL_DGRAM;
+            }
+            else
+            {
+                // UDP
+                //
+                addr::addr a(addr::string_to_addr(
+                          address
+                        , "127.0.0.1"
+                        , sc::UDP_PORT
+                        , "udp"));
+                switch(a.get_network_type())
+                {
+                case addr::addr::network_type_t::NETWORK_TYPE_PUBLIC:
+                    std::cerr << "warning: UDP has no encryption, it should not be used with a public IP address." << std::endl;
+                    [[fallthrough]];
+                case addr::addr::network_type_t::NETWORK_TYPE_LOOPBACK:
+                case addr::addr::network_type_t::NETWORK_TYPE_PRIVATE:
+                    break;
+
+                default:
+                    std::cerr << "error: unsupported network type of a Plain UDP/IP connection." << std::endl;
+                    return false;
+
+                }
+                f_ip_address = a;
+                f_prompt = "udp/ip> ";
+                f_selected_connection_type = connection_t::UDP;
+            }
+        }
+        else if(protocol == "scb")
+        {
+            if(f_uri.domain().empty())
+            {
+                // broadcasting on a Unix Datagram would be useless since we
+                // have a single listener on such
+                //
+                std::cerr << "error: invalid use of 'scu:' protocol; an IP address was expected." << std::endl;
+                return false;
+            }
+            addr::addr const a(addr::string_to_addr(
+                      address
+                    , "127.0.0.1"
+                    , sc::UDP_PORT
+                    , "udp"));
+            switch(a.get_network_type())
+            {
+            case addr::addr::network_type_t::NETWORK_TYPE_PUBLIC:
+                std::cerr << "warning: UDP has no encryption, it should not be used with a public IP address." << std::endl;
+                [[fallthrough]];
+            case addr::addr::network_type_t::NETWORK_TYPE_LOOPBACK:
+            case addr::addr::network_type_t::NETWORK_TYPE_PRIVATE:
+                // verify that this is the broadcast address (i.e. 192.168.33.255/24)
+                if(!addr::is_broadcast_address(f_ip_address))
+                {
+                    std::cerr
+                        << "error: UDP/IP address "
+                        << address
+                        << " is not a valid broadcast address." << std::endl;
+                    return false;
+                }
+                break;
+
+            case addr::addr::network_type_t::NETWORK_TYPE_MULTICAST: // in case you do not know the destination private network
+                break;
+
+            default:
+                std::cerr
+                    << "error: unsupported network type of a Plain UDP/IP address "
+                    << address
+                    << '.'
+                    << std::endl;
+                return false;
+
+            }
+            f_ip_address = a;
+            f_prompt = "udp/ip(broadcast)> ";
+            f_selected_connection_type = connection_t::UDP;
+        }
+        else
+        {
+            std::cerr << "error: unknown protocol '"
+                << protocol
+                << ":'; expected 'sc:', 'scs:', 'scu:', or 'scb:'." << std::endl;
+            return false;
+        }
+
+        return true;
     }
 
     void create_tcp_connection()
@@ -345,21 +681,28 @@ public:
         //
         disconnect();
 
-        // determine the IP address and port
-        //
-        f_addr = addr::string_to_addr(
-                  f_address
-                , "127.0.0.1"
-                , 4041
-                , "tcp");
-
         // create new connection
         //
-        f_tcp_connection = std::make_shared<tcp_message_connection>(f_addr, f_mode);
+        ed::mode_t const mode(f_selected_connection_type == connection_t::SECURE_TCP
+                            ? ed::mode_t::MODE_SECURE
+                            : ed::mode_t::MODE_PLAIN);
+        try
+        {
+            f_tcp_connection = std::make_shared<tcp_message_connection>(this, f_ip_address, mode);
+        }
+        catch(std::exception const & e)
+        {
+            std::cerr
+                << "error: could not create a tcp_message_connection: "
+                << e.what()
+                << '.'
+                << std::endl;
+            return;
+        }
 
         if(ed::communicator::instance()->add_connection(f_tcp_connection))
         {
-            f_connection_type = connection_t::TCP;
+            f_connection_type = f_selected_connection_type;
         }
         else
         {
@@ -378,22 +721,47 @@ public:
         //
         disconnect();
 
-        // determine the IP address and port
-        //
-        f_addr = addr::string_to_addr(
-                  f_address
-                , "127.0.0.1"
-                , 4041
-                , "udp");
-
         // create new connection
-        // -- at this point we only deal with client connections here
-        //    and this is a UDP server; to send data we just use the
-        //    send_message() which is static
+        // -- at this point we only deal with client connections here and
+        //    the following creates a UDP server; to send data we just use
+        //    the send_message() which is a static function
         //
         //f_tcp_connection = std::make_shared<snap::snap_communicator::snap_udp_server_message_connection>(ip, f_mode);
 
-        f_connection_type = connection_t::UDP;
+        f_connection_type = f_selected_connection_type;
+    }
+
+    void create_local_stream_connection()
+    {
+        disconnect();
+
+        try
+        {
+            f_unix_connection = std::make_shared<local_message_connection>(this, f_unix_address);
+        }
+        catch(std::exception const & e)
+        {
+            std::cerr
+                << "error: could not create a tcp_message_connection: "
+                << e.what()
+                << '.'
+                << std::endl;
+            return;
+        }
+
+        if(ed::communicator::instance()->add_connection(f_unix_connection))
+        {
+            f_connection_type = f_selected_connection_type;
+        }
+        else
+        {
+            // keep NONE (not connected)
+            //
+            f_unix_connection.reset();
+            std::cerr
+                << "error: could not connect--verify the IP, the port, and make sure that do or do not need to use the --ssl flag."
+                << std::endl;
+        }
     }
 
     // if not yet connected, attempt a connection
@@ -401,22 +769,38 @@ public:
     {
         // currently disconnected?
         //
-        if(f_connection_type == connection_t::NONE)
+        if(f_connection_type != f_selected_connection_type)
         {
             // connect as selected by user
             //
-            if(f_selected_connection_type == connection_t::TCP)
+            switch(f_selected_connection_type)
             {
+            case connection_t::NONE:           // no type, we cannot connect
+                break;
+
+            case connection_t::TCP:            // local TCP
+            case connection_t::REMOTE_TCP:     // non-secure, private TCP
+            case connection_t::SECURE_TCP:     // secure private or public TCP
                 create_tcp_connection();
-            }
-            else
-            {
+                break;
+
+            case connection_t::UDP:            // local (or not) UDP
+            case connection_t::BROADCAST_UDP:  // UDP in broadcast mode
                 create_udp_connection();
+                break;
+
+            case connection_t::LOCAL_STREAM:   // local (unix) stream
+                break;
+
+            case connection_t::LOCAL_DGRAM:    // local (unix) datagram
+                break;
+
             }
 
             if(f_connection_type == connection_t::NONE)
             {
-                std::cerr << "error: could not connect, can't send message." << std::endl;
+                std::cerr << "error: could not connect, can't send messages." << std::endl;
+                f_prompt.clear();
                 return false;
             }
         }
@@ -439,7 +823,8 @@ public:
             std::cerr
                 << "error: message \""
                 << message
-                << "\" is invalid. It won't be sent.\n";
+                << "\" is invalid. It won't be sent."
+                << std::endl;
             return false;
         }
 
@@ -449,18 +834,22 @@ public:
             return false;
 
         case connection_t::TCP:
+        case connection_t::REMOTE_TCP:
+        case connection_t::SECURE_TCP:
             f_tcp_connection->send_message(msg, false);
             break;
 
         case connection_t::UDP:
-            {
-                advgetopt::conf_file_setup const setup("snapcommunicator");
-                advgetopt::conf_file::pointer_t config(advgetopt::conf_file::get_conf_file(setup));
-                ed::udp_server_message_connection::send_message(
-                              f_addr
-                            , msg
-                            , config->get_parameter("signal_secret"));
-            }
+        case connection_t::BROADCAST_UDP:
+            send_udp_message(msg);
+            break;
+
+        case connection_t::LOCAL_STREAM:
+            f_unix_connection->send_message(msg, false);
+            break;
+
+        case connection_t::LOCAL_DGRAM:
+            send_dgram_message(msg);
             break;
 
         }
@@ -468,19 +857,37 @@ public:
         return true;
     }
 
-    // only use at initialization time, otherwise use switch_mode()
-    void set_mode(ed::mode_t mode)
+    void send_udp_message(ed::message const & msg)
     {
-        f_mode = mode;
+        // TODO: use a command instead of reading that signal secret from
+        //       the config file since we could be trying to send to a
+        //       remote snapcommunicator and the secret could be different
+        //       there...
+        //
+        advgetopt::conf_file_setup const setup("snapcommunicator");
+        advgetopt::conf_file::pointer_t config(advgetopt::conf_file::get_conf_file(setup));
+        ed::udp_server_message_connection::send_message(
+                      f_ip_address
+                    , msg
+                    , config->get_parameter("signal_secret"));
     }
 
-    void switch_mode(ed::mode_t mode)
+    void send_dgram_message(ed::message & msg)
     {
-        if(f_mode != mode)
-        {
-            disconnect();
-            f_mode = mode;
-        }
+        // TODO: see send_udp_message() -- replace signal-secret with
+        //       snapmessage command line option...
+        //
+        advgetopt::conf_file_setup const setup("snapcommunicator");
+        advgetopt::conf_file::pointer_t config(advgetopt::conf_file::get_conf_file(setup));
+        ed::local_dgram_server_message_connection::send_message(
+                      f_unix_address
+                    , msg
+                    , config->get_parameter("signal_secret"));
+    }
+
+    connection_t set_selected_connection_type() const
+    {
+        return f_selected_connection_type;
     }
 
     // call when you do /tcp and /udp in CUI/GUI
@@ -493,45 +900,18 @@ public:
         }
     }
 
-    void switch_connection_type(connection_t type)
+    bool has_prompt() const
     {
-        if(f_connection_type != type)
-        {
-            switch(type)
-            {
-            case connection_t::NONE:
-                disconnect();
-                break;
-
-            case connection_t::TCP:
-                create_tcp_connection();
-                break;
-
-            case connection_t::UDP:
-                create_udp_connection();
-                break;
-
-            }
-        }
+        return !f_prompt.empty();
     }
 
     std::string define_prompt() const
     {
-        std::string prompt;
-        if(f_selected_connection_type == connection_t::TCP)
+        if(f_prompt.empty())
         {
-            prompt = "tcp";
+            return std::string("not connected> ");
         }
-        else
-        {
-            prompt = "udp";
-        }
-        if(f_mode == ed::mode_t::MODE_SECURE)
-        {
-            prompt += "(tls)";
-        }
-        prompt += "> ";
-        return prompt;
+        return f_prompt;
     }
 
 private:
@@ -541,12 +921,14 @@ private:
     //          The only way to modify those values once the fork() happened
     //          is by sending messages to the child process.
     //
-    std::string                             f_address                   = std::string();
-    addr::addr                              f_addr                      = addr::addr();
-    ed::mode_t                              f_mode                      { ed::mode_t::MODE_PLAIN };
+    edhttp::uri                             f_uri                       = edhttp::uri();
+    addr::addr                              f_ip_address                = addr::addr();
+    addr::unix                              f_unix_address              = addr::unix();
     connection_t                            f_selected_connection_type  { connection_t::UDP }; // never set to NONE; default to UDP unless user uses --tcp on command line
     connection_t                            f_connection_type           { connection_t::NONE };
+    std::string                             f_prompt                    = std::string();
     tcp_message_connection::pointer_t       f_tcp_connection            = tcp_message_connection::pointer_t();
+    local_message_connection::pointer_t     f_unix_connection           = local_message_connection::pointer_t();
 };
 
 
@@ -561,7 +943,7 @@ public:
     typedef std::shared_ptr<console_connection>     pointer_t;
 
     console_connection(network_connection::pointer_t c)
-        : cui_connection(history_file)
+        : cui_connection(g_history_file)
         , f_connection(c)
     {
         if(g_console != nullptr)
@@ -613,7 +995,7 @@ public:
         f_win_message = newwin(height - 4, width - 4, 2, 2);
         if(f_win_message == nullptr)
         {
-            std::cerr << "couldn't create message window." << std::endl;
+            std::cerr << "error: couldn't create message window." << std::endl;
             exit(1);
         }
 
@@ -626,7 +1008,7 @@ public:
 
         if(wrefresh(f_win_message) != OK)
         {
-            std::cerr << "wrefresh() to output message window failed." << std::endl;
+            std::cerr << "error: wrefresh() to output message window failed." << std::endl;
             exit(1);
         }
     }
@@ -709,15 +1091,17 @@ public:
             return false;
         }
 
-        // /connect <IP>:<port>
+        // /connect <protocol>://<IP>:<port> | <protocol>:///<path>
         //
         // connect to service listening at <IP> on port <port>
         //
         if(command.compare(0, 9, "/connect ") == 0)
         {
-            c->set_address(command.substr(9));
-            c->connect();
-            return false;
+            if(c->set_address(command.substr(9)))
+            {
+                c->connect();
+            }
+            return true;
         }
 
         // /disconnect
@@ -730,53 +1114,18 @@ public:
             return false;
         }
 
-        // /tcp
-        //
-        // switch to TCP
-        //
-        if(command == "/tcp")
-        {
-            c->set_selected_connection_type(network_connection::connection_t::TCP);
-            return true;
-        }
-
-        // /udp
-        //
-        // switch to UDP
-        //
-        if(command == "/udp")
-        {
-            c->set_selected_connection_type(network_connection::connection_t::UDP);
-            return true;
-        }
-
-        // /plain
-        //
-        // switch to plain mode (opposed to SSL)
-        //
-        if(command == "/plain")
-        {
-            c->switch_mode(ed::mode_t::MODE_PLAIN);
-            return true;
-        }
-
-        // /ssl
-        //
-        // switch to SSL mode (opposed to plain, unencrypted)
-        //
-        if(command == "/ssl"
-        || command == "/tls")
-        {
-            c->switch_mode(ed::mode_t::MODE_SECURE);
-            return true;
-        }
-
         // "/.*" is not a valid message beginning, we suspect that the user
         // misstyped a command and thus generate an error instead
         //
         if(command[0] == '/')
         {
             output("error: unknown command: \"" + command + "\".");
+            return false;
+        }
+
+        if(!c->has_prompt())
+        {
+            output("error: message not sent, we are not connected.");
             return false;
         }
 
@@ -792,15 +1141,17 @@ private:
     {
         output("Help:");
         output("Internal commands start with a  slash (/). Supported commands:");
-        output("  /connect <ip>:<port> -- connect to specified IP and port");
+        output("  /connect <protocol>://<ip>:<port> | <protocol>:///<path> -- connect to specified URI");
         output("  /disconnect -- explicitly disconnect any existing connection");
-        output("  /help or /? or ? or F1 key -- print this help screen");
-        output("  /plain -- get a plain connection");
+        output("  /help or /? or ? or <F1> key -- print this help screen");
         output("  /quit -- leave snapmessage");
-        output("  /tcp -- send messages using our TCP connections");
-        output("  /udp -- send messages using our UDP connections");
-        output("  /ssl -- get an SSL connection");
-        output("  F2 -- create a message in a popup window");
+        output("  <F2> key -- create a message in a popup window");
+        output("  ... -- message to send to current connection");
+        output("    a message is composed of:");
+        output("      ['<'<server>:<service>' '][<server>:<service>'/']command[' '<name>=<value>';'...]");
+        output("    where the first <server>:<service> is the origin (\"sent from\")");
+        output("    where the second <server>:<service> is the destination");
+        output("    where <name>=<value> pairs are parameters (can be repeated)");
     }
 
     static console_connection *     g_console /* = nullptr; done below because it's static */;
@@ -824,7 +1175,11 @@ public:
     {
         snaplogger::add_logger_options(f_opts);
         f_opts.finish_parsing(argc, argv);
-        if(!snaplogger::process_logger_options(f_opts, "/etc/snapcommunicator/logger"))
+        if(!snaplogger::process_logger_options(
+                              f_opts
+                            , "/etc/snapcommunicator/logger"
+                            , std::cout
+                            , false))
         {
             // exit on any error
             throw advgetopt::getopt_exit("logger options generated an error.", 1);
@@ -833,7 +1188,7 @@ public:
         f_gui = f_opts.is_defined("gui");
 
         f_cui = f_opts.is_defined("cui")
-            || !f_opts.is_defined("message");
+            || (!f_opts.is_defined("message") && !f_gui);
 
         if(f_gui
         && f_cui)
@@ -843,11 +1198,12 @@ public:
             snapdev::NOT_REACHED();
         }
 
-        if(f_cui)
+        if(f_cui
+        || f_gui)
         {
             if(f_opts.is_defined("message"))
             {
-                std::cerr << "error: --message is not compatible with --cui." << std::endl;
+                std::cerr << "error: --message is not compatible with --cui or --gui." << std::endl;
                 exit(1);
                 snapdev::NOT_REACHED();
             }
@@ -862,28 +1218,12 @@ public:
             }
         }
 
-        if(f_opts.is_defined("tcp")
-        && f_opts.is_defined("udp"))
-        {
-            std::cerr << "error: --tcp and --udp are mutually exclusive" << std::endl;
-            exit(1);
-            snapdev::NOT_REACHED();
-        }
-
         f_connection = std::make_shared<network_connection>();
 
         if(f_opts.is_defined("address"))
         {
             f_connection->set_address(f_opts.get_string("address"));
         }
-
-        f_connection->set_mode(f_opts.is_defined("ssl")
-                ? ed::mode_t::MODE_SECURE
-                : ed::mode_t::MODE_PLAIN);
-
-        f_connection->set_selected_connection_type(f_opts.is_defined("tcp")
-                    ? network_connection::connection_t::TCP
-                    : network_connection::connection_t::UDP);
     }
 
     int run()
@@ -898,21 +1238,31 @@ public:
             return enter_cui();
         }
 
-        if(f_opts.is_defined("tcp")
-        || f_opts.is_defined("udp"))
+        if(f_opts.is_defined("message"))
         {
             return f_connection->send_message(f_opts.get_string("message")) ? 0 : 1;
         }
 
-        std::cerr << "error: no command specified, one of --gui, --cui, --tcp, --udp is required." << std::endl;
-
+        std::cerr << "error: no command specified, one of --gui, --cui, or --message is required; note that --message is implied if you just enter a message on the command line." << std::endl;
         return 1;
     }
 
     int start_gui()
     {
-        std::cerr << "error: the --gui is not yet implemented." << std::endl;
-        return 1;
+        // the GUI is a separate executable wchi is installed along the
+        // snapcommunicatord-gui package so as to not impose Qt on all
+        // servers; you probably don't need a GUI on your non-X servers
+        // anyway--try the 'cui' instead
+        //
+        if(access(g_gui_command, R_OK | X_OK) != 0)
+        {
+            std::cerr << "error: the --gui is not currently available; did you install the snapcommunicatord-gui package? -- on a server, consider using --cui instead." << std::endl;
+            return 1;
+        }
+        std::string cmd(g_gui_command);
+        cmd += ' ';
+        cmd += f_opts.options_to_string();
+        return system(cmd.c_str());
     }
 
     int enter_cui()

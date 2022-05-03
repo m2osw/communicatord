@@ -97,6 +97,25 @@ The projects comes with a few useful tools to send messages in script
 the traffic going through the Snap! Communicator.
 
 
+# Protocols
+
+The Snap! Communicator has its own protocol and we can access it using a
+protocol name as follow:
+
+* `sc:` -- basic stream connection
+* `scs:` -- secured stream connection
+* `scu:` -- basic datagram connection
+
+The address defines whether we have an IP based connection (TCP/IP or UDP/IP)
+or a Unix based connection (path to a socket). The `scs` protocol cannot
+be used with a Unix based connection (not available).
+
+Whether the connection is local or remote is defined by the IP address. By
+default, the `scu` is limited to local connections (127.0.0.1). In most cases,
+the `scs` is used between data centers (i.e. within one center, it is assumed
+that a non-encrypted connection works just fine).
+
+
 # License
 
 The project is covered by the GPL 3.0 license.

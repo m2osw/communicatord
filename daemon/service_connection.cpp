@@ -152,7 +152,8 @@ void service_connection::process_message(ed::message & msg)
         msg.set_sent_from_service(get_name());
     }
     //f_server->process_message(shared_from_this(), msg, false);
-    msg.user_data(shared_from_this());
+    base_connection::pointer_t conn(std::dynamic_pointer_cast<base_connection>(shared_from_this()));
+    msg.user_data(conn);
     f_server->dispatch_message(msg);
 }
 
