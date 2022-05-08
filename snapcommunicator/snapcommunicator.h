@@ -34,10 +34,11 @@ namespace sc
 
 
 
-constexpr const int     LOCAL_PORT = 4040;      // sc://<loopback-ip>
-constexpr const int     UDP_PORT = 4041;        // scu://<loopback-ip> (any IP is accepted at the moment, but it's expected to be local)
-constexpr const int     REMOTE_PORT = 4042;     // sc://<private-ip>
-constexpr const int     SECURE_PORT = 4043;     // scs://<public-ip>
+constexpr int const     LOCAL_PORT = 4040;      // sc://<loopback-ip>
+constexpr int const     UDP_PORT = 4041;        // scu://<loopback-ip> (any IP is accepted at the moment, but it's expected to be local)
+constexpr int const     REMOTE_PORT = 4042;     // sc://<private-ip>
+constexpr int const     SECURE_PORT = 4043;     // scs://<public-ip>
+constexpr char const *  g_snapcommunicator_default_ip_port = "127.0.0.1:4040";
 
 
 
