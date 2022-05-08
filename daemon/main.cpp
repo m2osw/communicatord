@@ -62,9 +62,20 @@ int main(int argc, char * argv[])
         // expected exit from the advgetopt (i.e. --help)
         return e.code();
     }
+    catch(libexcept::exception_t const & e)
+    {
+        std::cerr << "libexcept exception caught: "
+            << e.what()
+            << '\n';
+        SNAP_LOG_FATAL
+            << "exception caught: "
+            << e.what()
+            << SNAP_LOG_SEND_WITH_STACK_TRACE(e);
+        return 1;
+    }
     catch(std::exception const & e)
     {
-        std::cerr << "exception caught: "
+        std::cerr << "standard exception caught: "
             << e.what()
             << '\n';
         SNAP_LOG_FATAL

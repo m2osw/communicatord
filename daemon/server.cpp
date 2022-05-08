@@ -362,89 +362,85 @@ advgetopt::options_environment const g_options_environment =
  */
 ed::dispatcher<server>::dispatcher_match::vector_t const g_server_messages =
 {
-    {
-          "ACCEPT"
-        , &server::msg_accept
-    },
+    ed::dispatcher<server>::define_match(
+          ed::dispatcher<server>::Expression("ACCEPT")
+        , ed::dispatcher<server>::Execute(&server::msg_accept)
+    ),
     // default in dispatcher: ALIVE
-    {
-          "CLUSTERSTATUS"
-        , &server::msg_clusterstatus
-    },
-    {
-          "COMMANDS"
-        , &server::msg_commands
-    },
-    {
-          "CONNECT"
-        , &server::msg_connect
-    },
-    {
-          "DISCONNECT"
-        , &server::msg_disconnect
-    },
-    {
-          "FORGET"
-        , &server::msg_forget
-    },
-    {
-          "GOSSIP"
-        , &server::msg_gossip
-    },
+    ed::dispatcher<server>::define_match(
+          ed::dispatcher<server>::Expression("CLUSTERSTATUS")
+        , ed::dispatcher<server>::Execute(&server::msg_clusterstatus)
+    ),
+    ed::dispatcher<server>::define_match(
+          ed::dispatcher<server>::Expression("COMMANDS")
+        , ed::dispatcher<server>::Execute(&server::msg_commands)
+    ),
+    ed::dispatcher<server>::define_match(
+          ed::dispatcher<server>::Expression("CONNECT")
+        , ed::dispatcher<server>::Execute(&server::msg_connect)
+    ),
+    ed::dispatcher<server>::define_match(
+          ed::dispatcher<server>::Expression("DISCONNECT")
+        , ed::dispatcher<server>::Execute(&server::msg_disconnect)
+    ),
+    ed::dispatcher<server>::define_match(
+          ed::dispatcher<server>::Expression("FORGET")
+        , ed::dispatcher<server>::Execute(&server::msg_forget)
+    ),
+    ed::dispatcher<server>::define_match(
+          ed::dispatcher<server>::Expression("GOSSIP")
+        , ed::dispatcher<server>::Execute(&server::msg_gossip)
+    ),
     // default in dispatcher: HELP
     // default in dispatcher: LEAK
-    {
-          "LISTENLOADAVG"
-        , &server::msg_listen_loadavg
-    },
-    {
-          "LISTSERVICES"
-        , &server::msg_list_services
-    },
-    {
-          "LOADAVG"
-        , &server::msg_save_loadavg
-    },
-    // default in dispatcher: LOG
-    {
-          "PUBLIC_IP"
-        , &server::msg_public_ip
-    },
-    // default in dispatcher: QUITTING -- the default is not valid for us
-    {
-          "QUITTING"
-        , &server::msg_public_ip
-    },
+    ed::dispatcher<server>::define_match(
+          ed::dispatcher<server>::Expression("LISTENLOADAVG")
+        , ed::dispatcher<server>::Execute(&server::msg_listen_loadavg)
+    ),
+    ed::dispatcher<server>::define_match(
+          ed::dispatcher<server>::Expression("LISTSERVICES")
+        , ed::dispatcher<server>::Execute(&server::msg_list_services)
+    ),
+    ed::dispatcher<server>::define_match(
+          ed::dispatcher<server>::Expression("LOADAVG")
+        , ed::dispatcher<server>::Execute(&server::msg_save_loadavg)
+    ),
+    // default in dispatcher: LOG_ROTATE
+    ed::dispatcher<server>::define_match(
+          ed::dispatcher<server>::Expression("PUBLIC_IP")
+        , ed::dispatcher<server>::Execute(&server::msg_public_ip)
+    ),
+    // default in dispatcher: QUITTING -- the default is not valid for us, we have it overridden, but no need to do anything here
     // default in dispatcher: READY
-    {
-          "REFUSE"
-        , &server::msg_refuse
-    },
-    {
-          "REGISTER"
-        , &server::msg_register
-    },
-    {
-          "REGISTERFORLOADAVG"
-        , &server::msg_registerforloadavg
-    },
+    ed::dispatcher<server>::define_match(
+          ed::dispatcher<server>::Expression("REFUSE")
+        , ed::dispatcher<server>::Execute(&server::msg_refuse)
+    ),
+    ed::dispatcher<server>::define_match(
+          ed::dispatcher<server>::Expression("REGISTER")
+        , ed::dispatcher<server>::Execute(&server::msg_register)
+    ),
+    ed::dispatcher<server>::define_match(
+          ed::dispatcher<server>::Expression("REGISTERFORLOADAVG")
+        , ed::dispatcher<server>::Execute(&server::msg_registerforloadavg)
+    ),
     // default in dispatcher: RESTART
-    {
-          "SERVICESTATUS"
-          , &server::msg_servicestatus
-    },
-    {
-          "SHUTDOWN"
-        , &server::msg_shutdown
-    },
-    {
-          "UNREGISTER"
-        , &server::msg_unregister
-    },
-    {
-          "UNREGISTERFORLOADAVG"
-        , &server::msg_unregisterforloadavg
-    },
+    ed::dispatcher<server>::define_match(
+          ed::dispatcher<server>::Expression("SERVICESTATUS")
+        , ed::dispatcher<server>::Execute(&server::msg_servicestatus)
+    ),
+    ed::dispatcher<server>::define_match(
+          ed::dispatcher<server>::Expression("SHUTDOWN")
+        , ed::dispatcher<server>::Execute(&server::msg_shutdown)
+    ),
+    ed::dispatcher<server>::define_match(
+          ed::dispatcher<server>::Expression("UNREGISTER")
+        , ed::dispatcher<server>::Execute(&server::msg_unregister)
+    ),
+    ed::dispatcher<server>::define_match(
+          ed::dispatcher<server>::Expression("UNREGISTERFORLOADAVG")
+        , ed::dispatcher<server>::Execute(&server::msg_unregisterforloadavg)
+    ),
     // default in dispatcher: STOP -- we overload the stop() which gets called by the message implementation
     // default in dispatcher: UNKNOWN -- we overload the function to include more details in the log
 
@@ -528,7 +524,10 @@ server::~server()
 int server::init()
 {
     // keep a copy of the server name handy
-    f_server_name = f_opts.is_defined("server_name");
+    if(f_opts.is_defined("server_name"))
+    {
+        f_server_name = f_opts.get_string("server_name");
+    }
     if(f_server_name.empty())
     {
         f_server_name = snapdev::gethostname();
@@ -2381,10 +2380,7 @@ void server::msg_register(ed::message & msg)
     }
 
     service_conn->set_name(service_name);
-    if(service_conn)
-    {
-        service_conn->properly_named();
-    }
+    service_conn->properly_named();
 
     service_conn->set_connection_type(connection_type_t::CONNECTION_TYPE_LOCAL);
 
