@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicatord
+// https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -18,13 +18,13 @@
 #pragma once
 
 /** \file
- * \brief Declaration of the remote snapcommunicators manager.
+ * \brief Declaration of the remote communicators manager.
  *
- * The remote snapcommunicators is in charge of managing the connections
- * to the other snapcommunicators on your network.
+ * The remote communicators is in charge of managing the connections
+ * to the other communicators on your network.
  *
  * When the IP address is smaller than ours, then we connect to that
- * snapcommunicatord. When the IP address is larger than ours, then we
+ * communicatord. When the IP address is larger than ours, then we
  * instead connect to send a GOSSIP message. The GOSSIP is a mean to
  * connect to new servers without the need to define them on all your
  * servers. Defining it on one server is enough to get things started.
@@ -50,13 +50,13 @@ class remote_connection;
 class gossip_connection;
 
 
-class remote_snapcommunicators
-    : public std::enable_shared_from_this<remote_snapcommunicators>
+class remote_communicators
+    : public std::enable_shared_from_this<remote_communicators>
 {
 public:
-    typedef std::shared_ptr<remote_snapcommunicators>    pointer_t;
+    typedef std::shared_ptr<remote_communicators>    pointer_t;
 
-                                            remote_snapcommunicators(
+                                            remote_communicators(
                                                   server::pointer_t communicator
                                                 , addr::addr const & my_addr);
 

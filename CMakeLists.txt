@@ -1,6 +1,6 @@
 # Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 #
-# https://snapwebsites.org/project/snapcommunicator
+# https://snapwebsites.org/project/communicatord
 # contact@m2osw.com
 #
 # This program is free software: you can redistribute it and/or modify
@@ -19,9 +19,9 @@
 cmake_minimum_required(VERSION 3.10.2)
 
 ##
-## snapcommunicator RPC project
+## communicator RPC project
 ##
-project(snapcommunicator_project)
+project(communicatord_project)
 
 find_package(AdvGetOpt        REQUIRED)
 find_package(Boost            REQUIRED)
@@ -35,19 +35,19 @@ find_package(SnapCMakeModules REQUIRED)
 find_package(SnapDev          REQUIRED)
 find_package(SnapLogger       REQUIRED)
 
-SnapGetVersion(SNAPCOMMUNICATOR ${CMAKE_CURRENT_SOURCE_DIR})
+SnapGetVersion(COMMUNICATORD ${CMAKE_CURRENT_SOURCE_DIR})
 
 include_directories(
     ${PROJECT_SOURCE_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-add_subdirectory(snapcommunicator)      # helper library
-add_subdirectory(daemon          )      # actual snapcommunicator service
-add_subdirectory(cmake           )      # find helper library
-#add_subdirectory(conf            )      # configuration files
-add_subdirectory(doc             )      # various docs
-add_subdirectory(tools           )      # various tools
-add_subdirectory(tests           )      # unit tests
+add_subdirectory(communicatord)      # helper library
+add_subdirectory(daemon       )      # communicator service
+add_subdirectory(cmake        )      # find helper library
+#add_subdirectory(conf         )      # configuration files
+add_subdirectory(doc          )      # various docs
+add_subdirectory(tools        )      # various tools
+add_subdirectory(tests        )      # unit tests
 
 # vim: ts=4 sw=4 et

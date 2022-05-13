@@ -1,6 +1,6 @@
 # Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 #
-# https://snapwebsites.org/project/snapcommunicator
+# https://snapwebsites.org/project/communicatord
 # contact@m2osw.com
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,9 +17,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ##
-## snapcommunicator library
+## communicatord library
 ##
-project(snapcommunicator)
+project(communicatord)
 
 # Put the version in the header file
 configure_file(
@@ -29,7 +29,7 @@ configure_file(
 
 add_library(${PROJECT_NAME} SHARED
     loadavg.cpp
-    snapcommunicator.cpp
+    communicatord.cpp
     version.cpp
 )
 
@@ -54,10 +54,10 @@ target_link_libraries(${PROJECT_NAME}
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
     VERSION
-        ${SNAPCOMMUNICATOR_VERSION_MAJOR}.${SNAPCOMMUNICATOR_VERSION_MINOR}
+        ${COMMUNICATORD_VERSION_MAJOR}.${COMMUNICATORD_VERSION_MINOR}
 
     SOVERSION
-        ${SNAPCOMMUNICATOR_VERSION_MAJOR}
+        ${COMMUNICATORD_VERSION_MAJOR}
 )
 
 install(
@@ -76,11 +76,11 @@ install(
 
 install(
     FILES
-        snapcommunicator.h
+        communicatord.h
         ${CMAKE_CURRENT_BINARY_DIR}/version.h
 
     DESTINATION
-        include/snapcommunicator
+        include/communicatord
 )
 
 

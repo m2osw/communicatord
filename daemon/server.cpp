@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicatord
+// https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -17,11 +17,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 /** \file
- * \brief Implementation of the Snap! Communicator.
+ * \brief Implementation of the Communicator.
  *
  * This is the crux of this application, the service which manages all the
  * communication between all the other services (well nearly all of them).
- * The Snap! Communicator is what is called an RPC service. You use it
+ * The Communicator is what is called an RPC service. You use it
  * to send messages to various services to run commands and get replies.
  *
  * In most cases, the send_message() will be instantaneous. You must have
@@ -37,17 +37,17 @@
 #include    "load_timer.h"
 #include    "ping.h"
 #include    "remote_connection.h"
-#include    "remote_snapcommunicators.h"
+#include    "remote_communicators.h"
 #include    "service_connection.h"
 #include    "unix_listener.h"
 
 
-// snapcommunicator
+// communicatord
 //
-#include    <snapcommunicator/exception.h>
-#include    <snapcommunicator/loadavg.h>
-#include    <snapcommunicator/snapcommunicator.h>
-#include    <snapcommunicator/version.h>
+#include    <communicatord/exception.h>
+#include    <communicatord/loadavg.h>
+#include    <communicatord/communicatord.h>
+#include    <communicatord/version.h>
 
 
 // advgetopt
@@ -126,20 +126,20 @@ namespace
 {
 
 
-char const *        g_status_filename = "/var/lib/snapcommunicatord/cluster-status.txt";
+char const *        g_status_filename = "/var/lib/communicatord/cluster-status.txt";
 
 
 /** \brief The sequence number of a message being broadcast.
  *
- * Each instance of snapcommunicatord may broadcast a message to other
- * snapcommunicators. When that happens, we want to ignore that
- * message in case it comes again to the same snapcommunicatord. This
+ * Each instance of communicatord may broadcast a message to other
+ * communicators. When that happens, we want to ignore that
+ * message in case it comes again to the same communicatord. This
  * can be accomplished by saving which messages we received.
  *
  * We also control a number of hops and a timeout.
  *
  * This counter is added to the name of the computer running this
- * snapcommunicatord (i.e. f_server_name) so for example it would
+ * communicatord (i.e. f_server_name) so for example it would
  * look as following if the computer name is "snap":
  *
  * \code
@@ -166,15 +166,15 @@ const advgetopt::option g_options[] =
         , advgetopt::Flags(advgetopt::all_flags<
               advgetopt::GETOPT_FLAG_REQUIRED
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
-        , advgetopt::DefaultValue("/var/lib/snapcommunicatord")
-        , advgetopt::Help("a path where the snapcommunicatord saves data it uses between runs such as the list of IP addresses of other snapcommunicators.")
+        , advgetopt::DefaultValue("/var/lib/communicatord")
+        , advgetopt::Help("a path where the communicatord saves data it uses between runs such as the list of IP addresses of other communicators.")
     ),
     advgetopt::define_option(
           advgetopt::Name("debug-all-messages")
         , advgetopt::Flags(advgetopt::command_flags<
               advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
 #ifdef _DEBUG
-        , advgetopt::Help("log all the messages received by the snapcommunicatord and verify them (as per the COMMAND message).")
+        , advgetopt::Help("log all the messages received by the communicatord and verify them (as per the COMMAND message).")
 #else
         , advgetopt::Help("verify the incoming messages (as per the COMMAND message).")
 #endif
@@ -184,7 +184,7 @@ const advgetopt::option g_options[] =
         , advgetopt::Flags(advgetopt::all_flags<
               advgetopt::GETOPT_FLAG_REQUIRED
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
-        , advgetopt::DefaultValue("snapcommunicatord")
+        , advgetopt::DefaultValue("communicatord")
         , advgetopt::Help("drop privileges to this group.")
     ),
     advgetopt::define_option(
@@ -201,7 +201,7 @@ const advgetopt::option g_options[] =
               advgetopt::GETOPT_FLAG_REQUIRED
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
         , advgetopt::DefaultValue("100")
-        , advgetopt::Help("maximum number of connections allowed by this snapcommunicatord.")
+        , advgetopt::Help("maximum number of connections allowed by this communicatord.")
     ),
     advgetopt::define_option(
           advgetopt::Name("max-pending-connections")
@@ -216,14 +216,14 @@ const advgetopt::option g_options[] =
         , advgetopt::Flags(advgetopt::all_flags<
               advgetopt::GETOPT_FLAG_REQUIRED
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
-        , advgetopt::Help("define the snapcommunicatord address (i.e. 10.0.2.33); it has to be defined in one of your interfaces.")
+        , advgetopt::Help("define the communicatord address (i.e. 10.0.2.33); it has to be defined in one of your interfaces.")
     ),
     advgetopt::define_option(
           advgetopt::Name("neighbors")
         , advgetopt::Flags(advgetopt::all_flags<
               advgetopt::GETOPT_FLAG_REQUIRED
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
-        , advgetopt::Help("define a comma separated list of snapcommunicatord neighbors.")
+        , advgetopt::Help("define a comma separated list of communicatord neighbors.")
     ),
     advgetopt::define_option(
           advgetopt::Name("private-key")
@@ -260,7 +260,7 @@ const advgetopt::option g_options[] =
         , advgetopt::Flags(advgetopt::all_flags<
               advgetopt::GETOPT_FLAG_REQUIRED
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
-        , advgetopt::DefaultValue("/usr/share/snapcommunicatord/services")
+        , advgetopt::DefaultValue("/usr/share/communicatord/services")
         , advgetopt::Help("path to the list of service files.")
     ),
     advgetopt::define_option(
@@ -290,7 +290,7 @@ const advgetopt::option g_options[] =
         , advgetopt::Flags(advgetopt::all_flags<
               advgetopt::GETOPT_FLAG_REQUIRED
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
-        , advgetopt::DefaultValue("snapcommunicatord")
+        , advgetopt::DefaultValue("communicatord")
         , advgetopt::Help("drop privileges to this user.")
     ),
     advgetopt::end_options()
@@ -313,7 +313,7 @@ advgetopt::group_description const g_group_descriptions[] =
 
 constexpr char const * const g_configuration_files[] =
 {
-    "/etc/snapcommunicatord/snapcommunicatord.conf",
+    "/etc/communicatord/communicatord.conf",
     nullptr
 };
 
@@ -322,11 +322,11 @@ constexpr char const * const g_configuration_files[] =
 #pragma GCC diagnostic ignored "-Wpedantic"
 advgetopt::options_environment const g_options_environment =
 {
-    .f_project_name = "snapcommunicatord",
-    .f_group_name = "snapcommunicatord",
+    .f_project_name = "communicatord",
+    .f_group_name = "communicatord",
     .f_options = g_options,
     .f_options_files_directory = nullptr,
-    .f_environment_variable_name = "SNAPCOMMUNICATOR",
+    .f_environment_variable_name = "COMMUNICATORD",
     .f_environment_variable_intro = nullptr,
     .f_section_variables_name = nullptr,
     .f_configuration_files = g_configuration_files,
@@ -336,7 +336,7 @@ advgetopt::options_environment const g_options_environment =
     .f_help_header = "Usage: %p [-<opt>]\n"
                      "where -<opt> is one or more of:",
     .f_help_footer = "%c",
-    .f_version = SNAPCOMMUNICATOR_VERSION_STRING,
+    .f_version = COMMUNICATORD_VERSION_STRING,
     .f_license = "GPL v2 or newer",
     .f_copyright = "Copyright (c) 2012-"
                    BOOST_PP_STRINGIZE(UTC_BUILD_YEAR)
@@ -348,9 +348,9 @@ advgetopt::options_environment const g_options_environment =
 #pragma GCC diagnostic pop
 
 
-/** \brief List of messages understood by the snapcommunicatord.
+/** \brief List of messages understood by the communicatord.
  *
- * The snapcommunicator daemon propagates messages between services. It
+ * The communicator daemon propagates messages between services. It
  * also understands a certain number of messages to implement the
  * communication channels appropriately.
  *
@@ -456,7 +456,7 @@ ed::dispatcher<server>::dispatcher_match::vector_t const g_server_messages =
 
 
 /** \class server
- * \brief Set of connections in the snapcommunicatord tool.
+ * \brief Set of connections in the communicatord tool.
  *
  * All the connections and sockets in general will all appear
  * in this class.
@@ -482,7 +482,7 @@ server::server(int argc, char * argv[])
 {
     snaplogger::add_logger_options(f_opts);
     f_opts.finish_parsing(argc, argv);
-    if(!snaplogger::process_logger_options(f_opts, "/etc/snapcommunicatord/logger"))
+    if(!snaplogger::process_logger_options(f_opts, "/etc/communicatord/logger"))
     {
         // exit on any error
         throw advgetopt::getopt_exit("logger options generated an error.", 1);
@@ -536,7 +536,7 @@ int server::init()
     f_number_of_processors = std::max(1U, std::thread::hardware_concurrency());
 
     // check a user defined maximum number of connections
-    // by default this is set to SNAP_COMMUNICATOR_MAX_CONNECTIONS,
+    // by default this is set to COMMUNICATORD_MAX_CONNECTIONS,
     // which at this time is 100
     //
     f_max_connections = f_opts.get_long("max_connections");
@@ -552,7 +552,7 @@ int server::init()
         snapdev::glob_to_list<service_files_t> dir;
         if(dir.read_path<snapdev::glob_to_list_flag_t::GLOB_FLAG_NO_ESCAPE>(path_to_services))
         {
-            // we have some local services (note that snapcommunicatord is
+            // we have some local services (note that communicatord is
             // not added as a local service)
             //
             // at the moment we do not load those files, these could include
@@ -580,7 +580,7 @@ std::cerr << "got a name here!?!? " << service_name << "\n";
         }
 
         // the list of local services cannot (currently) change while
-        // snapcommunicatord is running so generate the corresponding
+        // communicatord is running so generate the corresponding
         // string once
         //
         f_local_services = snapdev::join_strings(f_local_services_list, ",");
@@ -612,7 +612,7 @@ std::cerr << "got a name here!?!? " << service_name << "\n";
     // connect using the 127.0.0.1 IP address
     //
     // the other listener listens to your local network and accepts
-    // connections from other snapcommunicatord servers
+    // connections from other communicatord servers
     //
     // TCP local
     {
@@ -641,7 +641,7 @@ std::cerr << "got a name here!?!? " << service_name << "\n";
                                 , max_pending_connections
                                 , true
                                 , f_server_name);
-        f_local_listener->set_name("snap communicator local listener");
+        f_local_listener->set_name("communicator local listener");
         f_communicator->add_connection(f_local_listener);
     }
     // unix
@@ -654,7 +654,7 @@ std::cerr << "got a name here!?!? " << service_name << "\n";
                 , unix_listen
                 , max_pending_connections
                 , f_server_name);
-        f_unix_listener->set_name("snap communicator unix listener");
+        f_unix_listener->set_name("communicator unix listener");
         f_communicator->add_connection(f_unix_listener);
     }
     // plain remote
@@ -680,7 +680,7 @@ std::cerr << "got a name here!?!? " << service_name << "\n";
                     , max_pending_connections
                     , false
                     , f_server_name);
-            f_remote_listener->set_name("snap communicator remote listener");
+            f_remote_listener->set_name("communicator remote listener");
             f_communicator->add_connection(f_remote_listener);
         }
         else
@@ -720,7 +720,7 @@ std::cerr << "got a name here!?!? " << service_name << "\n";
                     , max_pending_connections
                     , false
                     , f_server_name);
-            f_secure_listener->set_name("snap communicator secure listener");
+            f_secure_listener->set_name("communicator secure listener");
             f_communicator->add_connection(f_secure_listener);
         }
         else
@@ -751,7 +751,7 @@ std::cerr << "got a name here!?!? " << service_name << "\n";
         {
             p->set_secret_code(f_opts.get_string("signal_secret"));
         }
-        p->set_name("snap communicator messenger (UDP)");
+        p->set_name("communicator messenger (UDP)");
         f_ping = p;
         if(!f_communicator->add_connection(f_ping))
         {
@@ -763,11 +763,11 @@ std::cerr << "got a name here!?!? " << service_name << "\n";
 
     {
         f_loadavg_timer = std::make_shared<load_timer>(shared_from_this());
-        f_loadavg_timer->set_name("snap communicator load balancer timer");
+        f_loadavg_timer->set_name("communicator load balancer timer");
         f_communicator->add_connection(f_loadavg_timer);
     }
 
-    // transform the my_address to a snap_addr::addr object
+    // transform the my_address to a addr::addr object
     //
     f_my_address = addr::addr(addr::string_to_addr(
                   f_opts.get_string("my_address")
@@ -785,7 +785,7 @@ std::cerr << "got a name here!?!? " << service_name << "\n";
         throw sc::address_missing(msg);
     }
 
-    f_remote_snapcommunicators = std::make_shared<remote_snapcommunicators>(
+    f_remote_communicators = std::make_shared<remote_communicators>(
                                           shared_from_this()
                                         , f_my_address);
 
@@ -809,7 +809,7 @@ std::cerr << "got a name here!?!? " << service_name << "\n";
         //
         std::stringstream ss;
 
-        ss << "the snapcommunicatord \"listen="
+        ss << "the communicatord \"listen="
            << listen_str
            << "\" parameter is the loopback IP address."
              " This will prevent any tool that wants to make use of the"
@@ -821,7 +821,7 @@ std::cerr << "got a name here!?!? " << service_name << "\n";
             << SNAP_LOG_SEND;
 
         sitter::flag::pointer_t flag(SITTER_FLAG_UP(
-                      "snapcommunicatord"
+                      "communicatord"
                     , "cluster"
                     , "no-cluster"
                     , ss.str()));
@@ -921,7 +921,7 @@ void server::drop_privileges()
 
 /** \brief The execution loop.
  *
- * This function runs the execution loop until the snapcommunicatord
+ * This function runs the execution loop until the communicatord
  * system receives a QUIT or STOP message.
  */
 int server::run()
@@ -952,7 +952,7 @@ int server::run()
  * understands the command about to be sent to it (\p reply).
  *
  * \note
- * The test is done only when snapcommunicatord is run in debug
+ * The test is done only when communicatord is run in debug
  * mode to not waste time.
  *
  * \param[in,out] connection  The concerned connection that has to understand the command.
@@ -988,7 +988,7 @@ bool server::verify_command(
 
     // if you get this message, it could be that you do implement
     // the command, but do not advertise it in your COMMANDS
-    // reply to the HELP message sent by snapcommunicatord
+    // reply to the HELP message sent by communicatord
     //
     ed::connection::pointer_t c(std::dynamic_pointer_cast<ed::connection>(connection));
     if(c != nullptr)
@@ -1043,16 +1043,16 @@ void server::process_message(ed::message & msg)
     //    cache the information
     //
     // 2. the service is not one of ours, but we found a remote
-    //    snapcommunicatord server that says it is his, forward the
-    //    message to that snapcommunicatord instead
+    //    communicatord server that says it is his, forward the
+    //    message to that communicatord instead
     //
     // 3. the service is in the "heard of" list of services, send that
-    //    message to that snapcommunicatord, it will then forward it
+    //    message to that communicatord, it will then forward it
     //    to the correct server (or another proxy...)
     //
     // 4. the service cannot be found anywhere, we save it in our remote
     //    cache (i.e. because it will only be possible to send that message
-    //    to a remote snapcommunicatord and not to a service on this system)
+    //    to a remote communicatord and not to a service on this system)
     //
 
 //SNAP_LOG_TRACE("---------------- got message for [")(server_name)("] / [")(service)("]");
@@ -1113,7 +1113,7 @@ void server::process_message(ed::message & msg)
             if(!is_debug())
             {
                 // ignore in non-debug versions because a throw
-                // completely breaks snapcommunicatord... and it
+                // completely breaks communicatord... and it
                 // is not that important at this point without
                 // a programmer debugging this software
                 //
@@ -1140,7 +1140,7 @@ void server::process_message(ed::message & msg)
 
             case connection_type_t::CONNECTION_TYPE_REMOTE:
                 throw sc::missing_name(
-                          "server name missing in connection \"remote snapcommunicatord\"...");
+                          "server name missing in connection \"remote communicatord\"...");
 
             }
         }
@@ -1166,11 +1166,11 @@ void server::process_message(ed::message & msg)
                     catch(std::runtime_error const & e)
                     {
                         // ignore the error because this can come from an
-                        // external source (i.e. snapsignal) where an end
+                        // external source (i.e. ed-signal) where an end
                         // user may try to break the whole system!
                         //
                         SNAP_LOG_DEBUG
-                            << "snapcommunicatord failed to send a message to connection \""
+                            << "communicatord failed to send a message to connection \""
                             << conn->get_name()
                             << "\" (error: "
                             << e.what()
@@ -1236,7 +1236,7 @@ void server::process_message(ed::message & msg)
             << "\" for local service \""
             << service
             << "\", which is not currently registered with this"
-               " snapcommunicatord. Dropping message."
+               " communicatord. Dropping message."
             << SNAP_LOG_SEND;
 
         transmission_report(msg);
@@ -1325,21 +1325,21 @@ bool server::check_broadcast_message(ed::message const & msg)
 }
 
 
-bool server::snapcommunicator_message(ed::message & msg)
+bool server::communicator_message(ed::message & msg)
 {
     std::string const server_name(msg.get_server());
     if(!server_name.empty() 
     && server_name != "."       // this is an abbreviation meaning "f_server_name"
     && server_name != "*")
     {
-        // message is not for the snapcommunicatord server
+        // message is not for the communicatord server
         //
         return false;
     }
 
     std::string const service(msg.get_service());
     if(!service.empty()
-    && service != "snapcommunicatord")
+    && service != "communicatord")
     {
         // message is directed to another service
         //
@@ -1411,10 +1411,10 @@ bool server::dispatch_message(ed::message & msg)
         return true;
     }
 
-    // if this message is directed to the snapcommunicator daemon itself
+    // if this message is directed to the communicator daemon itself
     // then dispatcher it through our own dispatcher
     //
-    if(snapcommunicator_message(msg))
+    if(communicator_message(msg))
     {
         return dispatcher_support::dispatch_message(msg);
     }
@@ -1471,7 +1471,7 @@ void server::msg_accept(ed::message & msg)
     conn->set_server_name(remote_server_name);
 
     // reply to a CONNECT, this was to connect to another
-    // snapcommunicatord on another computer, retrieve the
+    // communicatord on another computer, retrieve the
     // data from that remote computer
     //
     conn->connection_started();
@@ -1580,7 +1580,7 @@ void server::msg_commands(ed::message & msg)
     // here we verify that a few commands are properly defined; for some,
     // we already sent them to that connection and thus it should understand
     // them no matter what; and a few more that are very possibly going to
-    // be sent later (i.e. all are part of the snapcommunicatord protocol)
+    // be sent later (i.e. all are part of the communicatord protocol)
     //
     bool ok(true);
     if(!conn->understand_command("HELP"))
@@ -1684,7 +1684,7 @@ void server::msg_connect(ed::message & msg)
     }
 
     // first we verify that we have a compatible version to
-    // communicate between two snapcommunicators
+    // communicate between two communicators
     //
     if(!msg.check_version_parameter())
     {
@@ -1703,15 +1703,15 @@ void server::msg_connect(ed::message & msg)
 
     std::string const remote_server_name(msg.get_parameter("server_name"));
     ed::connection::vector_t const all_connections(f_communicator->get_connections());
-    ed::connection::pointer_t snap_conn(std::dynamic_pointer_cast<ed::connection>(conn));
+    ed::connection::pointer_t ed_conn(std::dynamic_pointer_cast<ed::connection>(conn));
     auto const & name_match(std::find_if(
             all_connections.begin(),
             all_connections.end(),
-            [remote_server_name, snap_conn](auto const & it)
+            [remote_server_name, ed_conn](auto const & it)
             {
                 // ignore ourselves
                 //
-                if(it == snap_conn)
+                if(it == ed_conn)
                 {
                     return false;
                 }
@@ -1770,7 +1770,7 @@ void server::msg_connect(ed::message & msg)
         }
         else
         {
-            // cool, a remote snapcommunicatord wants to connect
+            // cool, a remote communicatord wants to connect
             // with us, make sure we did not reach the maximum
             // number of connections though...
             //
@@ -1860,17 +1860,17 @@ void server::msg_connect(ed::message & msg)
                 // Note: the name of the function is "GOSSIP"
                 //       received because if the "RECEIVED"
                 //       message was sent back from that remote
-                //       snapcommunicatord then it means that
+                //       communicatord then it means that
                 //       remote daemon received our GOSSIP message
                 //       and receiving the "CONNECT" message is
                 //       very similar to receiving the "RECEIVED"
                 //       message after a "GOSSIP"
                 //
-                f_remote_snapcommunicators->gossip_received(his_address);
+                f_remote_communicators->gossip_received(his_address);
 
                 // now let local services know that we have a new
                 // remote connections (which may be of interest
-                // for that service--see snapmanagerdaemon)
+                // for that service--see managerdaemon)
                 //
                 // TODO: to be symmetrical, we should also have
                 //       a message telling us when a remote
@@ -1883,7 +1883,7 @@ void server::msg_connect(ed::message & msg)
         }
     }
 
-    //verify_command(base, reply); -- we do not yet have a list of commands understood by the other snapcommunicator daemon
+    //verify_command(base, reply); -- we do not yet have a list of commands understood by the other communicator daemon
 
     // also request the COMMANDS of this connection with a HELP
     // if the connection was not refused
@@ -1928,7 +1928,7 @@ void server::msg_disconnect(ed::message & msg)
 
     conn->connection_ended();
 
-    // this has to be another snapcommunicatord
+    // this has to be another communicatord
     // (i.e. an object that sent ACCEPT or CONNECT)
     //
     connection_type_t const type(conn->get_connection_type());
@@ -1970,7 +1970,7 @@ SNAP_LOG_TODO
             // to avoid attempting to reconnect like crazy
             //
             remote_conn->disconnect();
-            f_remote_snapcommunicators->shutting_down(remote_conn->get_address());
+            f_remote_communicators->shutting_down(remote_conn->get_address());
         }
 
         // we may have lost some services information,
@@ -2022,7 +2022,7 @@ void server::msg_forget(ed::message & msg)
     std::string const forget_ip(msg.get_parameter("ip"));
 
     // self is not a connection that get broadcast messages
-    // for snapcommunicatord, so we also call the remove_neighbor()
+    // for communicatord, so we also call the remove_neighbor()
     // function now
     //
     remove_neighbor(forget_ip);
@@ -2043,7 +2043,7 @@ void server::msg_forget(ed::message & msg)
     ed::message forget;
     forget.set_command("FORGET");
     forget.set_server("*");
-    forget.set_service("snapcommunicatord");
+    forget.set_service("communicatord");
     forget.add_parameter("ip", forget_ip);
     broadcast_message(forget);
 }
@@ -2072,7 +2072,7 @@ void server::msg_gossip(ed::message & msg)
     //
     // 2) heard_of=... is defined -- in this case, the
     //    remote host received a GOSSIP from any one
-    //    snapcommunicatord and it is propagating the
+    //    communicatord and it is propagating the
     //    message; check all the IPs in that list and
     //    if all are present in our list of neighbors,
     //    do nothing; if all are not present, proceed
@@ -2112,9 +2112,9 @@ void server::msg_gossip(ed::message & msg)
     // exactly when such expires).
     //
     // Our GOSSIP has one advantage, it is used to
-    // connect all the snapcommunicators together
+    // connect all the communicators together
     // once. After that, the GOSSIP messages stop,
-    // no matter what (i.e. if a new snapcommunicator
+    // no matter what (i.e. if a new communicator
     // daemon is started, then the GOSSIP restart
     // for that instance, but that's it.)
     //
@@ -2124,16 +2124,16 @@ void server::msg_gossip(ed::message & msg)
     // In those cases, we do not need to use the same
     // algorithm because at that point we are expected
     // to have a complete list of all the
-    // snapcommunicators available.
+    // communicators available.
     //
     // (TODO: only we may not be directly connected to all of them,
-    // so we need to keep track of the snapcommunicators
+    // so we need to keep track of the communicators
     // we are not connected to and ask others to do some
     // forwarding!)
     //
     if(msg.has_parameter("my_address"))
     {
-        // this is a "simple" GOSSIP of a snapcommunicatord
+        // this is a "simple" GOSSIP of a communicatord
         // telling us it exists and expects a connection
         // from us
         //
@@ -2142,12 +2142,12 @@ void server::msg_gossip(ed::message & msg)
         //
         std::string const reply_to(msg.get_parameter("my_address"));
         add_neighbors(reply_to);
-        f_remote_snapcommunicators->add_remote_communicator(reply_to);
+        f_remote_communicators->add_remote_communicator(reply_to);
 
         ed::message reply;
         reply.set_command("RECEIVED");
         //verify_command(base, reply); -- in this case the remote
-        //                                snapcommunicatord is not connected,
+        //                                communicatord is not connected,
         //                                so no HELP+COMMANDS and thus no
         //                                verification possible
         conn->send_message_to_connection(reply);
@@ -2268,7 +2268,7 @@ void server::msg_quitting(ed::message & msg)
     snapdev::NOT_USED(msg);
 
     // the other services will call their stop() function, but the
-    // snapcommunicatord does not do that on this message; just inform
+    // communicatord does not do that on this message; just inform
     // the admin with a quick log message
     //
     SNAP_LOG_INFO
@@ -2296,7 +2296,7 @@ void server::msg_refuse(ed::message & msg)
         // we have to have a remote connection
         //
         SNAP_LOG_ERROR
-            << "REFUSE sent on a connection which is not a remote connection (another snapcommunicatord)."
+            << "REFUSE sent on a connection which is not a remote connection (another communicatord)."
             << SNAP_LOG_SEND;
         return;
     }
@@ -2309,11 +2309,11 @@ void server::msg_refuse(ed::message & msg)
     addr::addr peer_addr(remote_conn->get_address());
     if(msg.has_parameter("shutdown"))
     {
-        f_remote_snapcommunicators->shutting_down(peer_addr);
+        f_remote_communicators->shutting_down(peer_addr);
     }
     else
     {
-        f_remote_snapcommunicators->too_busy(peer_addr);
+        f_remote_communicators->too_busy(peer_addr);
     }
 
     // we are responsible to try again later, so we do not
@@ -2374,7 +2374,7 @@ void server::msg_register(ed::message & msg)
     if(service_conn == nullptr)
     {
         SNAP_LOG_ERROR
-            << "only local services are expected to REGISTER with the snapcommunicatord service."
+            << "only local services are expected to REGISTER with the communicatord service."
             << SNAP_LOG_SEND;
         return;
     }
@@ -2660,7 +2660,7 @@ void server::broadcast_message(
         f_received_broadcast_messages[broadcast_msgid] = timeout;
 
         // Note: we skip the canonicalization on this list of neighbors
-        //       because we assume only us (snapcommunicatord) handles
+        //       because we assume only us (communicatord) handles
         //       that message and we know that it is already
         //       canonicalized here
         //
@@ -2705,7 +2705,7 @@ void server::broadcast_message(
         ed::connection::vector_t const & connections(f_communicator->get_connections());
         for(auto const & nc : connections)
         {
-            // try for a service or snapcommunicatord that connected to us
+            // try for a service or communicatord that connected to us
             //
             service_connection::pointer_t conn(std::dynamic_pointer_cast<service_connection>(nc));
             remote_connection::pointer_t remote_conn;
@@ -2752,7 +2752,7 @@ void server::broadcast_message(
             }
             else if(remote_conn != nullptr)
             {
-                // another snapcommunicatord that connected to us
+                // another communicatord that connected to us
                 //
                 switch(remote_conn->get_address().get_network_type())
                 {
@@ -2763,7 +2763,7 @@ void server::broadcast_message(
                         {
                             warned = true;
                             SNAP_LOG_WARNING
-                                << "remote snap communicator was connected on a LOOPBACK IP address..."
+                                << "remote communicator was connected on a LOOPBACK IP address..."
                                 << SNAP_LOG_SEND;
                         }
                     }
@@ -2791,7 +2791,7 @@ void server::broadcast_message(
             }
             if(broadcast)
             {
-                // get the IP address of the remote snapcommunicatord
+                // get the IP address of the remote communicatord
                 //
                 std::string const address((conn != nullptr
                             ? conn->get_address()
@@ -2941,7 +2941,7 @@ void server::broadcast_message(
 
 /** \brief Send the current status of a client to connections.
  *
- * Some connections (at this time only the snapwatchdog) may be interested
+ * Some connections (at this time only the sitter) may be interested
  * by the STATUS event. Any connection that understands the STATUS
  * event will be sent that event whenever the status of a connection
  * changes (specifically, on a REGISTER and on an UNREGISTER or equivalent.)
@@ -3054,12 +3054,12 @@ void server::send_status(
  */
 void server::cluster_status(ed::connection::pointer_t reply_connection)
 {
-    // the count_live_connections() counts all the other snapcommunicators,
+    // the count_live_connections() counts all the other communicators,
     // not ourself, this is why we have a +1 here (it is very important
     // if you have a single computer like many developers would have when
     // writing code and testing quickly.)
     //
-    size_t const count(f_remote_snapcommunicators->count_live_connections() + 1);
+    size_t const count(f_remote_communicators->count_live_connections() + 1);
 
     // calculate the quorum, minimum number of computers that have to be
     // interconnected to be able to say we have a live cluster
@@ -3168,11 +3168,11 @@ void server::cluster_status(ed::connection::pointer_t reply_connection)
 }
 
 
-/** \brief Request LOADAVG messages from a snapcommunicatord.
+/** \brief Request LOADAVG messages from a communicatord.
  *
  * This function gets called whenever a local service sends us a
  * request to listen to the LOADAVG messages of a specific
- * snapcommunicatord.
+ * communicatord.
  *
  * \param[in] msg  The LISTENLOADAVG message.
  */
@@ -3184,7 +3184,7 @@ void server::msg_listen_loadavg(ed::message & msg)
     snapdev::tokenize_string(ip_list, ips, { "," });
 
     // we have to save those as IP addresses since the remote
-    // snapcommunicators come and go and we have to make sure
+    // communicators come and go and we have to make sure
     // that all get our REGISERFORLOADAVG message when they
     // come back after a broken link
     //
@@ -3401,13 +3401,13 @@ std::string server::get_services_heard_of() const
 
 /** \brief Add neighbors to this communicator server.
  *
- * Whenever a snap communicator connects to another snap communicator
+ * Whenever a communicator connects to another communicator
  * server, it is given a list of neighbors. These are added using
  * this function. In the end, all servers are expected to have a
  * complete list of all the neighbors.
  *
  * \todo
- * Make this list survive restarts of the snap communicator server.
+ * Make this list survive restarts of the communicator server.
  *
  * \param[in] new_neighbors  The list of new neighbors
  */
@@ -3436,7 +3436,7 @@ void server::add_neighbors(std::string const & new_neighbors)
                 // in case we are already running we want to also add
                 // the corresponding connection
                 //
-                f_remote_snapcommunicators->add_remote_communicator(s);
+                f_remote_communicators->add_remote_communicator(s);
             }
         }
 
@@ -3459,7 +3459,7 @@ void server::add_neighbors(std::string const & new_neighbors)
  *
  * This function removes a neighbor from the cache of this machine. If
  * the neighbor is also defined in the configuration file, such as
- * /etc/snapcommunicatord/snapcommunicatord.conf, then the IP will not be
+ * /etc/communicatord/communicatord.conf, then the IP will not be
  * forgotten any time soon.
  *
  * \param[in] neighbor  The neighbor to be removed.
@@ -3490,13 +3490,13 @@ void server::remove_neighbor(std::string const & neighbor)
 
     // make sure we stop all gossiping toward that address
     //
-    f_remote_snapcommunicators->gossip_received(n);
+    f_remote_communicators->gossip_received(n);
 
     // also remove the remote connection otherwise it will send that
     // info in broadcast messages and the neighbor resaved in those
     // other platforms neighbors.txt files
     //
-    f_remote_snapcommunicators->forget_remote_connection(n);
+    f_remote_communicators->forget_remote_connection(n);
 }
 
 
@@ -3513,7 +3513,7 @@ void server::read_neighbors()
         return;
     }
 
-    // get the path to the dynamic snapcommunicatord data files
+    // get the path to the dynamic communicatord data files
     //
     f_neighbors_cache_filename = f_opts.get_string("data_path");
     f_neighbors_cache_filename += "/neighbors.txt";
@@ -3539,7 +3539,7 @@ void server::read_neighbors()
                 // in case we are already running we want to also add
                 // the corresponding connection
                 //
-                f_remote_snapcommunicators->add_remote_communicator(l);
+                f_remote_communicators->add_remote_communicator(l);
             }
         }
     }
@@ -3565,7 +3565,7 @@ void server::save_neighbors()
 {
     if(f_neighbors_cache_filename.empty())
     {
-        throw sc::snapcommunicator_logic_error("Somehow save_neighbors() was called when f_neighbors_cache_filename was not set yet.");
+        throw sc::logic_error("Somehow save_neighbors() was called when f_neighbors_cache_filename was not set yet.");
     }
 
     snapdev::file_contents cache(f_neighbors_cache_filename);
@@ -3579,11 +3579,11 @@ void server::save_neighbors()
 }
 
 
-/** \brief The list of services we know about from other snapcommunicators.
+/** \brief The list of services we know about from other communicators.
  *
- * This function gathers the list of services that this snapcommunicatord
+ * This function gathers the list of services that this communicatord
  * heard of. This means, the list of all the services offered by other
- * snapcommunicators, heard of or not, minus our own services (because
+ * communicators, heard of or not, minus our own services (because
  * these other servers will return our own services as heard of!)
  */
 void server::refresh_heard_of()
@@ -3627,14 +3627,14 @@ bool server::send_message(ed::message & msg, bool cache)
     base_connection::pointer_t conn(msg.user_data<base_connection>());
     if(conn == nullptr)
     {
-        throw sc::snapcommunicator_logic_error("server::send_message() called with a missing user data connection pointer.");
+        throw sc::logic_error("server::send_message() called with a missing user data connection pointer.");
     }
 
     return conn->send_message_to_connection(msg, cache);
 }
 
 
-/** \brief This snapcommunicatord received the SHUTDOWN or a STOP command.
+/** \brief This communicatord received the SHUTDOWN or a STOP command.
  *
  * This function processes the SHUTDOWN or STOP commands. It is a bit of
  * work since we have to send a message to all connections and the message
@@ -3651,7 +3651,7 @@ void server::stop(bool quitting)
     f_shutdown = true;
 
     SNAP_LOG_DEBUG
-        << "shutting down snapcommunicatord ("
+        << "shutting down communicatord ("
         << (quitting ? "QUIT" : "STOP")
         << ")"
         << SNAP_LOG_SEND;
@@ -3660,9 +3660,9 @@ void server::stop(bool quitting)
     // connections in the list returned by f_communicator, we better
     // do that cleanly ahead of time
     //
-    if(f_remote_snapcommunicators != nullptr)
+    if(f_remote_communicators != nullptr)
     {
-        f_remote_snapcommunicators->stop_gossiping();
+        f_remote_communicators->stop_gossiping();
     }
 
     // DO NOT USE THE REFERENCE -- we need a copy of the vector
@@ -3688,7 +3688,7 @@ void server::stop(bool quitting)
             //
             ed::message reply;
 
-            // a remote snapcommunicatord needs to also
+            // a remote communicatord needs to also
             // shutdown so duplicate that message there
             if(quitting)
             {
@@ -3704,7 +3704,7 @@ void server::stop(bool quitting)
                 reply.set_command("DISCONNECT");
             }
 
-            // we know this a remote snapcommunicatord, no need to verify, and
+            // we know this a remote communicatord, no need to verify, and
             // we may not yet have received the ACCEPT message
             //verify_command(remote_communicator, reply);
             remote_conn->send_message(reply);
@@ -3717,7 +3717,7 @@ void server::stop(bool quitting)
         }
         else
         {
-            // a standard service connection or a remote snapcommunicatord server?
+            // a standard service connection or a remote communicatord server?
             //
             service_connection::pointer_t c(std::dynamic_pointer_cast<service_connection>(connection));
             if(c != nullptr)
@@ -3739,7 +3739,7 @@ void server::stop(bool quitting)
 //       then we have to just disconnect (HUP) instead of sending
 //       a reply
 
-                        // a remote snapcommunicatord server needs to also
+                        // a remote communicatord server needs to also
                         // shutdown so duplicate that message there
                         if(quitting)
                         {
@@ -3771,7 +3771,7 @@ void server::stop(bool quitting)
                     {
                         // a standard client (i.e. pagelist, images, etc.)
                         // may want to know when it gets disconnected
-                        // from the snapcommunicatord...
+                        // from the communicatord...
                         //
                         if(c->understand_command("DISCONNECTING"))
                         {

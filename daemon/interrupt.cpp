@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicatord
+// https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -47,7 +47,7 @@ namespace scd
 /** \class interrupt
  * \brief Handle the SIGINT that is expected to stop the server.
  *
- * This class is an implementation of the snap_signal that listens
+ * This class is an implementation of the ed::signal that listens
  * on the SIGINT.
  */
 
@@ -61,18 +61,18 @@ namespace scd
  * Specifically, it listens on the SIGINT signal, which is the equivalent
  * to the Ctrl-C.
  *
- * \param[in] cs  The snapcommunicatord we are listening for.
+ * \param[in] cs  The communicatord we are listening for.
  */
 interrupt::interrupt(server::pointer_t cs)
     : signal(SIGINT)
     , f_server(cs)
 {
     unblock_signal_on_destruction();
-    set_name("snap communicator interrupt");
+    set_name("communicatord interrupt");
 }
 
 
-/** \brief Call the stop function of the snapcommunicatord object.
+/** \brief Call the stop function of the communicatord object.
  *
  * When this function is called, the signal was received and thus we are
  * asked to quit as soon as possible.

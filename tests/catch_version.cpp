@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicator
+// https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -21,9 +21,9 @@
 #include    "catch_main.h"
 
 
-// snapcommunicator
+// communicator
 //
-#include    <snapcommunicator/version.h>
+#include    <communicatord/version.h>
 
 
 // last include
@@ -35,12 +35,12 @@
 
 CATCH_TEST_CASE("Version", "[version]")
 {
-    CATCH_START_SECTION("verify runtime vs compile time snapcommunicator version numbers")
+    CATCH_START_SECTION("verify runtime vs compile time communicator version numbers")
     {
-        CATCH_REQUIRE(sc::get_major_version()   == SNAPCOMMUNICATOR_VERSION_MAJOR);
-        CATCH_REQUIRE(sc::get_release_version() == SNAPCOMMUNICATOR_VERSION_MINOR);
-        CATCH_REQUIRE(sc::get_patch_version()   == SNAPCOMMUNICATOR_VERSION_PATCH);
-        CATCH_REQUIRE(strcmp(sc::get_version_string(), SNAPCOMMUNICATOR_VERSION_STRING) == 0);
+        CATCH_REQUIRE(sc::get_major_version()   == COMMUNICATORD_VERSION_MAJOR);
+        CATCH_REQUIRE(sc::get_release_version() == COMMUNICATORD_VERSION_MINOR);
+        CATCH_REQUIRE(sc::get_patch_version()   == COMMUNICATORD_VERSION_PATCH);
+        CATCH_REQUIRE(strcmp(sc::get_version_string(), COMMUNICATORD_VERSION_STRING) == 0);
     }
     CATCH_END_SECTION()
 }

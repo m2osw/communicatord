@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicatord
+// https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -35,8 +35,10 @@ namespace scd
 /** \class ping
  * \brief Handle UDP messages from clients.
  *
- * This class is an implementation of the snap server connection so we can
- * handle new connections from various clients.
+ * This class is a server connection listening for UDP messages.
+ *
+ * These messages cannot receive replies at the moment. If you need a
+ * reply, make sure to use a TCP connection.
  */
 
 
@@ -46,7 +48,7 @@ namespace scd
  * The messenger receives UDP messages from various sources (mainly
  * backends at this point).
  *
- * \param[in] cs  The snap communicator server we are listening for.
+ * \param[in] cs  The communicator server we are listening for.
  * \param[in] address  The address and port to listen on. Most often it is
  *                     127.0.0.1 for the UDP because we currently only allow
  *                     for local messages.

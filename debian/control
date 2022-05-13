@@ -1,4 +1,4 @@
-Source: snapcommunicator
+Source: communicatord
 Priority: extra
 Maintainer: Alexis Wilke <alexis@m2osw.com>
 Build-Depends: cmake,
@@ -26,21 +26,21 @@ Homepage: https://snapwebsites.org/
 Vcs-Git: https://github.com/m2osw/snapcpp.git
 Vcs-Browser: https://github.com/m2osw/eventdispatcher
 
-Package: snapcommunicator-doc
+Package: communicatord-doc
 Section: doc
 Architecture: all
 Depends: ${misc:Depends}
-Description: Documentation for the Snap! C++ Communicator.
- The snapcommunicator service is a deamon allowing RPC like communication
+Description: Documentation for the communicator daemons and tools.
+ The communicator service is a deamon allowing RPC like communication
  between services running in a cluster of servers. This package holds the
  documentation of the service.
 
-Package: snapcommunicator
+Package: communicatord
 Section: libs
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: The Snap! C++ Communicator, an advanced RPC system.
- This package holds the snapcommmunicator service which runs on all your
+Description: The Communicator, an advanced RPC system.
+ This package holds the commmunicator service which runs on all your
  computers in your cluster and allows free communication between all the
  services running on those computers without the need to graph the location
  of each service (auto-discovery).

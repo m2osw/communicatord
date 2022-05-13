@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicatord
+// https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -57,8 +57,8 @@ namespace scd
 /** \class listener
  * \brief Handle new connections from clients.
  *
- * This class is an implementation of the snap server connection so we can
- * handle new connections from various clients.
+ * This class is an implementation of the TCP server connection so we can
+ * handle messages from various TCP clients.
  */
 
 
@@ -111,7 +111,7 @@ listener::listener(
 void listener::process_accept()
 {
     // a new client just connected, create a new service_connection
-    // object and add it to the snap_communicator object.
+    // object and add it to the ed::communicator object.
     //
     ed::tcp_bio_client::pointer_t const new_client(accept());
     if(new_client == nullptr)

@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicatord
+// https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -20,7 +20,7 @@
 /** \file
  * \brief Declaration of the message cache facility.
  *
- * The Snap! Communicator is able to memorize messages it receives when the
+ * The Communicator is able to memorize messages it receives when the
  * destination is not yet available. The class here is used to manage that
  * cache.
  */

@@ -1,0 +1,6 @@
+# This file is part of ve
+#
+# See tmpfiles.d(5) for details
+
+# type  path                permissions  user           group          cleanup
+d       /run/communicatord  0775         communicatord  communicatord  -

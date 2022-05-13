@@ -1,6 +1,6 @@
 # Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 #
-# https://snapwebsites.org/project/snapcommunicator
+# https://snapwebsites.org/project/communicatord
 # contact@m2osw.com
 #
 # This program is free software: you can redistribute it and/or modify
@@ -20,10 +20,10 @@
 ###############################################################################
 ## A tool used mainly to help debug sending/receiving messages between services
 ##
-project(snapmessage)
+project(message)
 
 add_executable(${PROJECT_NAME}
-    snapmessage.cpp
+    message.cpp
 )
 
 target_include_directories(${PROJECT_NAME}
@@ -59,13 +59,13 @@ install(
 
 
 #################################################################################
-## Get snapcommunicator cluster status (UP/DOWN and/or COMPLETE/INCOMPLETE)
+## Get your cluster status (UP/DOWN and/or COMPLETE/INCOMPLETE)
 ## TODO: put that status in our Fluid Settings
 ##
-project(snapclusterstatus)
+project(clusterstatus)
 
 add_executable(${PROJECT_NAME}
-    snapclusterstatus.cpp
+    clusterstatus.cpp
 )
 
 target_include_directories(${PROJECT_NAME}

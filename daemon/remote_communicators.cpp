@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicatord
+// https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -19,19 +19,22 @@
 /** \file
  * \brief Implementation of the remote server connection.
  *
- * The Snap! Communicator has three types of connections:
+ * The Communicator Daemon has three types of connections:
  *
- * * this communicator to a remote communicator
- * * a remote communicator to this communicator
- * * local clients
+ * * this communicatord to a remote communicatord
+ * * a remote communicatord to this communicatord
+ * * local clients to this communicatord
  *
- * The remote connection handles connections from this communicator to
- * a remote communicator.
+ * The remote connection handles connections from this communicatord to
+ * a remote communicatord.
+ *
+ * The communicatord service does not connect to other local services.
+ * Instead, local services connnect to it.
  */
 
 // self
 //
-#include    "remote_snapcommunicators.h"
+#include    "remote_communicators.h"
 
 #include    "gossip_connection.h"
 #include    "remote_connection.h"
@@ -69,7 +72,7 @@ namespace scd
 
 
 
-remote_snapcommunicators::remote_snapcommunicators(
+remote_communicators::remote_communicators(
               server::pointer_t server
             , addr::addr const & my_addr)
     : f_server(server)
@@ -79,13 +82,13 @@ remote_snapcommunicators::remote_snapcommunicators(
 
 
 
-addr::addr const & remote_snapcommunicators::get_my_address() const
+addr::addr const & remote_communicators::get_my_address() const
 {
     return f_my_address;
 }
 
 
-void remote_snapcommunicators::add_remote_communicator(std::string const & addr_port)
+void remote_communicators::add_remote_communicator(std::string const & addr_port)
 {
     SNAP_LOG_DEBUG
         << "adding remote communicator at "
@@ -103,7 +106,7 @@ void remote_snapcommunicators::add_remote_communicator(std::string const & addr_
         //      right back to us!)
         //
         SNAP_LOG_WARNING
-            << "address of remote snapcommunicatord, \""
+            << "address of remote communicatord, \""
             << addr_port
             << "\", is the same as my address, which means it is not remote."
             << SNAP_LOG_SEND;
@@ -172,7 +175,7 @@ void remote_snapcommunicators::add_remote_communicator(std::string const & addr_
     //
     if(remote_addr < f_my_address)
     {
-        // smaller connections are created as remote snap communicator
+        // smaller connections are created as remote communicator
         // which are permanent message connections
         //
         // TODO: how to choose whether to use TLS or not here?
@@ -224,7 +227,7 @@ void remote_snapcommunicators::add_remote_communicator(std::string const & addr_
     }
     else //if(remote_addr != f_my_address) -- already tested at the beginning of the function
     {
-        // in case the remote snapcommunicatord has a larger address
+        // in case the remote communicatord has a larger address
         // it is expected to CONNECT to us; however, it may not yet
         // know about us so we want to send a GOSSIP message; this
         // means creating a special connection which attempts to
@@ -234,7 +237,7 @@ void remote_snapcommunicators::add_remote_communicator(std::string const & addr_
         f_gossip_ips[remote_addr] = std::make_shared<gossip_connection>(
                                       shared_from_this()
                                     , remote_addr);
-        f_gossip_ips[remote_addr]->set_name("gossip to remote snap communicator: " + addr);
+        f_gossip_ips[remote_addr]->set_name("gossip to remote communicator: " + addr);
 
         if(!ed::communicator::instance()->add_connection(f_gossip_ips[remote_addr]))
         {
@@ -269,13 +272,13 @@ void remote_snapcommunicators::add_remote_communicator(std::string const & addr_
  * This function can be called to remove all the gossip connections
  * at once.
  *
- * In most cases this function is called whenever the snapcommunicatord
+ * In most cases this function is called whenever the communicatord
  * daemon receives a STOP or a SHUTDOWN.
  *
  * Also these connections do not support any other messages than the
  * GOSSIP and RECEIVED.
  */
-void remote_snapcommunicators::stop_gossiping()
+void remote_communicators::stop_gossiping()
 {
     while(!f_gossip_ips.empty())
     {
@@ -287,7 +290,7 @@ void remote_snapcommunicators::stop_gossiping()
 
 /** \brief A remote communicator refused our connection.
  *
- * When a remote snap communicator server already manages too many
+ * When a remote communicator server already manages too many
  * connections, it may end up refusing our additional connection.
  * When this happens, we have to avoid trying to connect again
  * and again.
@@ -302,10 +305,10 @@ void remote_snapcommunicators::stop_gossiping()
  * At some point we may want to look into having seeds instead
  * of allowing connections to all the nodes.
  *
- * \param[in] address  The address of the snapcommunicatord that refused a
+ * \param[in] address  The address of the communicatord that refused a
  *                     CONNECT because it is too busy.
  */
-void remote_snapcommunicators::too_busy(addr::addr const & address)
+void remote_communicators::too_busy(addr::addr const & address)
 {
     auto it(f_smaller_ips.find(address));
     if(it != f_smaller_ips.end())
@@ -327,10 +330,10 @@ void remote_snapcommunicators::too_busy(addr::addr const & address)
  * This function makes sure we wait for some time, instead of waisting
  * our time trying to reconnect again and again.
  *
- * \param[in] addr  The address of the snapcommunicatord that refused a
+ * \param[in] addr  The address of the communicatord that refused a
  *                  CONNECT because it is shutting down.
  */
-void remote_snapcommunicators::shutting_down(addr::addr const & address)
+void remote_communicators::shutting_down(addr::addr const & address)
 {
     auto it(f_smaller_ips.find(address));
     if(it != f_smaller_ips.end())
@@ -351,9 +354,9 @@ void remote_snapcommunicators::shutting_down(addr::addr const & address)
 }
 
 
-void remote_snapcommunicators::server_unreachable(addr::addr const & address)
+void remote_communicators::server_unreachable(addr::addr const & address)
 {
-    // we do not have the name of the computer in snapcommunicatord so
+    // we do not have the name of the computer in communicatord so
     // we just broadcast the IP address of the non-responding computer
     //
     ed::message unreachable;
@@ -364,7 +367,7 @@ void remote_snapcommunicators::server_unreachable(addr::addr const & address)
 }
 
 
-void remote_snapcommunicators::gossip_received(addr::addr const & address)
+void remote_communicators::gossip_received(addr::addr const & address)
 {
     auto it(f_gossip_ips.find(address));
     if(it != f_gossip_ips.end())
@@ -375,7 +378,7 @@ void remote_snapcommunicators::gossip_received(addr::addr const & address)
 }
 
 
-void remote_snapcommunicators::forget_remote_connection(addr::addr const & address)
+void remote_communicators::forget_remote_connection(addr::addr const & address)
 {
     auto it(f_smaller_ips.find(address));
     if(it != f_smaller_ips.end())
@@ -395,7 +398,7 @@ void remote_snapcommunicators::forget_remote_connection(addr::addr const & addre
  * The GOSSIP connects are completely ignored since those are just and
  * only to sendthe GOSSIP message and not for a complete communication
  * channel. This is used to quickly get connections made between
- * snapcommunitors when one wakes up and is not to connect to the
+ * communitors when one wakes up and is not to connect to the
  * other (i.e. A connects to B means A has a larger IP address than B.)
  *
  * \warning
@@ -407,7 +410,7 @@ void remote_snapcommunicators::forget_remote_connection(addr::addr const & addre
  *
  * \return The number of live connections.
  */
-size_t remote_snapcommunicators::count_live_connections() const
+size_t remote_communicators::count_live_connections() const
 {
     size_t count(0);
 
@@ -445,7 +448,7 @@ size_t remote_snapcommunicators::count_live_connections() const
 
     // unfortunately, the f_larger_ips is not actually used and the local
     // connections are left in the complete list of connections in the
-    // snap::snap_communicator::instance() all mixed up
+    // ed::communicator::instance() all mixed up
     //
     ed::connection::vector_t const & all_connections(ed::communicator::instance()->get_connections());
     for(auto const & conn : all_connections)

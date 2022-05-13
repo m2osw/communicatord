@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicatord
+// https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -19,33 +19,33 @@
 /** \file
  * \brief Base declaration for all the connections.
  *
- * The snapcommunicatord daemon has to deal with many connections. This
+ * The communicatord daemon has to deal with many connections. This
  * base handles some basic aspects of each connection so we do not have
  * to specialize the code everywhere.
  *
  * The several types of connections supported:
  *
- * * Connection from this server to another snapcommunicatord server
+ * * Connection from this server to another communicatord server
  *   (see remote_connection)
  *
- * * Connection from another snapcommunicatord server to this server
+ * * Connection from another communicatord server to this server
  *   (see remote_connection)
  *
- * * Connection from a snapcommunicatord to another which is expected to
+ * * Connection from a communicatord to another which is expected to
  *   connect to us (see gossip_connection)
  *
- * * Connection from a local server to the snapcommunicatord
+ * * Connection from a local server to the communicatord
  *   (see service_connection and unix_connection)
  *
  * * Messages from a local server via UDP
  *   (see ping)
  *
- * The connections between snapcommunicators are 100% managed by each
- * snapcommunicatord. This creates the RPC functionality between all your
+ * The connections between communicators are 100% managed by each
+ * communicatord. This creates the RPC functionality between all your
  * tools.
  *
  * The other type of connections happen from the various local or remote
- * services to the snapcommunicatord.
+ * services to the communicatord.
  */
 
 
@@ -55,9 +55,9 @@
 #include    "base_connection.h"
 
 
-// snapcommunicator
+// communicatord
 //
-#include <snapcommunicator/exception.h>
+#include <communicatord/exception.h>
 
 
 // snapdev lib
@@ -222,7 +222,7 @@ addr::addr base_connection::get_my_address() const
 }
 
 
-/** \brief Define the type of snapcommunicatord server.
+/** \brief Define the type of communicatord server.
  *
  * This function is called whenever a CONNECT or an ACCEPT is received.
  * It saves the type=... parameter. By default the type is empty meaning
@@ -243,9 +243,9 @@ void base_connection::set_connection_type(connection_type_t type)
  *
  * By default a connection is given the type CONNECTION_TYPE_DOWN,
  * which means that it is not currently connected. To initialize
- * a connection one has to either CONNECT (between snapcommunicatord
+ * a connection one has to either CONNECT (between communicatord
  * servers) or REGISTER (a service such as snapbackend, snapserver,
- * snapwatchdog, and others.)
+ * sitter, and others.)
  *
  * The type is set to CONNECTION_TYPE_LOCAL for local services and
  * CONNECTION_TYPE_REMOTE when representing another snapserver.
@@ -258,9 +258,9 @@ connection_type_t base_connection::get_connection_type() const
 }
 
 
-/** \brief Define the list of services supported by the snapcommunicatord.
+/** \brief Define the list of services supported by the communicatord.
  *
- * Whenever a snapcommunicatord connects to another one, either by
+ * Whenever a communicatord connects to another one, either by
  * doing a CONNECT or replying to a CONNECT by an ACCEPT, it is
  * expected to list services that it supports (the list could be
  * empty as it usually is on a Cassandra node.) This function
@@ -277,10 +277,10 @@ void base_connection::set_services(std::string const & services)
 }
 
 
-/** \brief Retrieve the list of services offered by other snapcommunicators.
+/** \brief Retrieve the list of services offered by other communicators.
  *
  * This function saves in the input parameter \p services the list of
- * services that this very snapcommunicatord offers.
+ * services that this very communicatord offers.
  *
  * \param[in,out] services  The map where all the services are defined.
  */
@@ -308,12 +308,12 @@ bool base_connection::has_service(std::string const & name)
 /** \brief Define the list of services we heard of.
  *
  * This function saves the list of services that were heard of by
- * another snapcommunicatord server. This list may be updated later
+ * another communicatord server. This list may be updated later
  * with an ACCEPT event.
  *
  * This list is used to know where to forward a message if we do
  * not have a more direct link to those services (i.e. the same
- * service defined in our own list or in a snapcommunicatord
+ * service defined in our own list or in a communicatord
  * we are directly connected to.)
  *
  * \param[in] services  The list of services heard of.
@@ -327,7 +327,7 @@ void base_connection::set_services_heard_of(std::string const & services)
 /** \brief Retrieve the list of services heard of by another server.
  *
  * This function saves in the input parameter \p services the list of
- * services that this snapcommunicatord heard of.
+ * services that this communicatord heard of.
  *
  * \param[in,out] services  The map where all the services are defined.
  */
@@ -410,7 +410,7 @@ void base_connection::remove_command(std::string const & command)
 
 /** \brief Mark that connection as a remote connection.
  *
- * When we receive a connection from another snapconnector, we call
+ * When we receive a connection from another communicatord, we call
  * this function so later we can very quickly determine whether the
  * connection is a remote connection.
  */
@@ -439,7 +439,7 @@ bool base_connection::is_remote() const
  * represents a UDP (datagram based) connection.
  *
  * At this time, we only have one UDP connection recorded here. The connection
- * managed by the f_logrotate object is not added to the snapcommunicatord
+ * managed by the f_logrotate object is not added to the communicatord
  * system (it does not even derive from the base_connection; although we may
  * stop using that sub-object because the ping class is probably enough).
  *
@@ -460,7 +460,7 @@ bool base_connection::is_udp() const
  *
  * \param[in] wants_loadavg  Whether this connection wants
  *    (REGISTERFORLOADAVG) or does not want (UNREGISTERFORLOADAVG)
- *    to receive LOADAVG messages from this snapcommunicatord.
+ *    to receive LOADAVG messages from this communicatord.
  */
 void base_connection::set_wants_loadavg(bool wants_loadavg)
 {
@@ -486,12 +486,12 @@ bool base_connection::send_message_to_connection(ed::message & msg, bool cache)
     ed::connection * conn(dynamic_cast<ed::connection *>(this));
     if(conn == nullptr)
     {
-        throw sc::snapcommunicator_logic_error("somehow a dynamic_cast<ed::connection *> on our base_connection failed.");
+        throw sc::logic_error("somehow a dynamic_cast<ed::connection *> on our base_connection failed.");
     }
     ed::connection_with_send_message::pointer_t conn_msg(std::dynamic_pointer_cast<ed::connection_with_send_message>(conn->shared_from_this()));
     if(conn_msg == nullptr)
     {
-        throw sc::snapcommunicator_logic_error("std::dynamic_pointer_cast<ed::connection_with_send_message>() on our ed::connection failed.");
+        throw sc::logic_error("std::dynamic_pointer_cast<ed::connection_with_send_message>() on our ed::connection failed.");
     }
     return conn_msg->send_message(msg, cache);
 }

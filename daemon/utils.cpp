@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicatord
+// https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -173,7 +173,7 @@ std::string canonicalize_server_types(std::string const & server_types)
  * sort is textual, not numeric.
  *
  * \note
- * In the new version of Snap! Communicator, we actually make use of
+ * In the new version of Communicator, we actually make use of
  * the fluid settings so the addresses should already be canonicalized.
  *
  * \note

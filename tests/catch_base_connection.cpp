@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/edhttp
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -17,9 +17,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 /** \file
- * \brief Verify the snap_uri class.
+ * \brief Verify the base_connection class.
  *
- * This file implements tests to verify that the snap_uri
+ * This file implements tests to verify that the base_connection
  * class functions as expected.
  */
 
@@ -28,7 +28,7 @@
 #include    "catch_main.h"
 
 
-// snapcommunicatord
+// communicatord
 //
 #include    <daemon/base_connection.h>
 

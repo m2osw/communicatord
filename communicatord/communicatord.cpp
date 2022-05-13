@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicator
+// https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -18,7 +18,7 @@
 
 // self
 //
-#include    "snapcommunicator.h"
+#include    "communicatord.h"
 
 #include    "exception.h"
 
@@ -54,9 +54,9 @@ namespace
 {
 
 
-/** \brief Options to handle the snapcommunicator connection.
+/** \brief Options to handle the communicator connection.
  *
- * One can connect to the snapcommunicator through several possible
+ * One can connect to the communicator through several possible
  * connetions:
  *
  * \li TCP / plain text / local (on your computer loopback)
@@ -71,29 +71,29 @@ namespace
  */
 advgetopt::option const g_options[] =
 {
-    // SNAPCOMMUNICATOR OPTIONS
+    // COMMUNICATOR OPTIONS
     //
     advgetopt::define_option(
-          advgetopt::Name("snapcommunicator-listen")
+          advgetopt::Name("communicator-listen")
         , advgetopt::Flags(advgetopt::all_flags<
               advgetopt::GETOPT_FLAG_GROUP_OPTIONS
             , advgetopt::GETOPT_FLAG_COMMAND_LINE
             , advgetopt::GETOPT_FLAG_ENVIRONMENT_VARIABLE
             , advgetopt::GETOPT_FLAG_CONFIGURATION_FILE
             , advgetopt::GETOPT_FLAG_REQUIRED>())
-        , advgetopt::EnvironmentVariableName("SNAPCOMMUNICATOR_LISTEN")
-        , advgetopt::DefaultValue("unix:///run/snapcommunicator/snapcommunicator.socket")
+        , advgetopt::EnvironmentVariableName("COMMUNICATORD_LISTEN")
+        , advgetopt::DefaultValue("unix:///run/communicatord/communicatord.socket")
         , advgetopt::Help("define the connection type as a protocol (tcp, ssl, unix, udp) along an <address:port>.")
     ),
     advgetopt::define_option(
-          advgetopt::Name("snapcommunicator-secret")
+          advgetopt::Name("communicator-secret")
         , advgetopt::Flags(advgetopt::all_flags<
               advgetopt::GETOPT_FLAG_GROUP_OPTIONS
             , advgetopt::GETOPT_FLAG_COMMAND_LINE
             , advgetopt::GETOPT_FLAG_ENVIRONMENT_VARIABLE
             , advgetopt::GETOPT_FLAG_CONFIGURATION_FILE
             , advgetopt::GETOPT_FLAG_REQUIRED>())
-        , advgetopt::EnvironmentVariableName("SNAPCOMMUNICATOR_SECRET")
+        , advgetopt::EnvironmentVariableName("COMMUNICATORD_SECRET")
         , advgetopt::Help("the <login:password> to connect from a remote computer (i.e. a computer with an IP address other than this one or a local network IP).")
     ),
 
@@ -105,13 +105,13 @@ advgetopt::option const g_options[] =
 } // no name namespace
 
 
-snapcommunicator::snapcommunicator(advgetopt::getopt & opts)
+communicator::communicator(advgetopt::getopt & opts)
     : f_opts(opts)
 {
 }
 
 
-void snapcommunicator::add_snapcommunicator_options()
+void communicator::add_communicator_options()
 {
     // add options
     //
@@ -121,21 +121,21 @@ void snapcommunicator::add_snapcommunicator_options()
 
 /** \brief Call this function after you finalized option processing.
  *
- * This function acts on the snapcommunicator various command line options.
+ * This function acts on the communicator various command line options.
  * Assuming the command line options were valid, this function will
- * open a connection to the specified snapcommunicator.
+ * open a connection to the specified communicator.
  *
  * Once you are ready to quit your process, make sure to call the
- * disconnect_snapcommunicator_messenger() function to remove this
+ * disconnect_communicator_messenger() function to remove this
  * connection from ed::communicator. Not doing so would block the
  * communicator since it would continue to listen for messages on this
  * channel.
  */
-void snapcommunicator::process_snapcommunicator_options()
+void communicator::process_communicator_options()
 {
     // extract the protocol and segments
     //
-    edhttp::uri u(f_opts.get_string("snapcommunicator-listen"));
+    edhttp::uri u(f_opts.get_string("communicator-listen"));
 
     // unix is a special case since the URI is a path to a file
     // so we have to handle it in a special way
@@ -143,7 +143,7 @@ void snapcommunicator::process_snapcommunicator_options()
     if(u.protocol() == "unix")
     {
         addr::unix address(u.path(false));
-        f_snapcommunicator_connection = std::make_shared<ed::local_stream_client_permanent_message_connection>(address);
+        f_communicator_connection = std::make_shared<ed::local_stream_client_permanent_message_connection>(address);
     }
     else
     {
@@ -152,25 +152,25 @@ void snapcommunicator::process_snapcommunicator_options()
             , "127.0.0.1"
             , 4040
             , "tcp"));
-        f_snapcommunicator_connection = std::make_shared<ed::tcp_client_permanent_message_connection>(address);
+        f_communicator_connection = std::make_shared<ed::tcp_client_permanent_message_connection>(address);
     }
 
-    if(f_snapcommunicator_connection == nullptr)
+    if(f_communicator_connection == nullptr)
     {
         SNAP_LOG_FATAL
-            << "could not create a connection to the snapcommunicator."
+            << "could not create a connection to the communicatord."
             << SNAP_LOG_SEND;
-        throw connection_unavailable("could not create a connection to the snapcommunicator.");
+        throw connection_unavailable("could not create a connection to the communicatord.");
     }
 
-    if(!ed::communicator::instance()->add_connection(f_snapcommunicator_connection))
+    if(!ed::communicator::instance()->add_connection(f_communicator_connection))
     {
-        f_snapcommunicator_connection.reset();
+        f_communicator_connection.reset();
 
         SNAP_LOG_FATAL
-            << "could not register the snapcommunicator connection."
+            << "could not register the communicatord connection."
             << SNAP_LOG_SEND;
-        throw connection_unavailable("could not register the snapcommunicator connection.");
+        throw connection_unavailable("could not register the communicatord connection.");
     }
 }
 

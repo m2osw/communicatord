@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicatord
+// https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -27,7 +27,7 @@
 
 // self
 //
-#include    "remote_snapcommunicators.h"
+#include    "remote_communicators.h"
 #include    "server.h"
 
 
@@ -50,7 +50,7 @@ public:
     static int64_t const        FIRST_TIMEOUT = 5LL * 1000000L;  // 5 seconds before first attempt
 
                                 gossip_connection(
-                                          remote_snapcommunicators::pointer_t rcs
+                                          remote_communicators::pointer_t rcs
                                         , addr::addr const & address);
 
     // connection implementation
@@ -66,8 +66,8 @@ public:
 private:
     addr::addr const            f_address;
     int64_t                     f_wait = FIRST_TIMEOUT;
-    remote_snapcommunicators::pointer_t
-                                f_remote_communicators = remote_snapcommunicators::pointer_t();
+    remote_communicators::pointer_t
+                                f_remote_communicators = remote_communicators::pointer_t();
 };
 
 

@@ -1,0 +1,83 @@
+#!/bin/sh -e
+
+# Source debconf library.
+. /usr/share/debconf/confmodule
+
+if [ "$1" = "purge" ]
+then
+    ENVIRONMENTNAME=communicatord
+    PACKAGENAME=communicatord
+    USERNAME=communicatord
+    GROUPNAME=communicatord
+
+    # make sure to shred all the logs
+    #
+    shredlog --force --unlink --recursive /var/log/${ENVIRONMENTNAME}
+
+    # delete various data directories
+    #
+    rm -rf /var/lib/${ENVIRONMENTNAME}
+    rm -f /var/cache/${ENVIRONMENTNAME}
+
+    # delete the admin configuration file
+    #
+    rm -f /etc/${ENVIRONMENTNAME}/${ENVIRONMENTNAME}.d/50-${PACKAGENAME}.conf
+
+    # delete daemon user, if it exists
+    #
+    if getent passwd ${USERNAME} > /dev/null
+    then
+        if pgrep -u ${USERNAME} > /dev/null
+        then
+            echo "Cannot delete user '${USERNAME}' because there are processes running owned by this user!"
+        else
+            echo "Deleting ${USERNAME} user"
+            deluser --quiet ${USERNAME} > /dev/null || true
+        fi
+    fi
+
+    # delete daemon group, if it exists
+    #
+    if getent group ${GROUPNAME} > /dev/null
+    then
+        if pgrep -G ${GROUPNAME} > /dev/null
+        then
+            echo "Cannot delete group '${GROUPNAME}' because there are processes running owned by this group!"
+        else
+            echo "Deleting ${GROUPNAME} group"
+            delgroup --quiet ${GROUPNAME} > /dev/null || true
+        fi
+    fi
+
+    # delete override.d of communicator
+    #
+    rm -rf /etc/systemd/system/communicatord.service.d
+
+    # delete the communicator SSL files
+    #
+    SSLDIR=/etc/${ENVIRONMENTNAME}/ssl
+    rm -f ${SSLDIR}/${PACKAGENAME}.key
+    rm -f ${SSLDIR}/${PACKAGENAME}.crt
+
+    # delete the SSL directory, but leave it if non-empty
+    #
+    if test -d ${SSLDIR}
+    then
+        rmdir --ignore-fail-on-non-empty ${SSLDIR}
+    fi
+
+    # delete the settings directories, but leave them if non-empty
+    #
+    if test -d /etc/${ENVIRONMENTNAME}/${ENVIRONMENTNAME}.d
+    then
+        rmdir --ignore-fail-on-non-empty /etc/${ENVIRONMENTNAME}/${ENVIRONMENTNAME}.d
+    fi
+    if test -d /etc/${ENVIRONMENTNAME}
+    then
+        rmdir --ignore-fail-on-non-empty /etc/${ENVIRONMENTNAME}
+    fi
+fi
+
+#DEBHELPER#
+
+# vim: ts=4 sw=4 et nocindent

@@ -1,6 +1,6 @@
 # Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 #
-# https://snapwebsites.org/project/snapcommunicator
+# https://snapwebsites.org/project/communicatord
 # contact@m2osw.com
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,14 +16,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-project(snapcommunicator_cmake)
+project(communicatord_cmake)
 
 install(
     FILES
-        SnapCommunicatorConfig.cmake
+        CommunicatordConfig.cmake
 
     DESTINATION
-        share/cmake/SnapCommunicator
+        share/cmake/Communicatord
 )
 
 # vim: ts=4 sw=4 et nocindent

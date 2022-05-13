@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicatord
+// https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -20,8 +20,8 @@
 /** \file
  * \brief Declaration of the main server.
  *
- * The definition of the Snap! Communicator server. This class is the
- * one which drives everything else in the Snap! Communicator server.
+ * The definition of the Communicator server. This class is the
+ * one which drives everything else in the Communicator server.
  */
 
 // self
@@ -55,7 +55,7 @@ namespace scd
 
 
 class base_connection;
-class remote_snapcommunicators;
+class remote_communicators;
 
 
 
@@ -69,7 +69,7 @@ class server
 public:
     typedef std::shared_ptr<server>     pointer_t;
 
-    static std::size_t const    SNAP_COMMUNICATOR_MAX_CONNECTIONS = 100;
+    static std::size_t const    COMMUNICATORD_MAX_CONNECTIONS = 100;
 
                                 server(int argc, char * argv[]);
                                 server(server const & src) = delete;
@@ -140,10 +140,8 @@ private:
     void                        register_for_loadavg(std::string const & ip);
     bool                        shutting_down(ed::message & msg);
     bool                        check_broadcast_message(ed::message const & msg);
-    bool                        snapcommunicator_message(ed::message & msg);
+    bool                        communicator_message(ed::message & msg);
     void                        transmission_report(ed::message & msg);
-
-    //snap::server::pointer_t   f_server = snap::server::pointer_t(); -- this was the snapwebsites server
 
     advgetopt::getopt               f_opts;
     ed::dispatcher<server>::pointer_t
@@ -172,9 +170,9 @@ private:
     std::string                     f_explicit_neighbors = std::string();
     sorted_list_of_strings_t        f_all_neighbors = sorted_list_of_strings_t();
     sorted_list_of_strings_t        f_registered_neighbors_for_loadavg = sorted_list_of_strings_t();
-    std::shared_ptr<remote_snapcommunicators>
-                                    f_remote_snapcommunicators = std::shared_ptr<remote_snapcommunicators>();
-    size_t                          f_max_connections = SNAP_COMMUNICATOR_MAX_CONNECTIONS;
+    std::shared_ptr<remote_communicators>
+                                    f_remote_communicators = std::shared_ptr<remote_communicators>();
+    size_t                          f_max_connections = COMMUNICATORD_MAX_CONNECTIONS;
     size_t                          f_total_count_sent = 0; // f_all_neighbors.size() sent along CLUSTERUP/DOWN/COMPLETE/INCOMPLETE
     bool                            f_shutdown = false;
     bool                            f_debug_all_messages = false;

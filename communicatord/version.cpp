@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicator
+// https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -17,9 +17,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 /** \file
- * \brief The version of the snapcommunicator at compile time.
+ * \brief The version of the communicatord at compile time.
  *
- * This file records the snapcommunicator library version at compile time.
+ * This file records the communicator library version at compile time.
  *
  * The macros give you the library version at the time you are compiling.
  * The functions allow you to retrieve the version of a dynamically linked
@@ -28,7 +28,7 @@
 
 // self
 //
-#include    "snapcommunicator/version.h"
+#include    "communicatord/version.h"
 
 
 // last include
@@ -52,7 +52,7 @@ namespace sc
  */
 int get_major_version()
 {
-    return SNAPCOMMUNICATOR_VERSION_MAJOR;
+    return COMMUNICATORD_VERSION_MAJOR;
 }
 
 
@@ -65,7 +65,7 @@ int get_major_version()
  */
 int get_release_version()
 {
-    return SNAPCOMMUNICATOR_VERSION_MINOR;
+    return COMMUNICATORD_VERSION_MINOR;
 }
 
 
@@ -78,7 +78,7 @@ int get_release_version()
  */
 int get_patch_version()
 {
-    return SNAPCOMMUNICATOR_VERSION_PATCH;
+    return COMMUNICATORD_VERSION_PATCH;
 }
 
 
@@ -97,7 +97,7 @@ int get_patch_version()
  */
 char const * get_version_string()
 {
-    return SNAPCOMMUNICATOR_VERSION_STRING;
+    return COMMUNICATORD_VERSION_STRING;
 }
 
 

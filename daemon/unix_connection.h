@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicatord
+// https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -21,7 +21,7 @@
  * \brief The declaration of the service class.
  *
  * The service class is the one used whenever a service connects to the
- * snapcommunicatord daemon.
+ * communicatord daemon.
  */
 
 // self
@@ -53,7 +53,7 @@ public:
                                 , std::string const & server_name);
     virtual             ~unix_connection() override;
 
-    // snap::snap_communicator::snap_tcp_server_client_message_connection implementation
+    // ed::local_stream_server_client_message_connection implementation
     virtual void        process_message(ed::message & msg) override;
 
     void                send_status();

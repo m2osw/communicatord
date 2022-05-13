@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicator
+// https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -20,7 +20,7 @@
 /** \file
  * \brief Exceptions.
  *
- * The following are all the exceptions used by the Snap Communicator.
+ * The following are all the exceptions used by the Communicator.
  */
 
 
@@ -35,21 +35,21 @@ namespace sc
 
 
 
-DECLARE_LOGIC_ERROR(snapcommunicator_logic_error);
+DECLARE_LOGIC_ERROR(logic_error);
 
-DECLARE_MAIN_EXCEPTION(snapcommunicator_error);
+DECLARE_MAIN_EXCEPTION(communicator_error);
 
-DECLARE_EXCEPTION(snapcommunicator_error, address_missing);
-DECLARE_EXCEPTION(snapcommunicator_error, connection_unavailable);
-DECLARE_EXCEPTION(snapcommunicator_error, missing_message);
-DECLARE_EXCEPTION(snapcommunicator_error, missing_name);
-DECLARE_EXCEPTION(snapcommunicator_error, path_already_set);
-DECLARE_EXCEPTION(snapcommunicator_error, unexpected_message);
-DECLARE_EXCEPTION(snapcommunicator_error, unexpected_message_parameter);
-DECLARE_EXCEPTION(snapcommunicator_error, unknown_command);
-DECLARE_EXCEPTION(snapcommunicator_error, unknown_exception);
-DECLARE_EXCEPTION(snapcommunicator_error, switching_to_user_failed);
-DECLARE_EXCEPTION(snapcommunicator_error, user_missing);
+DECLARE_EXCEPTION(communicator_error, address_missing);
+DECLARE_EXCEPTION(communicator_error, connection_unavailable);
+DECLARE_EXCEPTION(communicator_error, missing_message);
+DECLARE_EXCEPTION(communicator_error, missing_name);
+DECLARE_EXCEPTION(communicator_error, path_already_set);
+DECLARE_EXCEPTION(communicator_error, unexpected_message);
+DECLARE_EXCEPTION(communicator_error, unexpected_message_parameter);
+DECLARE_EXCEPTION(communicator_error, unknown_command);
+DECLARE_EXCEPTION(communicator_error, unknown_exception);
+DECLARE_EXCEPTION(communicator_error, switching_to_user_failed);
+DECLARE_EXCEPTION(communicator_error, user_missing);
 
 
 

@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicatord
+// https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@
 /** \file
  * \brief Implementation of the Gossip connection.
  *
- * The Snap! Communicator has a rule, if its IP address is smaller than the
+ * The Communicator has a rule, if its IP address is smaller than the
  * IP address of another communicator, then it connects to it normally. That
  * creates the web of communicators in your Snap! Websites network.
  *
@@ -55,7 +55,7 @@ namespace scd
 
 
 /** \class gossip_connection
- * \brief To send a GOSSIP to a remote snapcommunicatord.
+ * \brief To send a GOSSIP to a remote communicatord.
  *
  * This class defines a connection used to send a GOSSIP message
  * to a remote communicator. Once the GOSSIP worked at least once,
@@ -80,7 +80,7 @@ namespace scd
  *
  * This object is actually a timer. Each time we get a tick
  * (i.e. process_timeout() callback gets called), a connection
- * is attempted against the remote snapcommunicatord daemon
+ * is attempted against the remote communicatord daemon
  * specified by the addr and port parameters.
  *
  * The addr and port are both mandatory to this constructor.
@@ -90,13 +90,13 @@ namespace scd
  * use a PLAIN connection for a GOSSIP message, but if the IP:port we
  * were given represent a SECURE port, then it won't work.
  *
- * \param[in] rcs  The remote snap communicators object which we contact
+ * \param[in] rcs  The remote communicators object which we contact
  *                 whenever the GOSSIP message was confirmed by the
  *                 remote connection.
- * \param[in] address  The IP:port address of the remote snap communicator.
+ * \param[in] address  The IP:port address of the remote communicator.
  */
 gossip_connection::gossip_connection(
-                  remote_snapcommunicators::pointer_t rcs
+                  remote_communicators::pointer_t rcs
                 , addr::addr const & address)
     : tcp_client_permanent_message_connection(
                   address
@@ -113,16 +113,16 @@ gossip_connection::gossip_connection(
  *
  * We do not really have anything to do when a timeout happens. The
  * connection attempts are automatically done by the permanent
- * connection in the snap_communicator library.
+ * connection in the communicatord library.
  *
  * However, we want to increase the delay between attempts. For that,
  * we use this function and double the delay on each timeout until
  * it reaches about 1h. Then we stop doubling that delay. If the
- * remote snapcommunicatord never makes it, we won't swamp the network
+ * remote communicatord never makes it, we won't swamp the network
  * by false attempts to connect to a dead computer.
  *
  * \todo
- * We need to let the snapwatchdog know that such remote connections
+ * We need to let the watchdog know that such remote connections
  * fail for X amount of time. This is important to track what's
  * missing in the cluster (Even if we likely will have other means
  * to know of the problem.)
@@ -151,7 +151,7 @@ void gossip_connection::process_timeout()
  *
  * We currently really only expect RECEIVED as a reply.
  *
- * \param[in] message  The message received from the remote snapcommunicatord.
+ * \param[in] message  The message received from the remote communicatord.
  */
 void gossip_connection::process_message(ed::message & msg)
 {
@@ -214,8 +214,8 @@ void gossip_connection::process_connected()
     // of the gossip connection. This means that we will not get
     // any further process_timeout() calls until we completely
     // lose the connection. This is possibly not what we want, or
-    // at least we should let the snapwatchdog know that we were
-    // connected to a snapcommunicatord, yes, sent the GOSSIP,
+    // at least we should let the sitter know that we were
+    // connected to a communicatord, yes, sent the GOSSIP,
     // all good up to here, but never got a reply! Not getting
     // a reply is likely to mean that the connection we establish
     // is somehow bogus even if it does not Hang Up on us.

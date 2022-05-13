@@ -2,16 +2,16 @@
 #
 # Once done this will define
 #
-# SNAPCOMMUNICATOR_FOUND        - System has Sitter
-# SNAPCOMMUNICATOR_INCLUDE_DIRS - The Sitter include directories
-# SNAPCOMMUNICATOR_LIBRARIES    - The libraries needed to use Sitter
-# SNAPCOMMUNICATOR_DEFINITIONS  - Compiler switches required for using Sitter
+# COMMUNICATORD_FOUND        - System has Sitter
+# COMMUNICATORD_INCLUDE_DIRS - The Sitter include directories
+# COMMUNICATORD_LIBRARIES    - The libraries needed to use Sitter
+# COMMUNICATORD_DEFINITIONS  - Compiler switches required for using Sitter
 #
 # License:
 #
 # Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 #
-# https://snapwebsites.org/project/snapcommunicator
+# https://snapwebsites.org/project/communicatord
 # contact@m2osw.com
 #
 # This program is free software: you can redistribute it and/or modify
@@ -28,38 +28,38 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 find_path(
-    SNAPCOMMUNICATOR_INCLUDE_DIR
-        snapcommunicator/version.h
+    COMMUNICATORD_INCLUDE_DIR
+        communicatord/version.h
 
     PATHS
-        $ENV{SNAPCOMMUNICATOR_INCLUDE_DIR}
+        $ENV{COMMUNICATORD_INCLUDE_DIR}
 )
 
 find_library(
-    SNAPCOMMUNICATOR_LIBRARY
-        snapcommunicator
+    COMMUNICATORD_LIBRARY
+        communicatord
 
     PATHS
-        $ENV{SNAPCOMMUNICATOR_LIBRARY}
+        $ENV{COMMUNICATORD_LIBRARY}
 )
 
 mark_as_advanced(
-    SNAPCOMMUNICATOR_INCLUDE_DIR
-    SNAPCOMMUNICATOR_LIBRARY
+    COMMUNICATORD_INCLUDE_DIR
+    COMMUNICATORD_LIBRARY
 )
 
-set(SNAPCOMMUNICATOR_INCLUDE_DIRS ${SNAPCOMMUNICATOR_INCLUDE_DIR})
-set(SNAPCOMMUNICATOR_LIBRARIES    ${SNAPCOMMUNICATOR_LIBRARY})
+set(COMMUNICATORD_INCLUDE_DIRS ${COMMUNICATORD_INCLUDE_DIR})
+set(COMMUNICATORD_LIBRARIES    ${COMMUNICATORD_LIBRARY})
 
 include(FindPackageHandleStandardArgs)
 
-# handle the QUIETLY and REQUIRED arguments and set SNAPCOMMUNICATOR_FOUND to
+# handle the QUIETLY and REQUIRED arguments and set COMMUNICATORD_FOUND to
 # TRUE if all listed variables are TRUE
 find_package_handle_standard_args(
-    SnapCommunicator
+    Communicatord
     DEFAULT_MSG
-    SNAPCOMMUNICATOR_INCLUDE_DIR
-    SNAPCOMMUNICATOR_LIBRARY
+    COMMUNICATORD_INCLUDE_DIR
+    COMMUNICATORD_LIBRARY
 )
 
 # vim: ts=4 sw=4 et

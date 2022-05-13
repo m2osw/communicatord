@@ -1,6 +1,6 @@
 # Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 #
-# https://snapwebsites.org/project/snapcommunicatord
+# https://snapwebsites.org/project/communicatord
 # contact@m2osw.com
 #
 # This program is free software: you can redistribute it and/or modify
@@ -21,9 +21,9 @@
 # algorithm so we keep the list of files in a variable in order to be
 # able to include the same files in the daemon and the test library
 #
-set(SNAPCOMMUNICATORD_SOURCE_FILES
+set(COMMUNICATORD_SOURCE_FILES
     cache.cpp
-    remote_snapcommunicators.cpp
+    remote_communicators.cpp
     server.cpp
     utils.cpp
 
@@ -51,13 +51,13 @@ set(SNAPCOMMUNICATORD_SOURCE_FILES
 
 
 ##
-## snapcommunicatord
+## communicatord
 ##
-project(snapcommunicatord)
+project(communicatordaemon)
 
 add_executable(${PROJECT_NAME}
     main.cpp
-    ${SNAPCOMMUNICATORD_SOURCE_FILES}
+    ${COMMUNICATORD_SOURCE_FILES}
 )
 
 target_include_directories(${PROJECT_NAME}
@@ -72,7 +72,7 @@ target_include_directories(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME}
-    snapcommunicator
+    communicatord
     ${ADVGETOPT_LIBRARIES}
     ${EDHTTP_LIBRARIES}
     ${EVENTDISPATCHER_LIBRARIES}
@@ -81,6 +81,8 @@ target_link_libraries(${PROJECT_NAME}
     ${SITTER_LIBRARIES}
     ${SNAPLOGGER_LIBRARIES}
 )
+
+set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "communicatord")
 
 install(
     TARGETS
@@ -92,12 +94,15 @@ install(
 
 
 ##
-## testcommunicatord
+## testcommunicatordaemon
 ##
-project(testcommunicatord)
+#
+# This is a "library-like" version used by the tests
+#
+project(testcommunicatordaemon)
 
 add_library(${PROJECT_NAME}
-    ${SNAPCOMMUNICATORD_SOURCE_FILES}
+    ${COMMUNICATORD_SOURCE_FILES}
 )
 
 target_include_directories(${PROJECT_NAME}
@@ -112,7 +117,7 @@ target_include_directories(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME}
-    snapcommunicator
+    communicatord
     ${ADVGETOPT_LIBRARIES}
     ${EDHTTP_LIBRARIES}
     ${EVENTDISPATCHER_LIBRARIES}

@@ -1,5 +1,5 @@
-snapcommunicator (2.0.0.0~bionic) bionic; urgency=high
+communicatord (2.0.0.0~bionic) bionic; urgency=high
 
-  * First version of snapcommunicator version 2.
+  * First version of communicatord version 2.
 
  -- Alexis Wilke <alexis@m2osw.com>  Sun, 03 Apr 2022 14:15:39 -0700

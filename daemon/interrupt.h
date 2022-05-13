@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicatord
+// https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -49,7 +49,7 @@ public:
                         interrupt(server::pointer_t cs);
     virtual             ~interrupt() override {}
 
-    // snap::snap_communicator::snap_signal implementation
+    // ed::signal implementation
     virtual void        process_signal() override;
 
 private:

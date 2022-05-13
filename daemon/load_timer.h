@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicatord
+// https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -21,7 +21,7 @@
  * \brief Definition of the load_timer class.
  *
  * The load average of the computer is collected on all computers and
- * shared between all the Snap! Communicators. This is used to know
+ * shared between all the Communicators. This is used to know
  * whether a computer is overloaded and make use of another in that
  * case.
  */
@@ -48,7 +48,7 @@ class load_timer
 public:
                         load_timer(server::pointer_t cs);
 
-    // snap::snap_communicator::snap_timer implementation
+    // ed::timer implementation
     virtual void        process_timeout() override;
 
 private:

@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicatord
+// https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -22,7 +22,7 @@
  *
  * The system can be pinged via a UDP connection.
  *
- * This is an addition to the normal TCP connection of the Snap!
+ * This is an addition to the normal TCP connection of the
  * Communicator when you want to send a quick message and you do not
  * need to wait for an answer.
  */

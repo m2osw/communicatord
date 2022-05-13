@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicatord
+// https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -17,10 +17,10 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 /** \file
- * \brief Implementation of the Snap! Communicator service connection.
+ * \brief Implementation of the Communicator service connection.
  *
  * A service is a local daemon offering a service to our system. Such
- * as service connections to the snapcommunicatord daemon via the local
+ * as service connections to the communicatord daemon via the local
  * TCP connection and uses that connection to register itself and
  * then send messages to other services wherever they are in the network.
  */
@@ -45,7 +45,7 @@ namespace scd
 /** \class service_connection
  * \brief Listen for messages.
  *
- * The snapcommunicatord TCP connection simply listen for process_message()
+ * The communicatord TCP connection simply listen for process_message()
  * callbacks and processes those messages by calling the process_message()
  * of the connections class.
  *
@@ -59,20 +59,20 @@ namespace scd
  * The constructor of the service connection expects a socket that
  * was just accept()'ed.
  *
- * The snapcommunicatord daemon listens on to two different ports
+ * The communicatord daemon listens on to two different ports
  * and two different addresses on those ports:
  *
  * \li TCP 127.0.0.1:4040 -- this address is expected to be used by all the
  * local services
  *
  * \li TCP 0.0.0.0:4040 -- this address is expected to be used by remote
- * snapcommunicators; it is often changed to a private network IP
+ * communicators; it is often changed to a private network IP
  * address such as 192.168.0.1 to increase safety. However, if your
  * cluster spans multiple data centers, it will not be possible to
  * use a private network IP address.
  *
  * \li UDP 127.0.0.1:4041 -- this special port is used to accept UDP
- * signals sent to the snapcommunicatord; UDP signals are most often
+ * signals sent to the communicatord; UDP signals are most often
  * used to very quickly send signals without having to have a full
  * TCP connection to a daemon
  *
@@ -139,7 +139,6 @@ service_connection::~service_connection()
 }
 
 
-// snap::snap_communicator::snap_tcp_server_client_message_connection implementation
 void service_connection::process_message(ed::message & msg)
 {
     // make sure the destination knows who sent that message so it

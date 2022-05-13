@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicatord
+// https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -58,7 +58,7 @@ namespace scd
  * system and forward it to whichever computer that requested the
  * information.
  *
- * \param[in] cs  The snap communicator server we are listening for.
+ * \param[in] cs  The communicatord server we are listening for.
  */
 load_timer::load_timer(server::pointer_t cs)
     : timer(1'000'000LL)  // 1 second in microseconds

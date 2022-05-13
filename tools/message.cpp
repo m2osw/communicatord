@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicator
+// https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -17,10 +17,10 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-// snapcommunicator
+// communicator
 //
-#include    <snapcommunicator/snapcommunicator.h>
-#include    <snapcommunicator/version.h>
+#include    <communicatord/communicatord.h>
+#include    <communicatord/version.h>
 
 
 // eventdispatcher
@@ -94,7 +94,7 @@
  *
  * This tool can be used to test various services and make sure they
  * work as expected, at least for their control feed. If they have
- * network connections that have nothing to do with snap_communicator
+ * network connections that have nothing to do with communicator
  * messaging feeds, then it won't work well.
  *
  * The organization of this file is as follow:
@@ -120,7 +120,7 @@
  *        |        |       |
  *     +--+--------+-------+----+
  *     |                        |
- *     |  Snap Message Obj.     |
+ *     |  Message Obj.          |
  *     |                        |
  *     +------------------------+
  */
@@ -131,8 +131,8 @@ namespace
 
 
 
-constexpr char const * g_history_file = "~/.snapmessage_history";
-constexpr char const * g_gui_command = "/var/lib/snapcommunicatord/sendmessage.gui";
+constexpr char const * g_history_file = "~/.message_history";
+constexpr char const * g_gui_command = "/var/lib/communicatord/sendmessage.gui";
 
 
 const advgetopt::option g_command_line_options[] =
@@ -242,7 +242,7 @@ advgetopt::group_description const g_group_descriptions[] =
 
 char const * const g_configuration_directories[] =
 {
-    "/etc/snapmessage",
+    "/etc/communicatord",
     nullptr
 };
 
@@ -252,21 +252,21 @@ char const * const g_configuration_directories[] =
 #pragma GCC diagnostic ignored "-Wpedantic"
 advgetopt::options_environment const g_command_line_options_environment =
 {
-    .f_project_name = "snapmessage",
+    .f_project_name = "message",
     .f_group_name = nullptr,
     .f_options = g_command_line_options,
     .f_options_files_directory = nullptr,
-    .f_environment_variable_name = "SNAPMESSAGE",
+    .f_environment_variable_name = "MESSAGE",
     .f_environment_variable_intro = nullptr,
     .f_section_variables_name = nullptr,
     .f_configuration_files = nullptr,
-    .f_configuration_filename = "snapmessage.conf",
+    .f_configuration_filename = "message.conf",
     .f_configuration_directories = g_configuration_directories,
     .f_environment_flags = advgetopt::GETOPT_ENVIRONMENT_FLAG_PROCESS_SYSTEM_PARAMETERS,
     .f_help_header = "Usage: %p [-<opt>] [<message> ...]\n"
                      "where -<opt> is one or more of:",
     .f_help_footer = "%c",
-    .f_version = SNAPCOMMUNICATOR_VERSION_STRING,
+    .f_version = COMMUNICATORD_VERSION_STRING,
     .f_license = "GNU GPL v3",
     .f_copyright = "Copyright (c) 2013-"
                    BOOST_PP_STRINGIZE(UTC_BUILD_YEAR)
@@ -469,17 +469,17 @@ public:
         disconnect();
 
         // we allow the user to connect to any one of the allowed socket
-        // that the snapcommunicator listens on
+        // that the communicator listens on
         //
         // the type is 100% defined by the address which is expected to
         // include a protocol, when no protocol is defined, "sc:" is used
         // as the default.
         //
         //     sc://<ip>:<port> -- a plain TCP connection
-        //     sc:///run/snapcommunicatod/stream.sock -- a plain local stream connection (Unix)
+        //     sc:///run/communicatod/stream.sock -- a plain local stream connection (Unix)
         //     scs://<ip>:<port> -- a secure TCP connection
         //     scu://<ip>:<port> -- a plain UDP connection
-        //     scu:///run/snapcommunicatord/datagram.sock -- a plain local datagram connection (Unix)
+        //     scu:///run/communicatord/datagram.sock -- a plain local datagram connection (Unix)
         //     scb://<ip>:<port> -- a broadcasting UDP connection
         //
         try
@@ -721,7 +721,7 @@ public:
         //    the following creates a UDP server; to send data we just use
         //    the send_message() which is a static function
         //
-        //f_tcp_connection = std::make_shared<snap::snap_communicator::snap_udp_server_message_connection>(ip, f_mode);
+        //f_tcp_connection = std::make_shared<ed::udp_server_message_connection>(ip, f_mode);
 
         f_connection_type = f_selected_connection_type;
     }
@@ -857,10 +857,10 @@ public:
     {
         // TODO: use a command instead of reading that signal secret from
         //       the config file since we could be trying to send to a
-        //       remote snapcommunicator and the secret could be different
+        //       remote communicatord and the secret could be different
         //       there...
         //
-        advgetopt::conf_file_setup const setup("snapcommunicator");
+        advgetopt::conf_file_setup const setup("communicatord");
         advgetopt::conf_file::pointer_t config(advgetopt::conf_file::get_conf_file(setup));
         ed::udp_server_message_connection::send_message(
                       f_ip_address
@@ -871,9 +871,9 @@ public:
     void send_dgram_message(ed::message & msg)
     {
         // TODO: see send_udp_message() -- replace signal-secret with
-        //       snapmessage command line option...
+        //       message command line option...
         //
-        advgetopt::conf_file_setup const setup("snapcommunicator");
+        advgetopt::conf_file_setup const setup("communicatord");
         advgetopt::conf_file::pointer_t config(advgetopt::conf_file::get_conf_file(setup));
         ed::local_dgram_server_message_connection::send_message(
                       f_unix_address
@@ -1059,7 +1059,7 @@ public:
         // request to quit the process, equivalent to Ctrl-D
         //
 // that should be a statistic in a stats window...
-//output("# of con: " + std::to_string(snap::snap_communicator::instance()->get_connections().size()));
+//output("# of con: " + std::to_string(ed::communicator::instance()->get_connections().size()));
         if(command == "/quit")
         {
             // the "/quit" internal command
@@ -1140,7 +1140,7 @@ private:
         output("  /connect <protocol>://<ip>:<port> | <protocol>:///<path> -- connect to specified URI");
         output("  /disconnect -- explicitly disconnect any existing connection");
         output("  /help or /? or ? or <F1> key -- print this help screen");
-        output("  /quit -- leave snapmessage");
+        output("  /quit -- leave tool");
         output("  <F2> key -- create a message in a popup window");
         output("  ... -- message to send to current connection");
         output("    a message is composed of:");
@@ -1163,17 +1163,17 @@ console_connection * console_connection::g_console = nullptr;
 
 
 
-class snapmessage
+class message
 {
 public:
-    snapmessage(int argc, char * argv[])
+    message(int argc, char * argv[])
         : f_opts(g_command_line_options_environment)
     {
         snaplogger::add_logger_options(f_opts);
         f_opts.finish_parsing(argc, argv);
         if(!snaplogger::process_logger_options(
                               f_opts
-                            , "/etc/snapcommunicator/logger"
+                            , "/etc/communicatord/logger"
                             , std::cout
                             , false))
         {
@@ -1246,13 +1246,13 @@ public:
     int start_gui()
     {
         // the GUI is a separate executable wchi is installed along the
-        // snapcommunicatord-gui package so as to not impose Qt on all
+        // communicatord-gui package so as to not impose Qt on all
         // servers; you probably don't need a GUI on your non-X servers
         // anyway--try the 'cui' instead
         //
         if(access(g_gui_command, R_OK | X_OK) != 0)
         {
-            std::cerr << "error: the --gui is not currently available; did you install the snapcommunicatord-gui package? -- on a server, consider using --cui instead." << std::endl;
+            std::cerr << "error: the --gui is not currently available; did you install the communicatord-gui package? -- on a server, consider using --cui instead." << std::endl;
             return 1;
         }
         std::string cmd(g_gui_command);
@@ -1263,7 +1263,7 @@ public:
 
     int enter_cui()
     {
-        // add a CUI connection to the snap_communicator
+        // add a CUI connection to the ed::communicator
         //
         {
             console_connection::pointer_t cui(std::make_shared<console_connection>(f_connection));
@@ -1285,7 +1285,7 @@ public:
 
         // run() returned with an error
         //
-        std::cerr << "error: something went wrong in the snap_communicator run() loop." << std::endl;
+        std::cerr << "error: something went wrong in the ed::communicator run() loop." << std::endl;
         return 1;
     }
 
@@ -1302,19 +1302,19 @@ int main(int argc, char *argv[])
 {
     try
     {
-        snapmessage sm(argc, argv);
+        message sm(argc, argv);
 
         return sm.run();
     }
-    catch( advgetopt::getopt_exit const & except )
+    catch(advgetopt::getopt_exit const & e)
     {
-        return except.code();
+        return e.code();
     }
     catch(std::exception const & e)
     {
         // clean error on exception
         //
-        std::cerr << "snapsignal: exception: " << e.what() << std::endl;
+        std::cerr << "message: exception: " << e.what() << std::endl;
         return 1;
     }
 }

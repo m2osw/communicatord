@@ -1,0 +1,3 @@
+usr/include/communicatord
+usr/lib/libcommunicatord.so
+usr/share/cmake/CommunicatordConfig.cmake

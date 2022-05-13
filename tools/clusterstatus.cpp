@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicator
+// https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -16,9 +16,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// snapcommunicator
+// communicatord
 //
-#include    <snapcommunicator/version.h>
+#include    <communicatord/version.h>
 
 
 // eventdispatcher
@@ -59,62 +59,60 @@ namespace
 {
 
 
-class snapcluster;
+class cluster;
 
-class snapcluster_messenger
+class cluster_messenger
     : public ed::tcp_client_message_connection
 {
 public:
-    typedef std::shared_ptr<snapcluster_messenger>     pointer_t;
+    typedef std::shared_ptr<cluster_messenger>     pointer_t;
 
-                                snapcluster_messenger(
-                                      snapcluster * sl
+                                cluster_messenger(
+                                      cluster * sl
                                     , addr::addr const & address);
-                                snapcluster_messenger(snapcluster_messenger const & rhs) = delete;
-    virtual                     ~snapcluster_messenger() override {}
+                                cluster_messenger(cluster_messenger const & rhs) = delete;
+    virtual                     ~cluster_messenger() override {}
 
-    snapcluster_messenger &     operator = (snapcluster_messenger const & rhs) = delete;
+    cluster_messenger &     operator = (cluster_messenger const & rhs) = delete;
 
 protected:
     // this is owned by a snaplock function so no need for a smart pointer
     // (and it would create a loop)
-    snapcluster *               f_snapcluster = nullptr;
+    cluster *               f_cluster = nullptr;
 };
 
 
-snapcluster_messenger::snapcluster_messenger(
-              snapcluster * sl
+cluster_messenger::cluster_messenger(
+              cluster * sl
             , addr::addr const & address)
     : tcp_client_message_connection(address)
-    , f_snapcluster(sl)
+    , f_cluster(sl)
 {
-    set_name("snapcluster messenger");
+    set_name("cluster messenger");
 }
 
 
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
-class snapcluster
+class cluster
     : public ed::connection_with_send_message
-    , public ed::dispatcher<snapcluster>
-    , public std::enable_shared_from_this<snapcluster>
+    , public ed::dispatcher<cluster>
+    , public std::enable_shared_from_this<cluster>
 {
 public:
-    typedef std::shared_ptr<snapcluster>      pointer_t;
+    typedef std::shared_ptr<cluster>      pointer_t;
 
-                                snapcluster(int argc, char * argv[]);
-                                snapcluster(snapcluster const & rhs) = delete;
-    virtual                     ~snapcluster() {}
+                                cluster(int argc, char * argv[]);
+                                cluster(cluster const & rhs) = delete;
+    virtual                     ~cluster() {}
 
-    snapcluster &               operator = (snapcluster const & rhs) = delete;
+    cluster &               operator = (cluster const & rhs) = delete;
 
     int                         run();
 
-    // implementation of connection_with_send_message
+    // ed::connection_with_send_message implementation
     virtual bool                send_message(ed::message & message, bool cache = false) override;
-
-    // implementation of snap::snapcommunicator::connection_with_send_message
     virtual void                ready(ed::message & message) override; // no "msg_" because that's in connection_with_send_message
     virtual void                stop(bool quitting) override; // no "msg_" because that's in connection_with_send_message
 
@@ -127,14 +125,14 @@ private:
     void                        msg_cluster_status(ed::message & message);
     void                        msg_cluster_complete(ed::message & message);
 
-    static ed::dispatcher<snapcluster>::dispatcher_match::vector_t const
-                                        g_snapcluster_service_messages;
+    static ed::dispatcher<cluster>::dispatcher_match::vector_t const
+                                        g_cluster_service_messages;
 
     advgetopt::getopt                   f_opts;
-    advgetopt::conf_file::pointer_t     f_snapcommunicator_config = advgetopt::conf_file::pointer_t();
+    advgetopt::conf_file::pointer_t     f_communicatord_config = advgetopt::conf_file::pointer_t();
     addr::addr                          f_communicator_addr = addr::addr();
     ed::communicator::pointer_t         f_communicator = ed::communicator::pointer_t();
-    snapcluster_messenger::pointer_t    f_messenger = snapcluster_messenger::pointer_t();
+    cluster_messenger::pointer_t        f_messenger = cluster_messenger::pointer_t();
     std::string                         f_cluster_status = std::string();       // UP or DOWN
     std::string                         f_cluster_complete = std::string();     // COMPLETE or INCOMPLETE
     size_t                              f_neighbors_count = 0;
@@ -143,29 +141,29 @@ private:
 
 
 
-/** \brief List of snapcluster commands.
+/** \brief List of cluster commands.
  *
- * The following table defines the commands understood by snapcluster,
+ * The following table defines the commands understood by cluster,
  * which are pretty limited, mainly we want to gather the status from
- * the snapcommunicator process.
+ * the communicator process.
  */
-ed::dispatcher<snapcluster>::dispatcher_match::vector_t const snapcluster::g_snapcluster_service_messages =
+ed::dispatcher<cluster>::dispatcher_match::vector_t const cluster::g_cluster_service_messages =
 {
     {
         "CLUSTERUP"
-      , &snapcluster::msg_cluster_status
+      , &cluster::msg_cluster_status
     },
     {
         "CLUSTERDOWN"
-      , &snapcluster::msg_cluster_status
+      , &cluster::msg_cluster_status
     },
     {
         "CLUSTERCOMPLETE"
-      , &snapcluster::msg_cluster_complete
+      , &cluster::msg_cluster_complete
     },
     {
         "CLUSTERINCOMPLETE"
-      , &snapcluster::msg_cluster_complete
+      , &cluster::msg_cluster_complete
     }
 };
 
@@ -174,12 +172,12 @@ ed::dispatcher<snapcluster>::dispatcher_match::vector_t const snapcluster::g_sna
 advgetopt::option const g_options[] =
 {
     advgetopt::define_option(
-          advgetopt::Name("snapcommunicator-config")
+          advgetopt::Name("communicatord-config")
         , advgetopt::Flags(advgetopt::all_flags<
               advgetopt::GETOPT_FLAG_REQUIRED
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
-        , advgetopt::DefaultValue("/etc/snapwebsites/snapcommunicator.conf")
-        , advgetopt::Help("path to the snapcommunicator configuration file.")
+        , advgetopt::DefaultValue("/etc/communicatord/communicatord.conf")
+        , advgetopt::Help("path to the communicatord configuration file.")
     ),
     advgetopt::end_options()
 };
@@ -192,8 +190,8 @@ advgetopt::option const g_options[] =
 #pragma GCC diagnostic ignored "-Wpedantic"
 advgetopt::options_environment const g_options_environment =
 {
-    .f_project_name = "snapcommunicator",
-    .f_group_name = "snapcommunicator",
+    .f_project_name = "communicatord",
+    .f_group_name = "communicatord",
     .f_options = g_options,
     .f_options_files_directory = nullptr,
     .f_environment_variable_name = nullptr,
@@ -206,7 +204,7 @@ advgetopt::options_environment const g_options_environment =
     .f_help_header = "Usage: %p [-<opt>]\n"
                      "where -<opt> is one or more of:",
     .f_help_footer = "%c",
-    .f_version = SNAPCOMMUNICATOR_VERSION_STRING,
+    .f_version = COMMUNICATORD_VERSION_STRING,
     .f_license = "GNU GPL v2",
     .f_copyright = "Copyright (c) "
                    BOOST_PP_STRINGIZE(UTC_BUILD_YEAR)
@@ -222,8 +220,8 @@ advgetopt::options_environment const g_options_environment =
 
 
 
-snapcluster::snapcluster(int argc, char * argv[])
-    : dispatcher(this, g_snapcluster_service_messages)
+cluster::cluster(int argc, char * argv[])
+    : dispatcher(this, g_cluster_service_messages)
     , f_opts(g_options_environment)
     , f_communicator(ed::communicator::instance())
 {
@@ -236,20 +234,20 @@ snapcluster::snapcluster(int argc, char * argv[])
     //    throw advgetopt::getopt_exit("logger options generated an error.", 1);
     //}
 
-    advgetopt::conf_file_setup setup(f_opts.get_string("snapcommunicator-config"));
-    f_snapcommunicator_config = advgetopt::conf_file::get_conf_file(setup);
+    advgetopt::conf_file_setup setup(f_opts.get_string("communicatord-config"));
+    f_communicatord_config = advgetopt::conf_file::get_conf_file(setup);
 
     f_communicator_addr = addr::string_to_addr(
-                  f_snapcommunicator_config->get_parameter("local_listen").c_str()
+                  f_communicatord_config->get_parameter("local_listen").c_str()
                 , "localhost"
                 , 4040
                 , "tcp");
 }
 
 
-int snapcluster::run()
+int cluster::run()
 {
-    f_messenger = std::make_shared<snapcluster_messenger>(
+    f_messenger = std::make_shared<cluster_messenger>(
                               this
                             , f_communicator_addr);
     f_messenger->set_dispatcher(shared_from_this());
@@ -259,11 +257,11 @@ int snapcluster::run()
     // we have to REGISTER immediately (if it couldn't connect we raise
     // an exception so this works)
     //
-    ed::message register_snapcluster;
-    register_snapcluster.set_command("REGISTER");
-    register_snapcluster.add_parameter("service", "snapcluster");
-    register_snapcluster.add_version_parameter();
-    send_message(register_snapcluster);
+    ed::message register_cluster;
+    register_cluster.set_command("REGISTER");
+    register_cluster.add_parameter("service", "cluster");
+    register_cluster.add_version_parameter();
+    send_message(register_cluster);
 
     f_communicator->run();
 
@@ -271,24 +269,24 @@ int snapcluster::run()
 }
 
 
-bool snapcluster::send_message(ed::message & message, bool cache)
+bool cluster::send_message(ed::message & message, bool cache)
 {
     return f_messenger->send_message(message, cache);
 }
 
 
-void snapcluster::ready(ed::message & message)
+void cluster::ready(ed::message & message)
 {
     snapdev::NOT_USED(message);
 
     ed::message clusterstatus_message;
     clusterstatus_message.set_command("CLUSTERSTATUS");
-    clusterstatus_message.set_service("snapcommunicator");
+    clusterstatus_message.set_service("communicator");
     send_message(clusterstatus_message);
 }
 
 
-void snapcluster::stop(bool quitting)
+void cluster::stop(bool quitting)
 {
     snapdev::NOT_USED(quitting);
 
@@ -300,21 +298,21 @@ void snapcluster::stop(bool quitting)
 }
 
 
-void snapcluster::msg_cluster_status(ed::message & message)
+void cluster::msg_cluster_status(ed::message & message)
 {
     f_cluster_status = message.get_command();
     done(message);
 }
 
 
-void snapcluster::msg_cluster_complete(ed::message & message)
+void cluster::msg_cluster_complete(ed::message & message)
 {
     f_cluster_complete = message.get_command();
     done(message);
 }
 
 
-void snapcluster::done(ed::message & message)
+void cluster::done(ed::message & message)
 {
     if(f_cluster_status.empty()
     || f_cluster_complete.empty())
@@ -348,7 +346,7 @@ int main(int argc, char * argv[])
 {
     try
     {
-        snapcluster::pointer_t cluster(std::make_shared<snapcluster>(argc, argv));
+        cluster::pointer_t cluster(std::make_shared<cluster>(argc, argv));
         return cluster->run();
     }
     catch(advgetopt::getopt_exit const & e)
@@ -358,12 +356,12 @@ int main(int argc, char * argv[])
     catch(std::exception const & e)
     {
         // clean error on exception
-        std::cerr << "snapclusterstatus: an exception occurred: " << e.what() << '\n';
+        std::cerr << "clusterstatus: an exception occurred: " << e.what() << '\n';
         return 1;
     }
     catch(...)
     {
-        std::cerr << "snapclusterstatus: an unknown exception occurred.\n";
+        std::cerr << "clusterstatus: an unknown exception occurred.\n";
         return 1;
     }
 }

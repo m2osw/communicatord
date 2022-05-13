@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicator
+// https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -38,22 +38,22 @@ constexpr int const     LOCAL_PORT = 4040;      // sc://<loopback-ip>
 constexpr int const     UDP_PORT = 4041;        // scu://<loopback-ip> (any IP is accepted at the moment, but it's expected to be local)
 constexpr int const     REMOTE_PORT = 4042;     // sc://<private-ip>
 constexpr int const     SECURE_PORT = 4043;     // scs://<public-ip>
-constexpr char const *  g_snapcommunicator_default_ip_port = "127.0.0.1:4040";
+constexpr char const *  g_communicator_default_ip_port = "127.0.0.1:4040";
 
 
 
-class snapcommunicator
+class communicator
 {
 public:
-                        snapcommunicator(advgetopt::getopt & opts);
+                        communicator(advgetopt::getopt & opts);
 
-    void                add_snapcommunicator_options();
-    void                process_snapcommunicator_options();
+    void                add_communicator_options();
+    void                process_communicator_options();
 
 private:
     advgetopt::getopt & f_opts;
     ed::connection::pointer_t
-                        f_snapcommunicator_connection = ed::connection::pointer_t();
+                        f_communicator_connection = ed::connection::pointer_t();
 };
 
 

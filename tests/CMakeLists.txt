@@ -1,6 +1,6 @@
 # Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 #
-# https://snapwebsites.org/project/edhttp
+# https://snapwebsites.org/project/communicatord
 # contact@m2osw.com
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,7 +17,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 ##
-## snapcommunicator unittest
+## communicatord unittest
 ##
 project(unittest)
 
@@ -41,7 +41,7 @@ if(SnapCatch2_FOUND)
     )
 
     target_link_libraries(${PROJECT_NAME}
-        testcommunicatord
+        testcommunicatordaemon
         ${SNAPCATCH2_LIBRARIES}
     )
 

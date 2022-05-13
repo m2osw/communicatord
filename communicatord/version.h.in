@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicator
+// https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -18,19 +18,19 @@
 #pragma once
 
 /** \file
- * \brief Definitions of the snapcommunicator version.
+ * \brief Definitions of the communicator version.
  *
- * This header includes the snapcommunicator daemon version.
+ * This header includes the communicator daemon version.
  *
- * Note that the snapcommunicator is a daemon so we do not offer functions
+ * Note that the communicator is a daemon so we do not offer functions
  * like you would get in a library.
  */
 
 
-#define    SNAPCOMMUNICATOR_VERSION_MAJOR   @SNAPCOMMUNICATOR_VERSION_MAJOR@
-#define    SNAPCOMMUNICATOR_VERSION_MINOR   @SNAPCOMMUNICATOR_VERSION_MINOR@
-#define    SNAPCOMMUNICATOR_VERSION_PATCH   @SNAPCOMMUNICATOR_VERSION_PATCH@
-#define    SNAPCOMMUNICATOR_VERSION_STRING  "@SNAPCOMMUNICATOR_VERSION_MAJOR@.@SNAPCOMMUNICATOR_VERSION_MINOR@.@SNAPCOMMUNICATOR_VERSION_PATCH@"
+#define    COMMUNICATORD_VERSION_MAJOR   @COMMUNICATORD_VERSION_MAJOR@
+#define    COMMUNICATORD_VERSION_MINOR   @COMMUNICATORD_VERSION_MINOR@
+#define    COMMUNICATORD_VERSION_PATCH   @COMMUNICATORD_VERSION_PATCH@
+#define    COMMUNICATORD_VERSION_STRING  "@COMMUNICATORD_VERSION_MAJOR@.@COMMUNICATORD_VERSION_MINOR@.@COMMUNICATORD_VERSION_PATCH@"
 
 namespace sc
 {

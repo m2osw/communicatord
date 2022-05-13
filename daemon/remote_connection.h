@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/snapcommunicatord
+// https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -18,10 +18,10 @@
 #pragma once
 
 /** \file
- * \brief Declaration of the remote snapcommunicatord connection.
+ * \brief Declaration of the remote communicatord connection.
  *
- * This is the definition of the remote snapcommunicatord connection.
- * Connection used to communicate with other snapcommunicators running
+ * This is the definition of the remote communicatord connection.
+ * Connection used to communicate with other communicators running
  * on other servers.
  */
 

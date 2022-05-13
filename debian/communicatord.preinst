@@ -1,0 +1,37 @@
+#!/bin/sh -e
+
+#DEBHELPER#
+
+# Source debconf library.
+. /usr/share/debconf/confmodule
+
+
+if [ "$1" = "install" ]
+then
+    ENVIRONMENTNAME=communicatord
+    USERNAME=communicatord
+    GROUPNAME=communicatord
+
+    # add user and group
+    #
+    if ! getent group "${GROUPNAME}" >/dev/null
+    then
+        addgroup --system "${GROUPNAME}"
+    fi
+    #
+    if ! getent passwd "${USERNAME}" >/dev/null
+    then
+        adduser --quiet \
+            --system \
+            --ingroup "${GROUPNAME}" \
+            --disabled-login \
+            --disabled-password \
+            --home "/var/lib/${ENVIRONMENTNAME}" \
+            --no-create-home \
+            -gecos "Communicator Daemons and Tools" \
+                "${USERNAME}"
+    fi
+fi
+
+
+# vim: ts=4 sw=4 et nocindent
