@@ -23,32 +23,6 @@ then
     #
     rm -f /etc/${ENVIRONMENTNAME}/${ENVIRONMENTNAME}.d/50-${PACKAGENAME}.conf
 
-    # delete daemon user, if it exists
-    #
-    if getent passwd ${USERNAME} > /dev/null
-    then
-        if pgrep -u ${USERNAME} > /dev/null
-        then
-            echo "Cannot delete user '${USERNAME}' because there are processes running owned by this user!"
-        else
-            echo "Deleting ${USERNAME} user"
-            deluser --quiet ${USERNAME} > /dev/null || true
-        fi
-    fi
-
-    # delete daemon group, if it exists
-    #
-    if getent group ${GROUPNAME} > /dev/null
-    then
-        if pgrep -G ${GROUPNAME} > /dev/null
-        then
-            echo "Cannot delete group '${GROUPNAME}' because there are processes running owned by this group!"
-        else
-            echo "Deleting ${GROUPNAME} group"
-            delgroup --quiet ${GROUPNAME} > /dev/null || true
-        fi
-    fi
-
     # delete override.d of communicator
     #
     rm -rf /etc/systemd/system/communicatord.service.d

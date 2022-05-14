@@ -1,0 +1,7 @@
+# Variables one can use in their debian scripts (i.e. in postinst, postrm, etc.)
+
+# Where to place your .service files
+#
+COMMUNICATORD_SERVICES_DIR=/usr/share/communicatord/services
+
+# vim: syntax=sh

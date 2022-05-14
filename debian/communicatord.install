@@ -8,3 +8,4 @@ debian/tmp/usr/share/communicatord/logger/communicator.conf           usr/share/
 communicatord/conf/communicatord.conf                                 etc/communicatord/
 communicatord/conf/logger/communicatord.conf                          etc/communicatord/logger/
 communicatord/conf/ssl-README.md                                      etc/communicatord/ssl/
+communicatord/conf/confcommunicatord                                  usr/share/communicatord
