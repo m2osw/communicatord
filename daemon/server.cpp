@@ -45,9 +45,12 @@
 // communicatord
 //
 #include    <communicatord/exception.h>
+#include    <communicatord/flags.h>
 #include    <communicatord/loadavg.h>
 #include    <communicatord/communicatord.h>
 #include    <communicatord/version.h>
+
+
 
 
 // advgetopt
@@ -86,11 +89,6 @@
 #include    <snaplogger/options.h>
 
 
-// sitter
-//
-#include    <sitter/flags.h>
-
-
 // boost
 //
 #include    <boost/preprocessor/stringize.hpp>
@@ -117,7 +115,7 @@
 
 
 
-namespace scd
+namespace communicator_daemon
 {
 
 
@@ -541,7 +539,7 @@ int server::init()
     //
     f_max_connections = f_opts.get_long("max_connections");
 
-    sc::set_loadavg_path(f_opts.get_string("data_path"));
+    communicatord::set_loadavg_path(f_opts.get_string("data_path"));
 
     // read the list of available services
     //
@@ -619,7 +617,7 @@ std::cerr << "got a name here!?!? " << service_name << "\n";
         addr::addr local_listen(addr::string_to_addr(
                   f_opts.get_string("local_listen")
                 , "127.0.0.1"
-                , sc::LOCAL_PORT
+                , communicatord::LOCAL_PORT
                 , "tcp"));
         if(local_listen.get_network_type() != addr::addr::network_type_t::NETWORK_TYPE_LOOPBACK)
         {
@@ -662,7 +660,7 @@ std::cerr << "got a name here!?!? " << service_name << "\n";
     addr::addr listen_addr(addr::string_to_addr(
                   listen_str
                 , "0.0.0.0"
-                , sc::REMOTE_PORT
+                , communicatord::REMOTE_PORT
                 , "tcp"));
     {
         // make this listener the remote listener, however, if the IP
@@ -702,7 +700,7 @@ std::cerr << "got a name here!?!? " << service_name << "\n";
         addr::addr secure_listen(addr::string_to_addr(
                   f_opts.get_string("secure_listen")
                 , "0.0.0.0"
-                , sc::SECURE_PORT
+                , communicatord::SECURE_PORT
                 , "tcp"));
 
         // make this listener the remote listener, however, if the IP
@@ -743,7 +741,7 @@ std::cerr << "got a name here!?!? " << service_name << "\n";
         addr::addr signal_address(addr::string_to_addr(
                           f_opts.get_string("signal")
                         , "127.0.0.1"
-                        , sc::UDP_PORT
+                        , communicatord::UDP_PORT
                         , "udp"));
 
         ping::pointer_t p(std::make_shared<ping>(shared_from_this(), signal_address));
@@ -782,7 +780,7 @@ std::cerr << "got a name here!?!? " << service_name << "\n";
         SNAP_LOG_FATAL
             << msg
             << SNAP_LOG_SEND;
-        throw sc::address_missing(msg);
+        throw communicatord::address_missing(msg);
     }
 
     f_remote_communicators = std::make_shared<remote_communicators>(
@@ -820,7 +818,7 @@ std::cerr << "got a name here!?!? " << service_name << "\n";
             << ss
             << SNAP_LOG_SEND;
 
-        sitter::flag::pointer_t flag(SITTER_FLAG_UP(
+        communicatord::flag::pointer_t flag(COMMUNICATORD_FLAG_UP(
                       "communicatord"
                     , "cluster"
                     , "no-cluster"
@@ -870,7 +868,7 @@ void server::drop_privileges()
                << f_group_name
                << "\"! Create it first, then run the server.";
             SNAP_LOG_FATAL << ss << SNAP_LOG_SEND;
-            throw sc::user_missing(ss.str());
+            throw communicatord::user_missing(ss.str());
         }
         int const sw_grp_id(grp->gr_gid);
         //
@@ -885,7 +883,7 @@ void server::drop_privileges()
                << ", "
                << strerror(e);
             SNAP_LOG_FATAL << ss << SNAP_LOG_SEND;
-            throw sc::switching_to_user_failed(ss.str());
+            throw communicatord::switching_to_user_failed(ss.str());
         }
     }
     //
@@ -898,7 +896,7 @@ void server::drop_privileges()
                << f_user_name
                << "\"! Create it first, then run the server.";
             SNAP_LOG_FATAL << ss << SNAP_LOG_SEND;
-            throw sc::user_missing(ss.str());
+            throw communicatord::user_missing(ss.str());
         }
         int const sw_usr_id(pswd->pw_uid);
         //
@@ -913,7 +911,7 @@ void server::drop_privileges()
                << ", "
                << strerror(e);
             SNAP_LOG_FATAL << ss << SNAP_LOG_SEND;
-            throw sc::switching_to_user_failed(ss.str());
+            throw communicatord::switching_to_user_failed(ss.str());
         }
     }
 }
@@ -1122,7 +1120,7 @@ void server::process_message(ed::message & msg)
             service_connection::pointer_t conn(std::dynamic_pointer_cast<service_connection>(nc));
             if(conn != nullptr)
             {
-                throw sc::missing_name(
+                throw communicatord::missing_name(
                           "server name missing in connection "
                         + conn->get_name()
                         + "...");
@@ -1135,11 +1133,11 @@ void server::process_message(ed::message & msg)
                 continue;
 
             case connection_type_t::CONNECTION_TYPE_LOCAL:
-                throw sc::missing_name(
+                throw communicatord::missing_name(
                           "server name missing in connection \"local service\"...");
 
             case connection_type_t::CONNECTION_TYPE_REMOTE:
-                throw sc::missing_name(
+                throw communicatord::missing_name(
                           "server name missing in connection \"remote communicatord\"...");
 
             }
@@ -1479,7 +1477,7 @@ void server::msg_accept(ed::message & msg)
     addr::addr his_address(addr::string_to_addr(
               his_address_str
             , "255.255.255.255"
-            , sc::REMOTE_PORT   // REMOTE_PORT or SECURE_PORT?
+            , communicatord::REMOTE_PORT   // REMOTE_PORT or SECURE_PORT?
             , "tcp"));
     conn->set_my_address(his_address);
 
@@ -1650,7 +1648,7 @@ void server::msg_commands(ed::message & msg)
         // end the process so developers can fix their problems
         // (this is only if --debug-all-messages was specified)
         //
-        throw sc::missing_message(
+        throw communicatord::missing_message(
                   "Connection \""
                 + c->get_name()
                 + "\" does not implement some of the required commands. See logs for more details.");
@@ -1835,7 +1833,7 @@ void server::msg_connect(ed::message & msg)
                 addr::addr his_address(addr::string_to_addr(
                           his_address_str
                         , "255.255.255.255"
-                        , sc::REMOTE_PORT   // REMOTE_PORT or SECURE_PORT?
+                        , communicatord::REMOTE_PORT   // REMOTE_PORT or SECURE_PORT?
                         , "tcp"));
 
                 conn->set_my_address(his_address);
@@ -3208,7 +3206,7 @@ void server::register_for_loadavg(std::string const & ip)
     addr::addr address(addr::string_to_addr(
               ip
             , "127.0.0.1"
-            , sc::LOCAL_PORT  // the port is ignore, use a safe default
+            , communicatord::LOCAL_PORT  // the port is ignore, use a safe default
             , "tcp"));
     ed::connection::vector_t const & all_connections(f_communicator->get_connections());
     auto const & it(std::find_if(
@@ -3264,15 +3262,15 @@ void server::msg_save_loadavg(ed::message & msg)
     std::string const my_address(msg.get_parameter("my_address"));
     std::string const timestamp_str(msg.get_parameter("timestamp"));
 
-    sc::loadavg_item item;
+    communicatord::loadavg_item item;
 
     // Note: we do not use the port so whatever number here is fine
     addr::addr a(addr::string_to_addr(
                   my_address
                 , "127.0.0.1"
-                , sc::LOCAL_PORT  // the port is ignore, use a safe default
+                , communicatord::LOCAL_PORT  // the port is ignore, use a safe default
                 , "tcp"));
-    a.set_port(sc::LOCAL_PORT); // actually force the port so in effect it is ignored
+    a.set_port(communicatord::LOCAL_PORT); // actually force the port so in effect it is ignored
     a.get_ipv6(item.f_address);
 
     item.f_avg = std::stof(avg_str);
@@ -3287,7 +3285,7 @@ void server::msg_save_loadavg(ed::message & msg)
         return;
     }
 
-    sc::loadavg_file file;
+    communicatord::loadavg_file file;
     file.load();
     file.add(item);
     file.save();
@@ -3485,7 +3483,7 @@ void server::remove_neighbor(std::string const & neighbor)
     addr::addr n(addr::string_to_addr(
               neighbor
             , "255.255.255.255"
-            , sc::REMOTE_PORT // if neighbor does not include a port, we may miss the SECURE_PORT...
+            , communicatord::REMOTE_PORT // if neighbor does not include a port, we may miss the SECURE_PORT...
             , "tcp"));
 
     // make sure we stop all gossiping toward that address
@@ -3565,7 +3563,7 @@ void server::save_neighbors()
 {
     if(f_neighbors_cache_filename.empty())
     {
-        throw sc::logic_error("Somehow save_neighbors() was called when f_neighbors_cache_filename was not set yet.");
+        throw communicatord::logic_error("Somehow save_neighbors() was called when f_neighbors_cache_filename was not set yet.");
     }
 
     snapdev::file_contents cache(f_neighbors_cache_filename);
@@ -3627,7 +3625,7 @@ bool server::send_message(ed::message & msg, bool cache)
     base_connection::pointer_t conn(msg.user_data<base_connection>());
     if(conn == nullptr)
     {
-        throw sc::logic_error("server::send_message() called with a missing user data connection pointer.");
+        throw communicatord::logic_error("server::send_message() called with a missing user data connection pointer.");
     }
 
     return conn->send_message_to_connection(msg, cache);
@@ -3878,5 +3876,5 @@ void server::process_connected(ed::connection::pointer_t conn)
 
 
 
-} // namespace scd
+} // namespace communicator_daemon
 // vim: ts=4 sw=4 et

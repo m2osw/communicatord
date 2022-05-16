@@ -28,8 +28,9 @@ configure_file(
 )
 
 add_library(${PROJECT_NAME} SHARED
-    loadavg.cpp
     communicatord.cpp
+    flags.cpp
+    loadavg.cpp
     version.cpp
 )
 

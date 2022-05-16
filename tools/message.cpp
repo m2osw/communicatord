@@ -17,7 +17,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-// communicator
+// communicatord
 //
 #include    <communicatord/communicatord.h>
 #include    <communicatord/version.h>
@@ -472,15 +472,15 @@ public:
         // that the communicator listens on
         //
         // the type is 100% defined by the address which is expected to
-        // include a protocol, when no protocol is defined, "sc:" is used
+        // include a protocol, when no protocol is defined, "cd:" is used
         // as the default.
         //
-        //     sc://<ip>:<port> -- a plain TCP connection
-        //     sc:///run/communicatod/stream.sock -- a plain local stream connection (Unix)
-        //     scs://<ip>:<port> -- a secure TCP connection
-        //     scu://<ip>:<port> -- a plain UDP connection
-        //     scu:///run/communicatord/datagram.sock -- a plain local datagram connection (Unix)
-        //     scb://<ip>:<port> -- a broadcasting UDP connection
+        //     cd://<ip>:<port> -- a plain TCP connection
+        //     cd:///run/communicatod/stream.sock -- a plain local stream connection (Unix)
+        //     cds://<ip>:<port> -- a secure TCP connection
+        //     cdu://<ip>:<port> -- a plain UDP connection
+        //     cdu:///run/communicatord/datagram.sock -- a plain local datagram connection (Unix)
+        //     cdb://<ip>:<port> -- a broadcasting UDP connection
         //
         try
         {
@@ -523,7 +523,7 @@ public:
                 addr::addr const a(addr::string_to_addr(
                           f_uri.domain()
                         , "127.0.0.1"
-                        , sc::LOCAL_PORT
+                        , communicatord::LOCAL_PORT
                         , "tcp"));
                 switch(a.get_network_type())
                 {
@@ -559,7 +559,7 @@ public:
             addr::addr const a(addr::string_to_addr(
                       address
                     , "127.0.0.1"
-                    , sc::SECURE_PORT
+                    , communicatord::SECURE_PORT
                     , "tcp"));
             switch(a.get_network_type())
             {
@@ -597,7 +597,7 @@ public:
                 addr::addr a(addr::string_to_addr(
                           address
                         , "127.0.0.1"
-                        , sc::UDP_PORT
+                        , communicatord::UDP_PORT
                         , "udp"));
                 switch(a.get_network_type())
                 {
@@ -631,7 +631,7 @@ public:
             addr::addr const a(addr::string_to_addr(
                       address
                     , "127.0.0.1"
-                    , sc::UDP_PORT
+                    , communicatord::UDP_PORT
                     , "udp"));
             switch(a.get_network_type())
             {
@@ -671,7 +671,7 @@ public:
         {
             std::cerr << "error: unknown protocol '"
                 << protocol
-                << ":'; expected 'sc:', 'scs:', 'scu:', or 'scb:'." << std::endl;
+                << ":'; expected 'cd:', 'cds:', 'cdu:', or 'cdb:'." << std::endl;
             return false;
         }
 

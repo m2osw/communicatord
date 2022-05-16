@@ -32,7 +32,7 @@
 #define    COMMUNICATORD_VERSION_PATCH   @COMMUNICATORD_VERSION_PATCH@
 #define    COMMUNICATORD_VERSION_STRING  "@COMMUNICATORD_VERSION_MAJOR@.@COMMUNICATORD_VERSION_MINOR@.@COMMUNICATORD_VERSION_PATCH@"
 
-namespace sc
+namespace communicatord
 {
 
 
@@ -44,5 +44,5 @@ char const *    get_version_string();
 
 
 
-} // namespace sc
+} // namespace communicatord
 // vim: ts=4 sw=4 et

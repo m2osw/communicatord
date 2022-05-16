@@ -60,7 +60,7 @@
 
 
 
-namespace sc
+namespace communicatord
 {
 
 
@@ -350,5 +350,5 @@ std::string get_loadavg_path()
 
 
 
-} // namespace sc
+} // namespace communicatord
 // vim: ts=4 sw=4 et

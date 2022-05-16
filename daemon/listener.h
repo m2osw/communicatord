@@ -36,7 +36,7 @@
 
 
 
-namespace scd
+namespace communicator_daemon
 {
 
 
@@ -63,5 +63,5 @@ private:
 };
 
 
-} // namespace scd
+} // namespace communicator_daemon
 // vim: ts=4 sw=4 et

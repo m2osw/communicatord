@@ -48,7 +48,7 @@
 
 
 
-namespace scd
+namespace communicator_daemon
 {
 
 
@@ -245,5 +245,5 @@ void gossip_connection::process_connected()
 
 
 
-} // namespace scd
+} // namespace communicator_daemon
 // vim: ts=4 sw=4 et

@@ -54,7 +54,7 @@ int main(int argc, char * argv[])
 
     try
     {
-        scd::server::pointer_t server(std::make_shared<scd::server>(argc, argv));
+        communicator_daemon::server::pointer_t server(std::make_shared<communicator_daemon::server>(argc, argv));
         return server->run();
     }
     catch(advgetopt::getopt_exit const & e)

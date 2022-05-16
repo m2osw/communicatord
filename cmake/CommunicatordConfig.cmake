@@ -1,11 +1,11 @@
-# - Try to find Sitter
+# - Try to find communicatord
 #
 # Once done this will define
 #
-# COMMUNICATORD_FOUND        - System has Sitter
-# COMMUNICATORD_INCLUDE_DIRS - The Sitter include directories
-# COMMUNICATORD_LIBRARIES    - The libraries needed to use Sitter
-# COMMUNICATORD_DEFINITIONS  - Compiler switches required for using Sitter
+# COMMUNICATORD_FOUND        - System has Communicator Daemon library
+# COMMUNICATORD_INCLUDE_DIRS - The Communicator Daemon library include directories
+# COMMUNICATORD_LIBRARIES    - The libraries needed to use the Communicator Daemon library
+# COMMUNICATORD_DEFINITIONS  - Compiler switches required for using Communicator Daemon library
 #
 # License:
 #

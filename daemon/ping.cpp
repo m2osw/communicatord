@@ -27,7 +27,7 @@
 
 
 
-namespace scd
+namespace communicator_daemon
 {
 
 
@@ -70,5 +70,5 @@ void ping::process_message(ed::message & msg)
 
 
 
-} // namespace scd
+} // namespace communicator_daemon
 // vim: ts=4 sw=4 et

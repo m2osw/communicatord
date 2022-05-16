@@ -37,10 +37,10 @@ CATCH_TEST_CASE("Version", "[version]")
 {
     CATCH_START_SECTION("verify runtime vs compile time communicator version numbers")
     {
-        CATCH_REQUIRE(sc::get_major_version()   == COMMUNICATORD_VERSION_MAJOR);
-        CATCH_REQUIRE(sc::get_release_version() == COMMUNICATORD_VERSION_MINOR);
-        CATCH_REQUIRE(sc::get_patch_version()   == COMMUNICATORD_VERSION_PATCH);
-        CATCH_REQUIRE(strcmp(sc::get_version_string(), COMMUNICATORD_VERSION_STRING) == 0);
+        CATCH_REQUIRE(communicatord::get_major_version()   == COMMUNICATORD_VERSION_MAJOR);
+        CATCH_REQUIRE(communicatord::get_release_version() == COMMUNICATORD_VERSION_MINOR);
+        CATCH_REQUIRE(communicatord::get_patch_version()   == COMMUNICATORD_VERSION_PATCH);
+        CATCH_REQUIRE(strcmp(communicatord::get_version_string(), COMMUNICATORD_VERSION_STRING) == 0);
     }
     CATCH_END_SECTION()
 }

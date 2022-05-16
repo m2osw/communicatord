@@ -71,7 +71,7 @@
 
 
 
-namespace scd
+namespace communicator_daemon
 {
 
 
@@ -486,17 +486,17 @@ bool base_connection::send_message_to_connection(ed::message & msg, bool cache)
     ed::connection * conn(dynamic_cast<ed::connection *>(this));
     if(conn == nullptr)
     {
-        throw sc::logic_error("somehow a dynamic_cast<ed::connection *> on our base_connection failed.");
+        throw communicatord::logic_error("somehow a dynamic_cast<ed::connection *> on our base_connection failed.");
     }
     ed::connection_with_send_message::pointer_t conn_msg(std::dynamic_pointer_cast<ed::connection_with_send_message>(conn->shared_from_this()));
     if(conn_msg == nullptr)
     {
-        throw sc::logic_error("std::dynamic_pointer_cast<ed::connection_with_send_message>() on our ed::connection failed.");
+        throw communicatord::logic_error("std::dynamic_pointer_cast<ed::connection_with_send_message>() on our ed::connection failed.");
     }
     return conn_msg->send_message(msg, cache);
 }
 
 
 
-} // namespace scd
+} // namespace communicator_daemon
 // vim: ts=4 sw=4 et

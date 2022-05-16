@@ -67,7 +67,7 @@
 
 
 
-namespace scd
+namespace communicator_daemon
 {
 
 
@@ -479,5 +479,5 @@ size_t remote_communicators::count_live_connections() const
 }
 
 
-} // namespace scd
+} // namespace communicator_daemon
 // vim: ts=4 sw=4 et

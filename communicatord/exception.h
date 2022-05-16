@@ -30,7 +30,7 @@
 
 
 
-namespace sc
+namespace communicatord
 {
 
 
@@ -41,6 +41,8 @@ DECLARE_MAIN_EXCEPTION(communicator_error);
 
 DECLARE_EXCEPTION(communicator_error, address_missing);
 DECLARE_EXCEPTION(communicator_error, connection_unavailable);
+DECLARE_EXCEPTION(communicator_error, invalid_name);
+DECLARE_EXCEPTION(communicator_error, invalid_parameter);
 DECLARE_EXCEPTION(communicator_error, missing_message);
 DECLARE_EXCEPTION(communicator_error, missing_name);
 DECLARE_EXCEPTION(communicator_error, path_already_set);
@@ -53,5 +55,5 @@ DECLARE_EXCEPTION(communicator_error, user_missing);
 
 
 
-} // namespace sc
+} // namespace communicatord
 // vim: ts=4 sw=4 et

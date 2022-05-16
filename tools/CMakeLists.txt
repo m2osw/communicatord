@@ -96,4 +96,36 @@ install(
 )
 
 
+#################################################################################
+## Save a raised flag (because permissions may not otherwise allow the save)
+##
+project(saveflag)
+
+add_executable(${PROJECT_NAME}
+    saveflag.cpp
+)
+
+target_include_directories(${PROJECT_NAME}
+    PUBLIC
+        ${ADVGETOPT_INCLUDE_DIRS}
+        ${LIBEXCEPT_INCLUDE_DIRS}
+        ${SNAPLOGGER_INCLUDE_DIRS}
+)
+
+target_link_libraries(${PROJECT_NAME}
+    communicatord
+    ${ADVGETOPT_LIBRARIES}
+    ${LIBEXCEPT_LIBRARIES}
+    ${SNAPLOGGER_LIBRARIES}
+)
+
+install(
+    TARGETS
+        ${PROJECT_NAME}
+
+    RUNTIME DESTINATION
+        bin
+)
+
+
 # vim: ts=4 sw=4 et

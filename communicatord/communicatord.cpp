@@ -47,7 +47,7 @@
 
 
 
-namespace sc
+namespace communicatord
 {
 
 namespace
@@ -176,5 +176,5 @@ void communicator::process_communicator_options()
 
 
 
-} // namespace sc
+} // namespace communicatord
 // vim: ts=4 sw=4 et

@@ -29,14 +29,14 @@
 #include    "remote_connection.h"
 
 
+// communicatord
+//
+#include    <communicatord/flags.h>
+
+
 // libaddr
 //
 #include    <libaddr/exception.h>
-
-
-// sitter
-//
-#include    <sitter/flags.h>
 
 
 // snaplogger
@@ -55,7 +55,7 @@
 
 
 
-namespace scd
+namespace communicator_daemon
 {
 
 
@@ -220,7 +220,7 @@ void remote_connection::process_connection_failed(std::string const & error_mess
               " fails connecting. If not, please remove that IP address"
               " from the list of neighbors AND THE FIREWALL if it is there too.";
 
-        sitter::flag::pointer_t flag(SITTER_FLAG_UP(
+        communicatord::flag::pointer_t flag(COMMUNICATORD_FLAG_UP(
                       "communicatord"
                     , "remote-connection"
                     , "connection-failed"
@@ -253,7 +253,7 @@ void remote_connection::process_connected()
         f_failures = 0;
         f_flagged = false;
 
-        sitter::flag::pointer_t flag(SITTER_FLAG_DOWN(
+        communicatord::flag::pointer_t flag(COMMUNICATORD_FLAG_DOWN(
                            "communicatord"
                          , "remote-connection"
                          , "connection-failed")
@@ -290,5 +290,5 @@ addr::addr const & remote_connection::get_address() const
 
 
 
-} // namespace scd
+} // namespace communicator_daemon
 // vim: ts=4 sw=4 et

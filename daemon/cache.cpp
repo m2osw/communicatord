@@ -50,7 +50,7 @@
 
 
 
-namespace scd
+namespace communicator_daemon
 {
 
 
@@ -196,5 +196,5 @@ void cache::process_messages(std::function<bool(ed::message & msg)> callback)
 
 
 
-} // namespace scd
+} // namespace communicator_daemon
 // vim: ts=4 sw=4 et

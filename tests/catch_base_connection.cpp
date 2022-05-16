@@ -35,10 +35,10 @@
 
 
 class test_connection
-    : public scd::base_connection
+    : public communicator_daemon::base_connection
 {
 public:
-    test_connection(scd::server::pointer_t s)
+    test_connection(communicator_daemon::server::pointer_t s)
         : base_connection(s, false)
     {
     }
@@ -49,7 +49,7 @@ CATCH_TEST_CASE("base_connection", "[connection]")
 {
     CATCH_SECTION("verify object")
     {
-        scd::server::pointer_t s;
+        communicator_daemon::server::pointer_t s;
         test_connection tc(s);
 
         // verify defaults

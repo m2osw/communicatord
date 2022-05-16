@@ -52,7 +52,7 @@
 
 
 
-namespace scd
+namespace communicator_daemon
 {
 
 
@@ -224,5 +224,5 @@ std::string canonicalize_neighbors(std::string const & neighbors)
 }
 
 
-} // namespace scd
+} // namespace communicator_daemon
 // vim: ts=4 sw=4 et

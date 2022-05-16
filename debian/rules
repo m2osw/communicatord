@@ -15,3 +15,8 @@
 override_dh_auto_configure:
 	dh_auto_configure -- -DCMAKE_BUILD_TYPE=Release
 
+override_dh_fixperms:
+	dh_fixperms
+	chmod u+s debian/communicatord/usr/bin/saveflag
+	chown communicatord debian/communicatord/usr/bin/saveflag
+

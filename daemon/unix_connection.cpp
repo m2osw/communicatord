@@ -37,7 +37,7 @@
 
 
 
-namespace scd
+namespace communicator_daemon
 {
 
 
@@ -258,5 +258,5 @@ void unix_connection::properly_named()
 
 
 
-} // namespace scd
+} // namespace communicator_daemon
 // vim: ts=4 sw=4 et

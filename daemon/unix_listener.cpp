@@ -50,7 +50,7 @@
 
 
 
-namespace scd
+namespace communicator_daemon
 {
 
 
@@ -143,5 +143,5 @@ void unix_listener::process_accept()
 
 
 
-} // namespace scd
+} // namespace communicator_daemon
 // vim: ts=4 sw=4 et

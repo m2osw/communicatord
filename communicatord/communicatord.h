@@ -29,16 +29,16 @@
 
 
 
-namespace sc
+namespace communicatord
 {
 
 
 
-constexpr int const     LOCAL_PORT = 4040;      // sc://<loopback-ip>
-constexpr int const     UDP_PORT = 4041;        // scu://<loopback-ip> (any IP is accepted at the moment, but it's expected to be local)
-constexpr int const     REMOTE_PORT = 4042;     // sc://<private-ip>
-constexpr int const     SECURE_PORT = 4043;     // scs://<public-ip>
-constexpr char const *  g_communicator_default_ip_port = "127.0.0.1:4040";
+constexpr int const     LOCAL_PORT = 4040;      // cd://<loopback-ip>
+constexpr int const     UDP_PORT = 4041;        // cdu://<loopback-ip> (any IP is accepted at the moment, but it's expected to be local)
+constexpr int const     REMOTE_PORT = 4042;     // cd://<private-ip>
+constexpr int const     SECURE_PORT = 4043;     // cds://<public-ip>
+constexpr char const *  g_communicatord_default_ip_port = "127.0.0.1:4040";
 
 
 
@@ -57,5 +57,5 @@ private:
 };
 
 
-} // namespace sc
+} // namespace communicatord
 // vim: ts=4 sw=4 et

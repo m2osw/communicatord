@@ -107,7 +107,7 @@ public:
                                 cluster(cluster const & rhs) = delete;
     virtual                     ~cluster() {}
 
-    cluster &               operator = (cluster const & rhs) = delete;
+    cluster &                   operator = (cluster const & rhs) = delete;
 
     int                         run();
 
@@ -205,8 +205,8 @@ advgetopt::options_environment const g_options_environment =
                      "where -<opt> is one or more of:",
     .f_help_footer = "%c",
     .f_version = COMMUNICATORD_VERSION_STRING,
-    .f_license = "GNU GPL v2",
-    .f_copyright = "Copyright (c) "
+    .f_license = "GNU GPL v3",
+    .f_copyright = "Copyright (c) 2011-"
                    BOOST_PP_STRINGIZE(UTC_BUILD_YEAR)
                    " by Made to Order Software Corporation -- All Rights Reserved",
     //.f_build_date = UTC_BUILD_DATE,

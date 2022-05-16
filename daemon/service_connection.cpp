@@ -37,7 +37,7 @@
 
 
 
-namespace scd
+namespace communicator_daemon
 {
 
 
@@ -278,5 +278,5 @@ addr::addr const & service_connection::get_address() const
 
 
 
-} // namespace scd
+} // namespace communicator_daemon
 // vim: ts=4 sw=4 et

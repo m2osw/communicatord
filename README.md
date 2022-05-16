@@ -35,7 +35,7 @@ the controller totally effortlessly.
 
     # Basic idea at the moment...
     class MyService
-        : public sc::communicator("<name>")
+        : public communicatord::communicator("<name>")
     {
         MyService()
             : add_communicator_options(f_opts)
@@ -58,10 +58,10 @@ about the eventdispatcher library to send messages with this library
 extension.
 
     COMMUNICATORD_MESSAGE("COMMAND")
-        << sc::param("name", "value")
+        << communicatord::param("name", "value")
         << ...
-        << sc::cache
-        << sc::...
+        << communicatord::cache
+        << communicatord::...
         << COMMUNICATORD_SEND;
 
 So, something similar to the snaplogger feature, but for messages in the
@@ -102,17 +102,17 @@ the traffic going through the Communicator.
 The Communicator has its own protocol and we can access it using a
 protocol name as follow:
 
-* `sc:` -- basic stream connection
-* `scs:` -- secured stream connection
-* `scu:` -- basic datagram connection
+* `cd:` -- basic stream connection
+* `cds:` -- secured stream connection
+* `cdu:` -- basic datagram connection
 
 The address defines whether we have an IP based connection (TCP/IP or UDP/IP)
-or a Unix based connection (path to a socket). The `scs` protocol cannot
+or a Unix based connection (path to a socket). The `cds` protocol cannot
 be used with a Unix based connection (not available).
 
 Whether the connection is local or remote is defined by the IP address. By
-default, the `scu` is limited to local connections (127.0.0.1). In most cases,
-the `scs` is used between data centers (i.e. within one center, it is assumed
+default, the `cdu` is limited to local connections (127.0.0.1). In most cases,
+the `cds` is used between data centers (i.e. within one center, it is assumed
 that a non-encrypted connection works just fine).
 
 
