@@ -99,15 +99,17 @@ install(
 #################################################################################
 ## Save a raised flag (because permissions may not otherwise allow the save)
 ##
-project(saveflag)
+project(raise-flag)
 
 add_executable(${PROJECT_NAME}
-    saveflag.cpp
+    raise_flag.cpp
 )
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC
         ${ADVGETOPT_INCLUDE_DIRS}
+        ${AS2JS_INCLUDE_DIRS}
+        ${EDHTTP_INCLUDE_DIRS}
         ${LIBEXCEPT_INCLUDE_DIRS}
         ${SNAPLOGGER_INCLUDE_DIRS}
 )
@@ -115,6 +117,8 @@ target_include_directories(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
     communicatord
     ${ADVGETOPT_LIBRARIES}
+    ${AS2JS_LIBRARIES}
+    ${EDHTTP_LIBRARIES}
     ${LIBEXCEPT_LIBRARIES}
     ${SNAPLOGGER_LIBRARIES}
 )

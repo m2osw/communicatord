@@ -1006,7 +1006,7 @@ void flag::valid_name(std::string & name)
  * It is expected that the number of flags is always going to be relatively
  * small. The function make sure that if more than 100 are defined, only
  * the first 100 are read and another is created warning about the large
- * number of available flags.
+ * number of existing flags.
  *
  * \return The vector of flag files read from disk.
  */
