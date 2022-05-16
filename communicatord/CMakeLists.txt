@@ -78,6 +78,9 @@ install(
 install(
     FILES
         communicatord.h
+        exception.h
+        flags.h
+        loadavg.h
         ${CMAKE_CURRENT_BINARY_DIR}/version.h
 
     DESTINATION
