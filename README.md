@@ -82,6 +82,55 @@ Thinking about it, though, it's not really any simpler than:
     msg.add_parameter("name", "value");
     connection.send_message(msg, true);
 
+## Flags
+
+The `communicatord` library inheriated the ability to raise and lower
+flags. In most cases, this is done with simple macros.
+
+First we want to raise a flag:
+
+    COMMUNICATORD_FLAG_UP(
+              "<service>"
+            , "<section>"
+            , "<flag>"
+            , "<description>")
+                ->set_priority(<priority>)
+                .set_manual_down(false)
+                .add_tag("<tag1>")
+                .add_tag("<tag2>")
+                ...
+                .add_tag("<tagN>")
+                .save();
+
+Except for the `save()`, the other parameters are optional. If you prefer,
+you can save the pointer and reuse it for each additional call:
+
+    auto flag(COMMUNICATORD_FLAG_UP(
+              "<service>"
+            , "<section>"
+            , "<flag>"
+            , "<description>"));
+    flag->set_priority(<priority>)
+    flag->set_manual_down(false)
+    flag->add_tag("<tag1>")
+    flag->add_tag("<tag2>")
+    ...
+    flag->add_tag("<tagN>")
+    flag->save();
+
+If possible (i.e. `set_manual_down(false)`, which is the default value),
+you then can take the flag down once the alarm goes off:
+
+    COMMUNICATORD_FLAG_DOWN(
+              "<service>"
+            , "<section>"
+            , "<flag>")
+                ->save();
+
+As above, you could save the pointer and call `save()` on a separate line.
+Note that using the other `set_...()` functions when dropping a flag
+is not necessary (that data will be ignored by the `save()`).
+
 
 # Daemon
 
@@ -105,6 +154,7 @@ protocol name as follow:
 * `cd:` -- basic stream connection
 * `cds:` -- secured stream connection
 * `cdu:` -- basic datagram connection
+* `cdb:` -- broadcast datagram connection (not fully implemented yet)
 
 The address defines whether we have an IP based connection (TCP/IP or UDP/IP)
 or a Unix based connection (path to a socket). The `cds` protocol cannot
