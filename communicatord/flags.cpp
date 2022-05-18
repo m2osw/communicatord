@@ -77,6 +77,27 @@ namespace
 
 
 
+std::string get_path_to_flag_files_internal()
+{
+    std::string path;
+
+    // TODO: fix this load, we need to support a sub-directory
+    //
+    advgetopt::conf_file_setup setup("/etc/communicatord/flags.conf");
+    advgetopt::conf_file::pointer_t server_config(advgetopt::conf_file::get_conf_file(setup));
+    if(server_config->has_parameter("path"))
+    {
+        path = server_config->get_parameter("path");
+    }
+    else
+    {
+        path = "/var/lib/communicatord/flags";
+    }
+
+    return path;
+}
+
+
 /** \brief Get the path where flag files are created.
  *
  * This function returns the path where we expect flag files to be created.
@@ -98,7 +119,7 @@ std::string get_path_to_flag_files()
     {
         // get the path (once unless the directory does not exist)
         //
-        std::string const path(get_path_to_flag_files());
+        std::string const path(get_path_to_flag_files_internal());
 
         // make sure the directory exists
         //
@@ -126,25 +147,6 @@ std::string get_path_to_flag_files()
     }
 
     return g_path_to_flag_files;
-}
-
-
-std::string get_path_to_flag_files_internal()
-{
-    std::string path;
-
-    advgetopt::conf_file_setup setup("/etc/communicatord/flags.conf");
-    advgetopt::conf_file::pointer_t server_config(advgetopt::conf_file::get_conf_file(setup));
-    if(server_config->has_parameter("path"))
-    {
-        path = server_config->get_parameter("path");
-    }
-    else
-    {
-        path = "/var/lib/communicatord/flags";
-    }
-
-    return path;
 }
 
 

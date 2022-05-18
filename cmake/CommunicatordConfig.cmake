@@ -1,6 +1,4 @@
-# - Try to find communicatord
-#
-# Once done this will define
+# - Find Communicator Daemon
 #
 # COMMUNICATORD_FOUND        - System has Communicator Daemon library
 # COMMUNICATORD_INCLUDE_DIRS - The Communicator Daemon library include directories
@@ -32,7 +30,7 @@ find_path(
         communicatord/version.h
 
     PATHS
-        $ENV{COMMUNICATORD_INCLUDE_DIR}
+        ENV COMMUNICATORD_INCLUDE_DIR
 )
 
 find_library(
@@ -40,7 +38,8 @@ find_library(
         communicatord
 
     PATHS
-        $ENV{COMMUNICATORD_LIBRARY}
+        ${COMMUNICATORD_LIBRARY_DIR}
+        ENV COMMUNICATORD_LIBRARY
 )
 
 mark_as_advanced(
@@ -52,14 +51,11 @@ set(COMMUNICATORD_INCLUDE_DIRS ${COMMUNICATORD_INCLUDE_DIR})
 set(COMMUNICATORD_LIBRARIES    ${COMMUNICATORD_LIBRARY})
 
 include(FindPackageHandleStandardArgs)
-
-# handle the QUIETLY and REQUIRED arguments and set COMMUNICATORD_FOUND to
-# TRUE if all listed variables are TRUE
 find_package_handle_standard_args(
     Communicatord
-    DEFAULT_MSG
-    COMMUNICATORD_INCLUDE_DIR
-    COMMUNICATORD_LIBRARY
+    REQUIRED_VARS
+        COMMUNICATORD_INCLUDE_DIR
+        COMMUNICATORD_LIBRARY
 )
 
 # vim: ts=4 sw=4 et

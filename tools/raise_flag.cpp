@@ -77,6 +77,15 @@ namespace
 {
 
 
+constexpr char const * const g_tag_separators[] =
+{
+    " ",
+    ",",
+
+    nullptr
+};
+
+
 advgetopt::option const g_command_line_options[] =
 {
     // COMMANDS
@@ -179,8 +188,10 @@ advgetopt::option const g_command_line_options[] =
         , advgetopt::ShortName(U't')
         , advgetopt::Flags(advgetopt::all_flags<
               advgetopt::GETOPT_FLAG_REQUIRED
+            , advgetopt::GETOPT_FLAG_MULTIPLE
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
         , advgetopt::Help("a comma separated list of tags.")
+        , advgetopt::Separators(g_tag_separators)
     ),
     advgetopt::define_option(
           advgetopt::Name("--")
@@ -228,7 +239,7 @@ advgetopt::options_environment const g_options_environment =
     .f_configuration_filename = nullptr,
     .f_configuration_directories = nullptr,
     .f_environment_flags = advgetopt::GETOPT_ENVIRONMENT_FLAG_PROCESS_SYSTEM_PARAMETERS,
-    .f_help_header = "Usage: %p [-<opt>]\n"
+    .f_help_header = "Usage: %p [-<opt>] [<unit> <section> <flag> [<message>]]\n"
                      "where -<opt> is one or more of:",
     .f_help_footer = "%c",
     .f_version = COMMUNICATORD_VERSION_STRING,
@@ -248,10 +259,10 @@ advgetopt::options_environment const g_options_environment =
 
 
 
-class save_flag
+class raise_flag
 {
 public:
-                                save_flag(int argc, char * argv[]);
+                                raise_flag(int argc, char * argv[]);
 
     int                         save();
 
@@ -271,7 +282,7 @@ private:
 };
 
 
-save_flag::save_flag(int argc, char * argv[])
+raise_flag::raise_flag(int argc, char * argv[])
     : f_opts(g_options_environment)
 {
     snaplogger::add_logger_options(f_opts);
@@ -288,7 +299,7 @@ save_flag::save_flag(int argc, char * argv[])
 }
 
 
-int save_flag::save()
+int raise_flag::save()
 {
     {
         int const count(
@@ -343,7 +354,7 @@ int save_flag::save()
 }
 
 
-int save_flag::down()
+int raise_flag::down()
 {
     if(f_opts.is_defined("automatic")
     || f_opts.is_defined("manual")
@@ -382,7 +393,7 @@ int save_flag::down()
 }
 
 
-int save_flag::up()
+int raise_flag::up()
 {
     int const name_count(f_opts.size("--"));
     if(name_count != 4)
@@ -409,12 +420,12 @@ int save_flag::up()
 }
 
 
-int save_flag::build_flag()
+int raise_flag::build_flag()
 {
     f_flag = std::make_shared<communicatord::flag>(
-          f_opts.get_string(f_opts.get_string("--", 0))    // unit
-        , f_opts.get_string(f_opts.get_string("--", 1))    // section
-        , f_opts.get_string(f_opts.get_string("--", 2)));  // name
+              f_opts.get_string("--", 0)    // unit
+            , f_opts.get_string("--", 1)    // section
+            , f_opts.get_string("--", 2));  // name
 
     if(f_opts.size("--") == 4)
     {
@@ -459,16 +470,10 @@ int save_flag::build_flag()
 
     if(f_opts.is_defined("tags"))
     {
-        std::string const tags(f_opts.get_string("tags"));
-        std::vector<std::string> tag_list;
-        snapdev::tokenize_string(tag_list
-                      , tags
-                      , ","
-                      , true
-                      , " \n\r\t");
-        for(auto const & t : tag_list)
+        std::size_t const max(f_opts.size("tags"));
+        for(std::size_t idx(0); idx < max; ++idx)
         {
-            f_flag->add_tag(t);
+            f_flag->add_tag(f_opts.get_string("tags", idx));
         }
     }
 
@@ -476,7 +481,7 @@ int save_flag::build_flag()
 }
 
 
-int save_flag::switch_user()
+int raise_flag::switch_user()
 {
     std::string const owner(f_opts.get_string("owner"));
     passwd const * pswd(getpwnam(owner.c_str()));
@@ -509,7 +514,7 @@ int save_flag::switch_user()
 
 
 
-int save_flag::count()
+int raise_flag::count()
 {
     communicatord::flag::list_t flags(communicatord::flag::load_flags());
     std::cout << flags.size() << std::endl;
@@ -517,14 +522,14 @@ int save_flag::count()
 }
 
 
-int save_flag::raised()
+int raise_flag::raised()
 {
     communicatord::flag::list_t flags(communicatord::flag::load_flags());
     return flags.empty() ? 0 : 1;
 }
 
 
-int save_flag::list_in_plain_text()
+int raise_flag::list_in_plain_text()
 {
     communicatord::flag::list_t flags(communicatord::flag::load_flags());
 
@@ -642,7 +647,7 @@ int save_flag::list_in_plain_text()
 
 
 
-int save_flag::list_in_json()
+int raise_flag::list_in_json()
 {
     as2js::JSON json;
     as2js::JSON::JSONValueRef root(json["flags"]);
@@ -689,7 +694,7 @@ int main(int argc, char * argv[])
 {
     try
     {
-        save_flag sf(argc, argv);
+        raise_flag sf(argc, argv);
         return sf.save();
     }
     catch(advgetopt::getopt_exit const & e)
