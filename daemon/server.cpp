@@ -94,13 +94,13 @@
 #include    <boost/preprocessor/stringize.hpp>
 
 
-// C++ lib
+// C++
 //
 #include    <cmath>
 #include    <thread>
 
 
-// C lib
+// C
 //
 #include    <grp.h>
 #include    <pwd.h>
