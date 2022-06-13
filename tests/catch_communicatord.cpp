@@ -16,31 +16,37 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+/** \file
+ * \brief Verify some of the communicatord client implementation.
+ *
+ * This test file implements verifications of the communicatord client
+ * class.
+ */
+
+// communicatord
+//
+#include    <communicatord/communicatord.h>
+
+
 // self
 //
 #include    "catch_main.h"
 
 
-// communicator
-//
-#include    <communicatord/version.h>
-
-
-// last include
-//
-#include    <snapdev/poison.h>
 
 
 
-
-CATCH_TEST_CASE("Version", "[version]")
+CATCH_TEST_CASE("communicatord", "[client]")
 {
-    CATCH_START_SECTION("version: verify runtime vs compile time communicator version numbers")
+    CATCH_START_SECTION("communicatord: verify default strings")
     {
-        CATCH_REQUIRE(communicatord::get_major_version()   == COMMUNICATORD_VERSION_MAJOR);
-        CATCH_REQUIRE(communicatord::get_release_version() == COMMUNICATORD_VERSION_MINOR);
-        CATCH_REQUIRE(communicatord::get_patch_version()   == COMMUNICATORD_VERSION_PATCH);
-        CATCH_REQUIRE(strcmp(communicatord::get_version_string(), COMMUNICATORD_VERSION_STRING) == 0);
+        std::stringstream port_str;
+        port_str << communicatord::LOCAL_PORT;
+        CATCH_REQUIRE(port_str.str() == std::string(communicatord::g_communicatord_default_port));
+
+        std::stringstream ip_port;
+        ip_port << communicatord::g_communicatord_default_ip << ":" << communicatord::LOCAL_PORT;
+        CATCH_REQUIRE(ip_port.str() == std::string(communicatord::g_communicatord_default_ip_port));
     }
     CATCH_END_SECTION()
 }

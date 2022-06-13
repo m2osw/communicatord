@@ -91,7 +91,7 @@ unix_listener::unix_listener(
         , addr::unix const & address
         , int max_connections
         , std::string const & server_name)
-    : local_stream_server_connection(address, max_connections, true)
+    : local_stream_server_connection(address, max_connections, true, true)
     , f_server(cs)
     , f_server_name(server_name)
 {

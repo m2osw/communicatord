@@ -44,6 +44,8 @@ class listener
     : public ed::tcp_server_connection
 {
 public:
+    typedef std::shared_ptr<listener>       pointer_t;
+
                         listener(
                               server::pointer_t cs
                             , addr::addr const & addr
@@ -56,10 +58,17 @@ public:
     // ed::tcp_server_connection
     virtual void        process_accept() override;
 
+    void                set_username(std::string const & username);
+    std::string         get_username() const;
+    void                set_password(std::string const & password);
+    std::string         get_password() const;
+
 private:
     server::pointer_t   f_server = server::pointer_t();
     bool const          f_local = false;
     std::string const   f_server_name;
+    std::string         f_username = std::string();
+    std::string         f_password = std::string();
 };
 
 

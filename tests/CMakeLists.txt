@@ -29,6 +29,7 @@ if(SnapCatch2_FOUND)
         catch_main.cpp
 
         catch_base_connection.cpp
+        catch_communicatord.cpp
         catch_version.cpp
     )
 

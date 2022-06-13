@@ -90,30 +90,31 @@ addr::addr const & remote_communicators::get_my_address() const
 
 void remote_communicators::add_remote_communicator(std::string const & addr_port)
 {
-    SNAP_LOG_DEBUG
-        << "adding remote communicator at "
-        << addr_port
-        << SNAP_LOG_SEND;
-
     // no default address for neighbors
     //
     addr::addr remote_addr(
             addr::string_to_addr(addr_port, std::string(), 4040, "tcp"));
 
+    add_remote_communicator(remote_addr);
+}
+
+
+void remote_communicators::add_remote_communicator(addr::addr const & remote_addr)
+{
+    std::string const addr_str(remote_addr.to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_PORT));
+
+    SNAP_LOG_DEBUG
+        << "adding remote communicator at "
+        << addr_str
+        << SNAP_LOG_SEND;
+
     if(remote_addr == f_my_address)
     {
-        // TBD: this may be normal (i.e. neighbors should send us our IP
-        //      right back to us!)
+        // this is normal: neighbors send us our IP right back to us
+        // we also register ourself
         //
-        SNAP_LOG_WARNING
-            << "address of remote communicatord, \""
-            << addr_port
-            << "\", is the same as my address, which means it is not remote."
-            << SNAP_LOG_SEND;
         return;
     }
-
-    std::string const addr(remote_addr.to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_PORT));
 
     // was this address already added
     //
@@ -160,7 +161,7 @@ void remote_communicators::add_remote_communicator(std::string const & addr_port
             //
             SNAP_LOG_DEBUG
                 << "new remote connection "
-                << addr_port
+                << addr_str
                 << " has a larger address than us. This is a GOSSIP channel."
                 << SNAP_LOG_SEND;
         }
@@ -182,7 +183,7 @@ void remote_communicators::add_remote_communicator(std::string const & addr_port
         //
         remote_connection::pointer_t remote_conn(std::make_shared<remote_connection>(f_server, remote_addr, false));
         f_smaller_ips[remote_addr] = remote_conn;
-        remote_conn->set_name("remote communicator connection: " + addr);
+        remote_conn->set_name("remote communicator connection: " + addr_str);
 
         // make sure not to try to connect to all remote communicators
         // all at once
@@ -207,7 +208,7 @@ void remote_communicators::add_remote_communicator(std::string const & addr_port
             //
             SNAP_LOG_ERROR
                 << "new remote connection to "
-                << addr_port
+                << addr_str
                 << " could not be added to the ed::communicator list of connections"
                 << SNAP_LOG_SEND;
 
@@ -221,7 +222,7 @@ void remote_communicators::add_remote_communicator(std::string const & addr_port
         {
             SNAP_LOG_DEBUG
                 << "new remote connection added for "
-                << addr_port
+                << addr_str
                 << SNAP_LOG_SEND;
         }
     }
@@ -237,7 +238,7 @@ void remote_communicators::add_remote_communicator(std::string const & addr_port
         f_gossip_ips[remote_addr] = std::make_shared<gossip_connection>(
                                       shared_from_this()
                                     , remote_addr);
-        f_gossip_ips[remote_addr]->set_name("gossip to remote communicator: " + addr);
+        f_gossip_ips[remote_addr]->set_name("gossip to remote communicator: " + addr_str);
 
         if(!ed::communicator::instance()->add_connection(f_gossip_ips[remote_addr]))
         {
@@ -246,7 +247,7 @@ void remote_communicators::add_remote_communicator(std::string const & addr_port
             //
             SNAP_LOG_ERROR
                 << "new gossip connection to "
-                << addr_port
+                << addr_str
                 << " could not be added to the ed::communicator list of connections."
                 << SNAP_LOG_SEND;
 
@@ -260,7 +261,7 @@ void remote_communicators::add_remote_communicator(std::string const & addr_port
         {
             SNAP_LOG_DEBUG
                 << "new gossip connection added for "
-                << addr_port
+                << addr_str
                 << SNAP_LOG_SEND;
         }
     }

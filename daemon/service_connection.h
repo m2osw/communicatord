@@ -64,6 +64,7 @@ public:
     virtual void        process_invalid() override;
     void                properly_named();
     addr::addr const &  get_address() const;
+    void                block_ip();
 
 private:
     std::string const   f_server_name;

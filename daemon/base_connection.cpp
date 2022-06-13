@@ -57,17 +57,17 @@
 
 // communicatord
 //
-#include <communicatord/exception.h>
+#include    <communicatord/exception.h>
 
 
-// snapdev lib
+// snapdev
 //
-#include <snapdev/tokenize_string.h>
+#include    <snapdev/tokenize_string.h>
 
 
 // included last
 //
-#include <snapdev/poison.h>
+#include    <snapdev/poison.h>
 
 
 
@@ -255,6 +255,46 @@ void base_connection::set_connection_type(connection_type_t type)
 connection_type_t base_connection::get_connection_type() const
 {
     return f_type;
+}
+
+
+/** \brief Set the username required to connect on this TCP connection.
+ *
+ * When accepting connections from remote communicatord, it is best to
+ * assign a user name and password to that connection. This protects
+ * your connection from hackers without such credentials.
+ *
+ * \param[in] username  The name of the user that can connect to this listener.
+ */
+void base_connection::set_username(std::string const & username)
+{
+    f_username = username;
+}
+
+
+/** \brief Retrieve the user name of this connection.
+ *
+ */
+std::string base_connection::get_username() const
+{
+    return f_username;
+}
+
+
+void base_connection::set_password(std::string const & password)
+{
+    f_password = password;
+}
+
+
+/** \brief Return the password assigned to this connection.
+ *
+ * Each listener may include a password to prevent unwanted connections
+ * from hackers on public facing connections.
+ */
+std::string base_connection::get_password() const
+{
+    return f_password;
 }
 
 

@@ -98,7 +98,7 @@ listener::listener(
             , private_key
             , (certificate.empty() || private_key.empty()
                 ? ed::mode_t::MODE_PLAIN
-                : ed::mode_t::MODE_SECURE)
+                : ed::mode_t::MODE_ALWAYS_SECURE)
             , max_connections
             , true)
     , f_server(cs)
@@ -132,12 +132,10 @@ void listener::process_accept()
                 , new_client
                 , f_server_name));
 
+    service->set_username(f_username);
+    service->set_password(f_password);
+
     // TBD: is that a really weak test?
-    //
-    //QString const addr(service->get_remote_address());
-    // the get_remote_address() function may return an IP and a port so
-    // parse that to remove the port; also remote_addr() has a function
-    // that tells us whether the IP is private, local, or public
     //
     addr::addr const remote_addr(service->get_remote_address());
     addr::addr::network_type_t const network_type(remote_addr.get_network_type());
@@ -203,6 +201,46 @@ void listener::process_accept()
             << "new client connection could not be added to the ed::communicator list of connections."
             << SNAP_LOG_SEND;
     }
+}
+
+
+/** \brief Set the username required to connect on this TCP connection.
+ *
+ * When accepting connections from remote communicatord, it is best to
+ * assign a user name and password to that connection. This protects
+ * your connection from hackers without such credentials.
+ *
+ * \param[in] username  The name of the user that can connect to this listener.
+ */
+void listener::set_username(std::string const & username)
+{
+    f_username = username;
+}
+
+
+/** \brief Retrieve the user name of this connection.
+ *
+ */
+std::string listener::get_username() const
+{
+    return f_username;
+}
+
+
+void listener::set_password(std::string const & password)
+{
+    f_password = password;
+}
+
+
+/** \brief Return the password assigned to this connection.
+ *
+ * Each listener may include a password to prevent unwanted connections
+ * from hackers on public facing connections.
+ */
+std::string listener::get_password() const
+{
+    return f_password;
 }
 
 

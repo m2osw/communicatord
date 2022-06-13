@@ -163,7 +163,7 @@ be used with a Unix based connection (not available).
 Whether the connection is local or remote is defined by the IP address. By
 default, the `cdu` is limited to local connections (127.0.0.1). In most cases,
 the `cds` is used between data centers (i.e. within one center, it is assumed
-that a non-encrypted connection works just fine).
+that a non-encrypted connection is secure, using a LAN).
 
 
 # License

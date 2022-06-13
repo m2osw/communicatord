@@ -51,6 +51,7 @@
 int main(int argc, char * argv[])
 {
     ed::signal_handler::create_instance();
+    libexcept::set_collect_stack(libexcept::collect_stack_t::COLLECT_STACK_YES);
 
     try
     {

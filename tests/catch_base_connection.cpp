@@ -47,7 +47,7 @@ public:
 
 CATCH_TEST_CASE("base_connection", "[connection]")
 {
-    CATCH_SECTION("verify object")
+    CATCH_START_SECTION("base_connection: verify default object")
     {
         communicator_daemon::server::pointer_t s;
         test_connection tc(s);
@@ -58,6 +58,7 @@ CATCH_TEST_CASE("base_connection", "[connection]")
         CATCH_REQUIRE(tc.get_connection_ended() == -1);
         CATCH_REQUIRE(tc.get_server_name().empty());
     }
+    CATCH_END_SECTION()
 }
 
 

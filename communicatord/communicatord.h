@@ -28,17 +28,32 @@
 #include    <eventdispatcher/connection.h>
 
 
+// snapdev
+//
+#include    <snapdev/join_strings.h>
+#include    <snapdev/to_string_literal.h>
+
+
+// C++
+//
+#include    <string_view>
+
 
 namespace communicatord
 {
 
 
 
-constexpr int const     LOCAL_PORT = 4040;      // cd://<loopback-ip>
-constexpr int const     UDP_PORT = 4041;        // cdu://<loopback-ip> (any IP is accepted at the moment, but it's expected to be local)
-constexpr int const     REMOTE_PORT = 4042;     // cd://<private-ip>
-constexpr int const     SECURE_PORT = 4043;     // cds://<public-ip>
-constexpr char const *  g_communicatord_default_ip_port = "127.0.0.1:4040";
+constexpr int const         LOCAL_PORT = 4040;      // cd://<loopback-ip>
+constexpr int const         UDP_PORT = 4041;        // cdu://<loopback-ip> (any IP is accepted at the moment, but it's expected to be local)
+constexpr int const         REMOTE_PORT = 4042;     // cd://<private-ip>
+constexpr int const         SECURE_PORT = 4043;     // cds://<public-ip>
+constexpr std::string_view  g_communicatord_default_ip = "127.0.0.1";
+constexpr std::string_view  g_communicatord_any_ip = "0.0.0.0";
+constexpr std::string_view  g_communicatord_default_port = snapdev::to_string_literal<LOCAL_PORT>.data();
+constexpr std::string_view  g_communicatord_colon = ":";
+constexpr std::string_view  g_communicatord_default_ip_port = snapdev::join_string_views<g_communicatord_default_ip, g_communicatord_colon, g_communicatord_default_port>;
+constexpr std::string_view  g_communicatord_any_ip_port = snapdev::join_string_views<g_communicatord_any_ip, g_communicatord_colon, g_communicatord_default_port>;
 
 
 

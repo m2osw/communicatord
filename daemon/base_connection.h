@@ -73,6 +73,10 @@ public:
     addr::addr                  get_my_address() const;
     void                        set_connection_type(connection_type_t type);
     connection_type_t           get_connection_type() const;
+    void                        set_username(std::string const & username);
+    std::string                 get_username() const;
+    void                        set_password(std::string const & password);
+    std::string                 get_password() const;
     void                        set_services(std::string const & services);
     void                        get_services(sorted_list_of_strings_t & services);
     bool                        has_service(std::string const & name);
@@ -103,6 +107,8 @@ private:
     addr::addr                  f_my_address = addr::addr();
     sorted_list_of_strings_t    f_services = sorted_list_of_strings_t();
     sorted_list_of_strings_t    f_services_heard_of = sorted_list_of_strings_t();
+    std::string                 f_username = std::string();
+    std::string                 f_password = std::string();
     bool                        f_remote_connection = false;
     bool                        f_wants_loadavg = false;
     bool                        f_is_udp = false;

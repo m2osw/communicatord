@@ -168,7 +168,7 @@ private:
     std::string                     f_services_heard_of = std::string();
     sorted_list_of_strings_t        f_services_heard_of_list = sorted_list_of_strings_t();
     std::string                     f_explicit_neighbors = std::string();
-    sorted_list_of_strings_t        f_all_neighbors = sorted_list_of_strings_t();
+    addr::addr::set_t               f_all_neighbors = addr::addr::set_t();
     sorted_list_of_strings_t        f_registered_neighbors_for_loadavg = sorted_list_of_strings_t();
     std::shared_ptr<remote_communicators>
                                     f_remote_communicators = std::shared_ptr<remote_communicators>();

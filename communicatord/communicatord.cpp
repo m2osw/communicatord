@@ -81,20 +81,9 @@ advgetopt::option const g_options[] =
             , advgetopt::GETOPT_FLAG_ENVIRONMENT_VARIABLE
             , advgetopt::GETOPT_FLAG_CONFIGURATION_FILE
             , advgetopt::GETOPT_FLAG_REQUIRED>())
-        , advgetopt::EnvironmentVariableName("COMMUNICATORD_LISTEN")
-        , advgetopt::DefaultValue("unix:///run/communicatord/communicatord.socket")
-        , advgetopt::Help("define the connection type as a protocol (tcp, ssl, unix, udp) along an <address:port>.")
-    ),
-    advgetopt::define_option(
-          advgetopt::Name("communicator-secret")
-        , advgetopt::Flags(advgetopt::all_flags<
-              advgetopt::GETOPT_FLAG_GROUP_OPTIONS
-            , advgetopt::GETOPT_FLAG_COMMAND_LINE
-            , advgetopt::GETOPT_FLAG_ENVIRONMENT_VARIABLE
-            , advgetopt::GETOPT_FLAG_CONFIGURATION_FILE
-            , advgetopt::GETOPT_FLAG_REQUIRED>())
-        , advgetopt::EnvironmentVariableName("COMMUNICATORD_SECRET")
-        , advgetopt::Help("the <login:password> to connect from a remote computer (i.e. a computer with an IP address other than this one or a local network IP).")
+        , advgetopt::EnvironmentVariableName("COMMUNICATOR_LISTEN")
+        , advgetopt::DefaultValue("cd:///run/communicatord/communicatord.socket")
+        , advgetopt::Help("define the connection type as a protocol (cd, cdu, cds, cdb) along an <address:port> or </socket/path>.")
     ),
 
     // END
@@ -105,12 +94,31 @@ advgetopt::option const g_options[] =
 } // no name namespace
 
 
+/** \brief Initialize the communicator extension.
+ *
+ * The constructor initializes the communicator extension by saving a
+ * reference to the command line option object. This is used in a few
+ * other functions as required to determine the value of options used
+ * by this object.
+ *
+ * See the g_options array for a list of the supported options.
+ *
+ * \param[in] opts  An reference to an advgetopt::getopt object.
+ */
 communicator::communicator(advgetopt::getopt & opts)
     : f_opts(opts)
 {
 }
 
 
+/** \brief Add the command line option of communicator extension.
+ *
+ * The communicator extension allows for your service to connect to
+ * the communicator daemon without effort on your part. This is done
+ * by first adding the communicator available options (i.e. this very
+ * function) then by processing the options by calling the
+ * process_communicator_options().
+ */
 void communicator::add_communicator_options()
 {
     // add options
@@ -119,38 +127,40 @@ void communicator::add_communicator_options()
 }
 
 
-/** \brief Call this function after you finalized option processing.
+/** \brief Call this function after you finalized your own option processing.
  *
  * This function acts on the communicator various command line options.
- * Assuming the command line options were valid, this function will
- * open a connection to the specified communicator.
+ * Assuming the command line options were valid, this function opens a
+ * connection to the specified communicator daemon.
  *
  * Once you are ready to quit your process, make sure to call the
- * disconnect_communicator_messenger() function to remove this
- * connection from ed::communicator. Not doing so would block the
- * communicator since it would continue to listen for messages on this
- * channel.
+ * disconnect_communicator_messenger() function to send a last message
+ * to the communicator daemon and remove this connection from list of
+ * connections managed by ed::communicator. Not doing so would block
+ * your service since it would continue to listen for messages on this
+ * connection forever.
  */
 void communicator::process_communicator_options()
 {
     // extract the protocol and segments
     //
-    edhttp::uri u(f_opts.get_string("communicator-listen"));
+    edhttp::uri u;
+    u.set_uri(f_opts.get_string("communicator-listen"), true, true);
 
     // unix is a special case since the URI is a path to a file
     // so we have to handle it in a special way
     //
-    if(u.protocol() == "unix")
+    if(u.is_unix())
     {
-        addr::unix address(u.path(false));
+        addr::unix const address(u.path(false));
         f_communicator_connection = std::make_shared<ed::local_stream_client_permanent_message_connection>(address);
     }
     else
     {
         addr::addr const address(addr::string_to_addr(
-              u.full_domain() + ':' + std::to_string(u.get_port())
+              u.full_domain() + ':' + u.get_str_port()
             , "127.0.0.1"
-            , 4040
+            , LOCAL_PORT
             , "tcp"));
         f_communicator_connection = std::make_shared<ed::tcp_client_permanent_message_connection>(address);
     }

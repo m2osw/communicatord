@@ -30,15 +30,20 @@
 
 
 
+// communicatord
+//
+#include    <communicatord/communicatord.h>
+
+
 // snapdev
 //
-#include <snapdev/join_strings.h>
-#include <snapdev/tokenize_string.h>
+#include    <snapdev/join_strings.h>
+#include    <snapdev/tokenize_string.h>
 
 
-// libaddr lib
+// libaddr
 //
-#include <libaddr/addr_parser.h>
+#include    <libaddr/addr_parser.h>
 
 
 // snaplogger
@@ -181,6 +186,12 @@ std::string canonicalize_server_types(std::string const & server_types)
  * function also accepts spaces and the canonicalization replaces those
  * spaces with commas.
  *
+ * \todo
+ * Since this function is used right before converting the result
+ * back to a set of addresses, it would be faster to do the conversion
+ * just once. Some other function would need to be converted to use
+ * a vector of addresses instead of a string.
+ *
  * \param[in] neighbors  The comma separated list of IP:port addresses.
  *
  * \return The canonicalized list of IP:port addresses.
@@ -191,7 +202,7 @@ std::string canonicalize_neighbors(std::string const & neighbors)
     p.set_allow(addr::allow_t::ALLOW_REQUIRED_ADDRESS, true);
     p.set_allow(addr::allow_t::ALLOW_MULTI_ADDRESSES_COMMAS, true);
     p.set_allow(addr::allow_t::ALLOW_MULTI_ADDRESSES_SPACES, true);
-    p.set_default_port(4040);
+    p.set_default_port(communicatord::REMOTE_PORT);
     p.set_protocol("tcp");
     addr::addr_range::vector_t list(p.parse(neighbors));
 
@@ -207,7 +218,9 @@ std::string canonicalize_neighbors(std::string const & neighbors)
             //
             SNAP_LOG_ERROR
                 << "invalid neighbor address \""
-                << "TBD" // 'a' is an addr now
+                << a.get_from()
+                << '-'
+                << a.get_to()
                 << "\", we could not convert it to a valid IP:port."
                 << SNAP_LOG_SEND;
             continue;
@@ -217,7 +230,7 @@ std::string canonicalize_neighbors(std::string const & neighbors)
         {
             result += ',';
         }
-        result += a.get_from().to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_ALL);
+        result += a.get_from().to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_PORT);
     }
 
     return result;

@@ -62,6 +62,7 @@ public:
 
     addr::addr const &                      get_my_address() const;
     void                                    add_remote_communicator(std::string const & addr_port);
+    void                                    add_remote_communicator(addr::addr const & address);
     void                                    stop_gossiping();
     void                                    too_busy(addr::addr const & address);
     void                                    shutting_down(addr::addr const & address);

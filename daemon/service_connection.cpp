@@ -42,6 +42,20 @@ namespace communicator_daemon
 
 
 
+namespace
+{
+
+struct hits_t
+{
+    int         f_count = 1;
+    time_t      f_last_hit = time(nullptr);
+};
+
+std::map<addr::addr, hits_t>    g_blocked_ips = {};
+
+} // no name namespace
+
+
 /** \class service_connection
  * \brief Listen for messages.
  *
@@ -276,6 +290,67 @@ addr::addr const & service_connection::get_address() const
     return f_address;
 }
 
+
+/** \brief Mark the IP address of this connection as blocked.
+ *
+ * This function marks that IP address as blocked.
+ *
+ * The first 2 times, it just registers the IP. If the IP is still marked
+ * as blocked the 3 time (i.e. it eventually times out), then it blocks
+ * the IP completely by sending a message to the firewall.
+ *
+ * \todo
+ * Move the elapsed time limit (15 min. for now) to the configuration.
+ *
+ * \todo
+ * Move the limit of hits (3 for now) to the configuration.
+ *
+ * \todo
+ * Added a timeout timer so we can check old entries and remove them from
+ * memory. Otherwise we could end up filling up memory (albeit after quite
+ * a long time, but that's a potential issue).
+ */
+void service_connection::block_ip()
+{
+    addr::addr a(get_remote_address());
+    a.set_port(0); // ignore the port in this case
+    auto it(g_blocked_ips.find(a));
+    int r(1);
+    if(it == g_blocked_ips.end())
+    {
+        g_blocked_ips[a] = hits_t();
+    }
+    else
+    {
+        time_t const now(time(nullptr));
+        if(it->second.f_last_hit + 60 * 15 < now)
+        {
+            // reset counter back to 1 and date to "now"
+            //
+            it->second.f_count = 1;
+        }
+        else
+        {
+            ++it->second.f_count;
+            r = it->second.f_count;
+        }
+        it->second.f_last_hit = now;
+    }
+
+    // TODO: make "3" a config parameter
+    //
+    if(r >= 3)
+    {
+        ed::message block;
+        block.set_command("BLOCK");
+        block.set_service("*");
+        block.add_parameter("uri", a.to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_BRACKETS));
+        block.add_parameter("period", "1h");
+        block.add_parameter("profile", "system-login-attempts");
+        block.add_parameter("reason", "Three or more attempts at connecting to communicator daemon with the wrong credentials");
+        f_server->broadcast_message(block);
+    }
+}
 
 
 } // namespace communicator_daemon
