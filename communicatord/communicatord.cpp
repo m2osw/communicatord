@@ -33,6 +33,7 @@
 #include    <eventdispatcher/communicator.h>
 #include    <eventdispatcher/local_stream_client_permanent_message_connection.h>
 #include    <eventdispatcher/tcp_client_permanent_message_connection.h>
+#include    <eventdispatcher/udp_server_message_connection.h>
 
 
 // libaddr
@@ -147,22 +148,126 @@ void communicator::process_communicator_options()
     edhttp::uri u;
     u.set_uri(f_opts.get_string("communicator-listen"), true, true);
 
+    std::string const protocol(u.protocol());
+
     // unix is a special case since the URI is a path to a file
     // so we have to handle it in a special way
     //
     if(u.is_unix())
     {
+        if(protocol != "cd")
+        {
+            SNAP_LOG_FATAL
+                << "a Unix socket connection only works with the \"cd:\" protocol."
+                << SNAP_LOG_SEND;
+            throw connection_unavailable("a Unix socket connection only works with the \"cd:\" protocol.");
+        }
         addr::unix const address(u.path(false));
         f_communicator_connection = std::make_shared<ed::local_stream_client_permanent_message_connection>(address);
     }
     else
     {
-        addr::addr const address(addr::string_to_addr(
-              u.full_domain() + ':' + u.get_str_port()
-            , "127.0.0.1"
-            , LOCAL_PORT
-            , "tcp"));
-        f_communicator_connection = std::make_shared<ed::tcp_client_permanent_message_connection>(address);
+        addr::addr_range::vector_t const & ranges(u.address_ranges());
+        if(ranges.size() <= 0)
+        {
+            // I don't think this is possible
+            //
+            SNAP_LOG_FATAL
+                << "the communicatord requires at least one address to work."
+                << SNAP_LOG_SEND;
+            throw connection_unavailable("the \"cdb:\" protocol is not yet supported.");
+        }
+
+        if(protocol == "cd")
+        {
+            for(auto const & r : ranges)
+            {
+                if((r.has_from() && !r.get_from().is_lan())
+                || (r.has_to()   && !r.get_to().is_lan()))
+                {
+                    SNAP_LOG_FATAL
+                        << "the \"cd:\" protocol requires a LAN address. For public addresses, please use \"cds:\" instead. "
+                        << (r.has_from() ? r.get_from() : r.get_to())
+                        << " will not work."
+                        << SNAP_LOG_SEND;
+                    throw security_issue("the \"cd:\" protocol requires a LAN address. For public addresses, please use \"cds:\" instead.");
+                }
+            }
+            f_communicator_connection = std::make_shared<ed::tcp_client_permanent_message_connection>(ranges);
+        }
+        else if(protocol == "cds")
+        {
+            for(auto const & r : ranges)
+            {
+                if((r.has_from() && r.get_from().get_network_type() == addr::addr::network_type_t::NETWORK_TYPE_LOOPBACK)
+                || (r.has_to()   && r.get_to().get_network_type() == addr::addr::network_type_t::NETWORK_TYPE_LOOPBACK))
+                {
+                    SNAP_LOG_IMPORTANT
+                        << "the \"cds:\" protocol is not likely to work on the loopback network ("
+                        << (r.has_from() ? r.get_from() : r.get_to())
+                        << ")."
+                        << SNAP_LOG_SEND;
+                }
+            }
+            f_communicator_connection = std::make_shared<ed::tcp_client_permanent_message_connection>(
+                      ranges
+                    , ed::mode_t::MODE_ALWAYS_SECURE);
+        }
+        else if(protocol == "cdu")
+        {
+            // I don't think that the URI object can return a "to" only range
+            //
+            if(ranges.size() != 1
+            || ranges[0].size() != 1
+            || !ranges[0].has_from())
+            {
+                SNAP_LOG_FATAL
+                    << "the \"cdu:\" requires at least one address to work."
+                    << SNAP_LOG_SEND;
+                throw connection_unavailable("the \"cdu:\" requires at least one address to work.");
+            }
+
+            // we listen on the "Server" IP:port (port will be auto-assigned)
+            //
+            addr::addr server(ranges[0].get_from());
+            server.set_port(0);
+
+            if(!server.is_lan())
+            {
+                SNAP_LOG_FATAL
+                    << "the \"cdu:\" protocol requires a LAN address. For public addresses, please use \"cds:\" instead. "
+                    << server
+                    << " will not work."
+                    << SNAP_LOG_SEND;
+                throw security_issue("the \"cdu:\" protocol requires a LAN address. For public addresses, please use \"cds:\" instead.");
+            }
+
+            // we send messages on the "Client" IP:port
+            //
+            addr::addr const client(ranges[0].get_from());
+
+            f_communicator_connection = std::make_shared<ed::udp_server_message_connection>(
+                      server
+                    , client);
+        }
+        else if(protocol == "cdb")
+        {
+            SNAP_LOG_FATAL
+                << "the \"cdb:\" protocol is not yet supported."
+                << SNAP_LOG_SEND;
+            throw connection_unavailable("the \"cdb:\" protocol is not yet supported.");
+        }
+        else
+        {
+            std::stringstream ss;
+            ss << "unknown protocol \""
+                << protocol
+                << ":\" to connect to communicatord.";
+            SNAP_LOG_FATAL
+                << ss
+                << SNAP_LOG_SEND;
+            throw connection_unavailable(ss.str());
+        }
     }
 
     if(f_communicator_connection == nullptr)

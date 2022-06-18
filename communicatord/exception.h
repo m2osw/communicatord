@@ -50,6 +50,7 @@ DECLARE_EXCEPTION(communicator_error, unexpected_message);
 DECLARE_EXCEPTION(communicator_error, unexpected_message_parameter);
 DECLARE_EXCEPTION(communicator_error, unknown_command);
 DECLARE_EXCEPTION(communicator_error, unknown_exception);
+DECLARE_EXCEPTION(communicator_error, security_issue);
 DECLARE_EXCEPTION(communicator_error, switching_to_user_failed);
 DECLARE_EXCEPTION(communicator_error, user_missing);
 
