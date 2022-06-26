@@ -527,14 +527,14 @@ public:
                         , "tcp"));
                 switch(a.get_network_type())
                 {
-                case addr::addr::network_type_t::NETWORK_TYPE_LOOPBACK:
+                case addr::network_type_t::NETWORK_TYPE_LOOPBACK:
                     f_selected_connection_type = connection_t::TCP;
                     break;
 
-                case addr::addr::network_type_t::NETWORK_TYPE_PUBLIC:
+                case addr::network_type_t::NETWORK_TYPE_PUBLIC:
                     std::cerr << "warning: remote TCP without encryption is expected to use a private network IP address." << std::endl;
                     [[fallthrough]];
-                case addr::addr::network_type_t::NETWORK_TYPE_PRIVATE:
+                case addr::network_type_t::NETWORK_TYPE_PRIVATE:
                     f_selected_connection_type = connection_t::REMOTE_TCP;
                     break;
 
@@ -563,12 +563,12 @@ public:
                     , "tcp"));
             switch(a.get_network_type())
             {
-            case addr::addr::network_type_t::NETWORK_TYPE_LOOPBACK:
+            case addr::network_type_t::NETWORK_TYPE_LOOPBACK:
                 std::cerr << "error: invalid use of 'scs:' protocol; it cannot work on a loopback address." << std::endl;
                 return false;
 
-            case addr::addr::network_type_t::NETWORK_TYPE_PUBLIC:
-            case addr::addr::network_type_t::NETWORK_TYPE_PRIVATE:
+            case addr::network_type_t::NETWORK_TYPE_PUBLIC:
+            case addr::network_type_t::NETWORK_TYPE_PRIVATE:
                 break;
 
             default:
@@ -601,11 +601,11 @@ public:
                         , "udp"));
                 switch(a.get_network_type())
                 {
-                case addr::addr::network_type_t::NETWORK_TYPE_PUBLIC:
+                case addr::network_type_t::NETWORK_TYPE_PUBLIC:
                     std::cerr << "warning: UDP has no encryption, it should not be used with a public IP address." << std::endl;
                     [[fallthrough]];
-                case addr::addr::network_type_t::NETWORK_TYPE_LOOPBACK:
-                case addr::addr::network_type_t::NETWORK_TYPE_PRIVATE:
+                case addr::network_type_t::NETWORK_TYPE_LOOPBACK:
+                case addr::network_type_t::NETWORK_TYPE_PRIVATE:
                     break;
 
                 default:
@@ -635,11 +635,11 @@ public:
                     , "udp"));
             switch(a.get_network_type())
             {
-            case addr::addr::network_type_t::NETWORK_TYPE_PUBLIC:
+            case addr::network_type_t::NETWORK_TYPE_PUBLIC:
                 std::cerr << "warning: UDP has no encryption, it should not be used with a public IP address." << std::endl;
                 [[fallthrough]];
-            case addr::addr::network_type_t::NETWORK_TYPE_LOOPBACK:
-            case addr::addr::network_type_t::NETWORK_TYPE_PRIVATE:
+            case addr::network_type_t::NETWORK_TYPE_LOOPBACK:
+            case addr::network_type_t::NETWORK_TYPE_PRIVATE:
                 // verify that this is the broadcast address (i.e. 192.168.33.255/24)
                 if(!addr::is_broadcast_address(f_ip_address))
                 {
@@ -651,7 +651,7 @@ public:
                 }
                 break;
 
-            case addr::addr::network_type_t::NETWORK_TYPE_MULTICAST: // in case you do not know the destination private network
+            case addr::network_type_t::NETWORK_TYPE_MULTICAST: // in case you do not know the destination private network
                 break;
 
             default:

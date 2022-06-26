@@ -199,8 +199,8 @@ void communicator::process_communicator_options()
         {
             for(auto const & r : ranges)
             {
-                if((r.has_from() && r.get_from().get_network_type() == addr::addr::network_type_t::NETWORK_TYPE_LOOPBACK)
-                || (r.has_to()   && r.get_to().get_network_type() == addr::addr::network_type_t::NETWORK_TYPE_LOOPBACK))
+                if((r.has_from() && r.get_from().get_network_type() == addr::network_type_t::NETWORK_TYPE_LOOPBACK)
+                || (r.has_to()   && r.get_to().get_network_type() == addr::network_type_t::NETWORK_TYPE_LOOPBACK))
                 {
                     SNAP_LOG_IMPORTANT
                         << "the \"cds:\" protocol is not likely to work on the loopback network ("

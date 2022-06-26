@@ -344,7 +344,7 @@ void service_connection::block_ip()
         ed::message block;
         block.set_command("BLOCK");
         block.set_service("*");
-        block.add_parameter("uri", a.to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_BRACKETS));
+        block.add_parameter("uri", a.to_ipv4or6_string(addr::string_ip_t::STRING_IP_BRACKETS));
         block.add_parameter("period", "1h");
         block.add_parameter("profile", "system-login-attempts");
         block.add_parameter("reason", "Three or more attempts at connecting to communicator daemon with the wrong credentials");

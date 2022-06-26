@@ -138,10 +138,10 @@ void listener::process_accept()
     // TBD: is that a really weak test?
     //
     addr::addr const remote_addr(service->get_remote_address());
-    addr::addr::network_type_t const network_type(remote_addr.get_network_type());
+    addr::network_type_t const network_type(remote_addr.get_network_type());
     if(f_local)
     {
-        if(network_type != addr::addr::network_type_t::NETWORK_TYPE_LOOPBACK)
+        if(network_type != addr::network_type_t::NETWORK_TYPE_LOOPBACK)
         {
             // TODO: look into making this an ERROR() again and return, in
             //       effect viewing the error as a problem and refusing the
@@ -151,7 +151,7 @@ void listener::process_accept()
             //
             SNAP_LOG_WARNING
                 << "received what should be a local connection from \""
-                << service->get_remote_address().to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_PORT)
+                << service->get_remote_address().to_ipv4or6_string(addr::string_ip_t::STRING_IP_PORT)
                 << "\"."
                 << SNAP_LOG_SEND;
             //return;
@@ -166,11 +166,11 @@ void listener::process_accept()
     }
     else
     {
-        if(network_type == addr::addr::network_type_t::NETWORK_TYPE_LOOPBACK)
+        if(network_type == addr::network_type_t::NETWORK_TYPE_LOOPBACK)
         {
             SNAP_LOG_ERROR
                 << "received what should be a remote connection from \""
-                << service->get_remote_address().to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_PORT)
+                << service->get_remote_address().to_ipv4or6_string(addr::string_ip_t::STRING_IP_PORT)
                 << "\"."
                 << SNAP_LOG_SEND;
             return;
@@ -188,7 +188,7 @@ void listener::process_accept()
         //
         service->set_name(
                   std::string("remote connection from: ")
-                + service->get_remote_address().to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_PORT));
+                + service->get_remote_address().to_ipv4or6_string(addr::string_ip_t::STRING_IP_PORT));
         service->mark_as_remote();
     }
 

@@ -230,7 +230,7 @@ std::string canonicalize_neighbors(std::string const & neighbors)
         {
             result += ',';
         }
-        result += a.get_from().to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_PORT);
+        result += a.get_from().to_ipv4or6_string(addr::string_ip_t::STRING_IP_PORT);
     }
 
     return result;

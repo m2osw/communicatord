@@ -110,7 +110,7 @@ remote_connection::~remote_connection()
     {
         SNAP_LOG_DEBUG
             << "deleting remote_connection connection: "
-            << f_address.to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_PORT)
+            << f_address.to_ipv4or6_string(addr::string_ip_t::STRING_IP_PORT)
             << SNAP_LOG_SEND;
     }
     catch(addr::addr_invalid_argument const &)
@@ -202,7 +202,7 @@ void remote_connection::process_connection_failed(std::string const & error_mess
         std::stringstream ss;
 
         ss << "connecting to "
-           << f_address.to_ipv4or6_string(addr::addr::string_ip_t::STRING_IP_PORT)
+           << f_address.to_ipv4or6_string(addr::string_ip_t::STRING_IP_PORT)
            << ", failed "
            << std::to_string(f_failures)
            << " times in a row for "
