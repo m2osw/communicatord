@@ -32,18 +32,18 @@
 
 // snaplogger
 //
-#include <snaplogger/message.h>
+#include    <snaplogger/message.h>
 
 
 // libaddr
 //
-#include <libaddr/addr.h>
-#include <libaddr/addr_parser.h>
+#include    <libaddr/addr.h>
+#include    <libaddr/addr_parser.h>
 
 
 // included last
 //
-#include <snapdev/poison.h>
+#include    <snapdev/poison.h>
 
 
 
