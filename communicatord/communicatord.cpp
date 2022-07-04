@@ -30,7 +30,6 @@
 
 // eventdispatcher
 //
-#include    <eventdispatcher/communicator.h>
 #include    <eventdispatcher/local_stream_client_permanent_message_connection.h>
 #include    <eventdispatcher/tcp_client_permanent_message_connection.h>
 #include    <eventdispatcher/udp_server_message_connection.h>
@@ -108,6 +107,7 @@ advgetopt::option const g_options[] =
  */
 communicator::communicator(advgetopt::getopt & opts)
     : f_opts(opts)
+    , f_communicator(ed::communicator::instance())
 {
 }
 
@@ -157,10 +157,11 @@ void communicator::process_communicator_options()
     {
         if(protocol != "cd")
         {
+            connection_unavailable const e("a Unix socket connection only works with the \"cd:\" protocol.");
             SNAP_LOG_FATAL
-                << "a Unix socket connection only works with the \"cd:\" protocol."
+                << e
                 << SNAP_LOG_SEND;
-            throw connection_unavailable("a Unix socket connection only works with the \"cd:\" protocol.");
+            throw e;
         }
         addr::unix const address(u.path(false));
         f_communicator_connection = std::make_shared<ed::local_stream_client_permanent_message_connection>(address);
@@ -172,10 +173,11 @@ void communicator::process_communicator_options()
         {
             // I don't think this is possible
             //
+            connection_unavailable const e("the communicatord requires at least one address to work.");
             SNAP_LOG_FATAL
-                << "the communicatord requires at least one address to work."
+                << e
                 << SNAP_LOG_SEND;
-            throw connection_unavailable("the \"cdb:\" protocol is not yet supported.");
+            throw e;
         }
 
         if(protocol == "cd")
@@ -185,12 +187,15 @@ void communicator::process_communicator_options()
                 if((r.has_from() && !r.get_from().is_lan())
                 || (r.has_to()   && !r.get_to().is_lan()))
                 {
+                    std::stringstream ss;
+                    ss << "the \"cd:\" protocol requires a LAN address. For public addresses, please use \"cds:\" instead. "
+                       << (r.has_from() ? r.get_from() : r.get_to())
+                       << " will not work.";
+                    security_issue const e(ss.str());
                     SNAP_LOG_FATAL
-                        << "the \"cd:\" protocol requires a LAN address. For public addresses, please use \"cds:\" instead. "
-                        << (r.has_from() ? r.get_from() : r.get_to())
-                        << " will not work."
+                        << e
                         << SNAP_LOG_SEND;
-                    throw security_issue("the \"cd:\" protocol requires a LAN address. For public addresses, please use \"cds:\" instead.");
+                    throw e;
                 }
             }
             f_communicator_connection = std::make_shared<ed::tcp_client_permanent_message_connection>(ranges);
@@ -221,10 +226,11 @@ void communicator::process_communicator_options()
             || ranges[0].size() != 1
             || !ranges[0].has_from())
             {
+                connection_unavailable const e("the \"cdu:\" requires at least one address to work.");
                 SNAP_LOG_FATAL
-                    << "the \"cdu:\" requires at least one address to work."
+                    << e
                     << SNAP_LOG_SEND;
-                throw connection_unavailable("the \"cdu:\" requires at least one address to work.");
+                throw e;
             }
 
             // we listen on the "Server" IP:port (port will be auto-assigned)
@@ -234,12 +240,14 @@ void communicator::process_communicator_options()
 
             if(!server.is_lan())
             {
+                security_issue const e(
+                      "the \"cdu:\" protocol requires a LAN address. For public addresses, please use \"cds:\" instead. "
+                    + server.to_ipv4or6_string()
+                    + " will not work.");
                 SNAP_LOG_FATAL
-                    << "the \"cdu:\" protocol requires a LAN address. For public addresses, please use \"cds:\" instead. "
-                    << server
-                    << " will not work."
+                    << e
                     << SNAP_LOG_SEND;
-                throw security_issue("the \"cdu:\" protocol requires a LAN address. For public addresses, please use \"cds:\" instead.");
+                throw e;
             }
 
             // we send messages on the "Client" IP:port
@@ -252,40 +260,88 @@ void communicator::process_communicator_options()
         }
         else if(protocol == "cdb")
         {
+            connection_unavailable const e("the \"cdb:\" protocol is not yet supported.");
             SNAP_LOG_FATAL
-                << "the \"cdb:\" protocol is not yet supported."
+                << e
                 << SNAP_LOG_SEND;
-            throw connection_unavailable("the \"cdb:\" protocol is not yet supported.");
+            throw e;
         }
         else
         {
-            std::stringstream ss;
-            ss << "unknown protocol \""
-                << protocol
-                << ":\" to connect to communicatord.";
+            connection_unavailable const e(
+                      "unknown protocol \""
+                    + protocol
+                    + ":\" to connect to communicatord.");
             SNAP_LOG_FATAL
-                << ss
+                << e
                 << SNAP_LOG_SEND;
-            throw connection_unavailable(ss.str());
+            throw e;
         }
     }
 
     if(f_communicator_connection == nullptr)
     {
+        connection_unavailable const e("could not create a connection to the communicatord.");
         SNAP_LOG_FATAL
-            << "could not create a connection to the communicatord."
+            << e
             << SNAP_LOG_SEND;
-        throw connection_unavailable("could not create a connection to the communicatord.");
+        throw e;
     }
 
-    if(!ed::communicator::instance()->add_connection(f_communicator_connection))
+    if(!f_communicator->add_connection(f_communicator_connection))
     {
         f_communicator_connection.reset();
 
+        connection_unavailable const e("could not register the communicatord connection.");
         SNAP_LOG_FATAL
-            << "could not register the communicatord connection."
+            << e
             << SNAP_LOG_SEND;
-        throw connection_unavailable("could not register the communicatord connection.");
+        throw e;
+    }
+}
+
+
+bool communicator::send_message(ed::message & msg, bool cache)
+{
+    ed::connection_with_send_message::pointer_t messenger(std::dynamic_pointer_cast<ed::connection_with_send_message>(f_communicator_connection));
+    if(messenger != nullptr)
+    {
+        return messenger->send_message(msg, cache);
+    }
+
+    return false;
+}
+
+
+/** \brief When exiting your process, make sure to unregister.
+ *
+ * To cleanly unregister a service and thus send a message to the communicator
+ * service letting it know that you are exiting, call this function.
+ *
+ * The process takes the \p quitting parameter to know whether the communicator
+ * itself is quitting (true) or not (false).
+ *
+ * \param[in] quitting  true if the communicator itself is quitting.
+ */
+void communicator::unregister_communicator(bool quitting)
+{
+    if(f_communicator_connection != nullptr)
+    {
+        // check whether we are connected, which depends on the type of
+        // connection we are currently using
+        //
+        ed::connection_with_send_message::pointer_t messenger(std::dynamic_pointer_cast<ed::connection_with_send_message>(f_communicator_connection));
+        if(quitting || messenger == nullptr)
+        {
+            f_communicator->remove_connection(f_communicator_connection);
+            f_communicator_connection.reset();
+        }
+        else
+        {
+            // in this case we can UNREGISTER from the snapcommunicator
+            //
+            messenger->unregister_service();
+        }
     }
 }
 

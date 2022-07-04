@@ -25,7 +25,9 @@
 
 // eventdispatcher
 //
+#include    <eventdispatcher/communicator.h>
 #include    <eventdispatcher/connection.h>
+#include    <eventdispatcher/message.h>
 
 
 // snapdev
@@ -64,11 +66,13 @@ public:
 
     void                add_communicator_options();
     void                process_communicator_options();
+    bool                send_message(ed::message & msg, bool cache = false);
+    void                unregister_communicator(bool quitting);
 
 private:
-    advgetopt::getopt & f_opts;
-    ed::connection::pointer_t
-                        f_communicator_connection = ed::connection::pointer_t();
+    advgetopt::getopt &         f_opts;
+    ed::communicator::pointer_t f_communicator = ed::communicator::pointer_t();
+    ed::connection::pointer_t   f_communicator_connection = ed::connection::pointer_t();
 };
 
 
