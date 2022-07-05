@@ -83,7 +83,7 @@ advgetopt::option const g_options[] =
             , advgetopt::GETOPT_FLAG_REQUIRED>())
         , advgetopt::EnvironmentVariableName("COMMUNICATOR_LISTEN")
         , advgetopt::DefaultValue("cd:///run/communicatord/communicatord.socket")
-        , advgetopt::Help("define the communicator connection type as a protocol (cd://, cdu://, cds://, cdb://) along an \"address:port\" or \"/socket/path\".")
+        , advgetopt::Help("define the communicator connection type as a scheme (cd://, cdu://, cds://, cdb://) along an \"address:port\" or \"/socket/path\".")
     ),
 
     // END
@@ -152,27 +152,28 @@ void communicator::add_communicator_options()
  */
 void communicator::process_communicator_options()
 {
-    // extract the protocol and segments
+    // extract the scheme and segments
     //
     edhttp::uri u;
     u.set_uri(f_opts.get_string("communicator-listen"), true, true);
 
-    std::string const protocol(u.protocol());
+    std::string const scheme(u.protocol());
 
     // unix is a special case since the URI is a path to a file
     // so we have to handle it in a special way
     //
     if(u.is_unix())
     {
-        if(protocol != "cd")
+        if(scheme != "cd")
         {
-            connection_unavailable const e("a Unix socket connection only works with the \"cd:\" protocol.");
+            connection_unavailable const e("a Unix socket connection only works with the \"cd:\" scheme.");
             SNAP_LOG_FATAL
                 << e
                 << SNAP_LOG_SEND;
             throw e;
         }
-        addr::unix const address(u.path(false));
+        addr::unix address(u.path(false));
+        address.set_scheme(scheme);
         f_communicator_connection = std::make_shared<ed::local_stream_client_permanent_message_connection>(address);
     }
     else
@@ -189,7 +190,7 @@ void communicator::process_communicator_options()
             throw e;
         }
 
-        if(protocol == "cd")
+        if(scheme == "cd")
         {
             for(auto const & r : ranges)
             {
@@ -197,7 +198,7 @@ void communicator::process_communicator_options()
                 || (r.has_to()   && !r.get_to().is_lan()))
                 {
                     std::stringstream ss;
-                    ss << "the \"cd:\" protocol requires a LAN address. For public addresses, please use \"cds:\" instead. "
+                    ss << "the \"cd:\" scheme requires a LAN address. For public addresses, please use \"cds:\" instead. "
                        << (r.has_from() ? r.get_from() : r.get_to())
                        << " will not work.";
                     security_issue const e(ss.str());
@@ -209,7 +210,7 @@ void communicator::process_communicator_options()
             }
             f_communicator_connection = std::make_shared<ed::tcp_client_permanent_message_connection>(ranges);
         }
-        else if(protocol == "cds")
+        else if(scheme == "cds")
         {
             for(auto const & r : ranges)
             {
@@ -217,7 +218,7 @@ void communicator::process_communicator_options()
                 || (r.has_to()   && r.get_to().get_network_type() == addr::network_type_t::NETWORK_TYPE_LOOPBACK))
                 {
                     SNAP_LOG_IMPORTANT
-                        << "the \"cds:\" protocol is not likely to work on the loopback network ("
+                        << "the \"cds:\" scheme is not likely to work on the loopback network ("
                         << (r.has_from() ? r.get_from() : r.get_to())
                         << ")."
                         << SNAP_LOG_SEND;
@@ -227,7 +228,7 @@ void communicator::process_communicator_options()
                       ranges
                     , ed::mode_t::MODE_ALWAYS_SECURE);
         }
-        else if(protocol == "cdu")
+        else if(scheme == "cdu")
         {
             // I don't think that the URI object can return a "to" only range
             //
@@ -250,7 +251,7 @@ void communicator::process_communicator_options()
             if(!server.is_lan())
             {
                 security_issue const e(
-                      "the \"cdu:\" protocol requires a LAN address. For public addresses, please use \"cds:\" instead. "
+                      "the \"cdu:\" scheme requires a LAN address. For public addresses, please use \"cds:\" instead. "
                     + server.to_ipv4or6_string()
                     + " will not work.");
                 SNAP_LOG_FATAL
@@ -267,9 +268,9 @@ void communicator::process_communicator_options()
                       server
                     , client);
         }
-        else if(protocol == "cdb")
+        else if(scheme == "cdb")
         {
-            connection_unavailable const e("the \"cdb:\" protocol is not yet supported.");
+            connection_unavailable const e("the \"cdb:\" scheme is not yet supported.");
             SNAP_LOG_FATAL
                 << e
                 << SNAP_LOG_SEND;
@@ -278,8 +279,8 @@ void communicator::process_communicator_options()
         else
         {
             connection_unavailable const e(
-                      "unknown protocol \""
-                    + protocol
+                      "unknown scheme \""
+                    + scheme
                     + ":\" to connect to communicatord.");
             SNAP_LOG_FATAL
                 << e
