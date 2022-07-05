@@ -83,7 +83,7 @@ advgetopt::option const g_options[] =
             , advgetopt::GETOPT_FLAG_REQUIRED>())
         , advgetopt::EnvironmentVariableName("COMMUNICATOR_LISTEN")
         , advgetopt::DefaultValue("cd:///run/communicatord/communicatord.socket")
-        , advgetopt::Help("define the connection type as a protocol (cd, cdu, cds, cdb) along an <address:port> or </socket/path>.")
+        , advgetopt::Help("define the communicator connection type as a protocol (cd://, cdu://, cds://, cdb://) along an \"address:port\" or \"/socket/path\".")
     ),
 
     // END
@@ -108,6 +108,15 @@ advgetopt::option const g_options[] =
 communicator::communicator(advgetopt::getopt & opts)
     : f_opts(opts)
     , f_communicator(ed::communicator::instance())
+{
+}
+
+
+/** \brief Destroy the communicator.
+ *
+ * The communicator needed a virtual destructor so here it is.
+ */
+communicator::~communicator()
 {
 }
 

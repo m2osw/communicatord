@@ -63,6 +63,7 @@ class communicator
 {
 public:
                         communicator(advgetopt::getopt & opts);
+    virtual             ~communicator();
 
     void                add_communicator_options();
     void                process_communicator_options();
