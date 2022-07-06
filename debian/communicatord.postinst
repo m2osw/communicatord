@@ -40,7 +40,7 @@ then
         echo "#listen=" >>$COMMUNICATORD_USER_CONFIGURATION_FILE
     fi
 
-    # Create the logfile because the communicator user may have
+    # Create the logfile because the communicatord user may have
     # difficulties with it otherwise during logrotate.
     #
     LOGDIR=/var/log/${PACKAGENAME}
@@ -52,17 +52,17 @@ then
     SECURELOGDIR=${LOGDIR}/secure
     SECURELOGFILE=${SECURELOGDIR}/${PACKAGENAME}.log
     touch ${SECURELOGFILE}
-    chown communicatord:sommunicatord ${SECURELOGFILE}
+    chown ${USERNAME}:${GROUPNAME} ${SECURELOGFILE}
     chmod 640 ${SECURELOGFILE}
 
-    # generate a private key and a certificate for remote communicators
+    # generate a private key and a certificate for remote communicator daemons
     # to connect using SSL; this key will work for 3650 days (about 10 years)
     #
     # here we fix the ownship of the directory (since it is not just
     # root:root, we cannot really do it in the rules)
     #
-    SSLDIR=/etc/communicatord/ssl
-    chown communicatord:communicatord ${SSLDIR}
+    SSLDIR=/etc/${ENVIRONMENTNAME}/ssl
+    chown ${USERNAME}:${GROUPNAME} ${SSLDIR}
     if test ! -f ${SSLDIR}/${PACKAGENAME}.key \
          -o ! -f ${SSLDIR}/${PACKAGENAME}.crt
     then

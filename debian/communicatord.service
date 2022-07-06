@@ -3,11 +3,11 @@
 
 [Unit]
 Description=Snap! Websites communicator daemon
-After=network.target snapbase.service
+After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/var/lib/snapwebsites
+WorkingDirectory=/var/lib/communicatord
 ProtectHome=true
 NoNewPrivileges=true
 ExecStart=/usr/sbin/communicatord
