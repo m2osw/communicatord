@@ -472,7 +472,7 @@ public:
         // that the communicator listens on
         //
         // the type is 100% defined by the address which is expected to
-        // include a protocol, when no protocol is defined, "cd:" is used
+        // include a scheme, when no scheme is defined, "cd:" is used
         // as the default.
         //
         //     cd://<ip>:<port> -- a plain TCP connection
@@ -505,8 +505,8 @@ public:
                 << std::endl;
             return false;
         }
-        std::string const & protocol(f_uri.protocol());
-        if(protocol == "sc")
+        std::string const & scheme(f_uri.scheme());
+        if(scheme == "sc")
         {
             if(f_uri.domain().empty())
             {
@@ -547,11 +547,11 @@ public:
                 f_ip_address = a;
             }
         }
-        else if(protocol == "scs")
+        else if(scheme == "scs")
         {
             if(f_uri.domain().empty())
             {
-                std::cerr << "error: invalid use of 'scs:' protocol; an IP address was expected." << std::endl;
+                std::cerr << "error: invalid use of 'scs:' scheme; an IP address was expected." << std::endl;
                 return false;
             }
             // TCP in secure mode
@@ -564,7 +564,7 @@ public:
             switch(a.get_network_type())
             {
             case addr::network_type_t::NETWORK_TYPE_LOOPBACK:
-                std::cerr << "error: invalid use of 'scs:' protocol; it cannot work on a loopback address." << std::endl;
+                std::cerr << "error: invalid use of 'scs:' scheme; it cannot work on a loopback address." << std::endl;
                 return false;
 
             case addr::network_type_t::NETWORK_TYPE_PUBLIC:
@@ -580,7 +580,7 @@ public:
             f_ip_address = a;
             f_selected_connection_type = connection_t::SECURE_TCP;
         }
-        else if(protocol == "scu")
+        else if(scheme == "scu")
         {
             if(f_uri.domain().empty())
             {
@@ -618,14 +618,14 @@ public:
                 f_selected_connection_type = connection_t::UDP;
             }
         }
-        else if(protocol == "scb")
+        else if(scheme == "scb")
         {
             if(f_uri.domain().empty())
             {
                 // broadcasting on a Unix Datagram would be useless since we
                 // have a single listener on such
                 //
-                std::cerr << "error: invalid use of 'scu:' protocol; an IP address was expected." << std::endl;
+                std::cerr << "error: invalid use of 'scu:' scheme; an IP address was expected." << std::endl;
                 return false;
             }
             addr::addr const a(addr::string_to_addr(
@@ -669,8 +669,8 @@ public:
         }
         else
         {
-            std::cerr << "error: unknown protocol '"
-                << protocol
+            std::cerr << "error: unknown scheme '"
+                << scheme
                 << ":'; expected 'cd:', 'cds:', 'cdu:', or 'cdb:'." << std::endl;
             return false;
         }
@@ -1087,7 +1087,7 @@ public:
             return false;
         }
 
-        // /connect <protocol>://<IP>:<port> | <protocol>:///<path>
+        // /connect <scheme>://<IP>:<port> | <scheme>:///<path>
         //
         // connect to service listening at <IP> on port <port>
         //
@@ -1137,7 +1137,7 @@ private:
     {
         output("Help:");
         output("Internal commands start with a  slash (/). Supported commands:");
-        output("  /connect <protocol>://<ip>:<port> | <protocol>:///<path> -- connect to specified URI");
+        output("  /connect <scheme>://<ip>:<port> | <scheme>:///<path> -- connect to specified URI");
         output("  /disconnect -- explicitly disconnect any existing connection");
         output("  /help or /? or ? or <F1> key -- print this help screen");
         output("  /quit -- leave tool");

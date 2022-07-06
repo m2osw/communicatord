@@ -157,8 +157,7 @@ void communicator::process_communicator_options()
     edhttp::uri u;
     u.set_uri(f_opts.get_string("communicator-listen"), true, true);
 
-    std::string const scheme(u.protocol());
-std::cerr << " --- URI scheme [" << scheme << "]\n";
+    std::string const scheme(u.scheme());
 
     // unix is a special case since the URI is a path to a file
     // so we have to handle it in a special way
@@ -173,7 +172,6 @@ std::cerr << " --- URI scheme [" << scheme << "]\n";
                 << SNAP_LOG_SEND;
             throw e;
         }
-std::cerr << "Unix path [" << u.path(false) << "] vs scheme [" << scheme << "]\n";
         addr::unix address(u.path(false));
         address.set_scheme(scheme);
         f_communicator_connection = std::make_shared<ed::local_stream_client_permanent_message_connection>(address);
