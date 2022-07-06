@@ -3,10 +3,12 @@ debian/tmp/usr/bin/message                                            usr/bin/
 debian/tmp/usr/sbin/communicatord                                     usr/sbin/
 #debian/tmp/usr/lib/snapmanager/manager_plugins/libcommunicator.so         usr/lib/snapmanager/manager_plugins/
 debian/tmp/usr/lib/libcommunicatord.so.*                              usr/lib
-conf/confcommunicatord                                                usr/share/communicatord/
+
 conf/communicatord.conf                                               etc/communicatord/
+conf/conf-README.md                                                   etc/communicatord/communicatord.d/
+conf/confcommunicatord                                                usr/share/communicatord/
 conf/flags.conf                                                       etc/communicatord/
-conf/logger/raise-flag.conf                                           usr/share/snaplogger/etc/
 conf/logger/communicatord.conf                                        usr/share/snaplogger/etc/
-conf/README.md                                                        usr/share/communicatord/services/
+conf/logger/raise-flag.conf                                           usr/share/snaplogger/etc/
+conf/service-README.md                                                usr/share/communicatord/services/
 conf/ssl-README.md                                                    etc/communicatord/ssl/
