@@ -657,6 +657,7 @@ int server::init()
     if(f_opts.is_defined("unix-listen"))
     {
         addr::unix unix_listen(addr::unix(f_opts.get_string("unix-listen")));
+        unix_listen.set_scheme("cd");
 
         f_unix_listener = std::make_shared<unix_listener>(
                   shared_from_this()

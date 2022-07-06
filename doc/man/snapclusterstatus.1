@@ -1,0 +1,55 @@
+.TH "clusterstatus" 1 "Sat Apr 20 2019" "Version 1.7.7" "communicatord" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+clusterstatus - query communicatord about the cluster status
+.SH SYNOPSIS
+.B clusterstatus
+[\fB--help\fR] [\fB--version\fR] [\fB\-c|\-\-config\fR \fI\,config\/\fR]
+.SH DESCRIPTION
+
+The \fBclusterstatus\fR sends a \fBCLUSTERSTATUS\fR message to the
+\fBcommunicatord\fR daemon, prints out the results, and exits.
+
+If the \fBcommunicatord\fR daemon is not running, then an error
+occurs and corresponding messages are printed.
+
+By default the \fBclusterstatus\fR uses the configuration information
+found in \fB/etc/communicatord/communicatord.conf\fR and 
+\fB/etc/communicatord/communicatord.d/??-communicatord.conf\fR. The filename
+can be changed using the \fB--config\fR option.
+
+The command supports the following options:
+
+.TP
+\fB\-\-help
+prints out the help page
+
+.TP
+\fB\-\-version
+prints out the version (which is really communicatord's version)
+
+.TP
+\fB\-\-config | \-c \fI\,config\/\fR
+specify a different configuration file than the default.
+
+.SH AUTHOR
+
+Written by Alexis Wilke.
+
+.SH REPORTING BUGS
+
+https://github.com/m2osw/communicatord/issues
+
+.SH COPYRIGHT
+
+Copyright (c) 2019-2022  Made to Order Software Corp.
+.br
+License GPLv3+.
+.br
+This is free software: you are free to change and redistribute it.
+.br
+There is NO WARRANTY, to the extent permitted by law.
+
+.SH SEE ALSO
+Full documentation at: <http://snapwebsites.org/>
