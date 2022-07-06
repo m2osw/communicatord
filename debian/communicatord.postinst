@@ -71,6 +71,12 @@ then
            -x509 -days 3650 -out ${SSLDIR}/${PACKAGENAME}.crt \
            -subj "/C=US/ST=California/L=Sacramento/O=Snap/OU=Website/CN=snap.website"
     fi
+
+    # The username is created at installation time so we can't have these
+    # command work at packaging time (in debian/rules)
+    #
+    chown ${USERNAME} /usr/bin/raise-flag
+    chmod u+s /usr/bin/raise-flag
 fi
 
 
