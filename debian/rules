@@ -17,6 +17,6 @@ override_dh_auto_configure:
 
 override_dh_fixperms:
 	dh_fixperms
-	chmod u+s debian/communicatord/usr/bin/saveflag
-	chown communicatord debian/communicatord/usr/bin/saveflag
+	chown communicatord debian/communicatord/usr/bin/raise-flag
+	chmod u+s debian/communicatord/usr/bin/raise-flag
 
