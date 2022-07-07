@@ -172,7 +172,7 @@ void communicator::process_communicatord_options()
                 << SNAP_LOG_SEND;
             throw e;
         }
-        addr::unix address(u.path(false));
+        addr::unix address('/' + u.path(false));
         address.set_scheme(scheme);
         f_communicator_connection = std::make_shared<ed::local_stream_client_permanent_message_connection>(address);
     }
