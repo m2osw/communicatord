@@ -77,8 +77,9 @@ then
     # The username is created at installation time so we can't have these
     # command work at packaging time (in debian/rules)
     #
-    chown ${USERNAME} /usr/bin/raise-flag
-    chmod u+s /usr/bin/raise-flag
+    RAISE_FLAG=/usr/bin/raise-flag
+    chown ${USERNAME} ${RAISE_FLAG}
+    chmod u+s ${RAISE_FLAG}
 fi
 
 
