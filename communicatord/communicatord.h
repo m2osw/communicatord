@@ -65,8 +65,8 @@ public:
                         communicator(advgetopt::getopt & opts);
     virtual             ~communicator();
 
-    void                add_communicator_options();
-    void                process_communicator_options();
+    void                add_communicatord_options();
+    void                process_communicatord_options();
     bool                send_message(ed::message & msg, bool cache = false);
     void                unregister_communicator(bool quitting);
 

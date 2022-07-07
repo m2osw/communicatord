@@ -54,9 +54,9 @@ namespace
 {
 
 
-/** \brief Options to handle the communicator connection.
+/** \brief Options to handle the communicatord connection.
  *
- * One can connect to the communicator through several possible
+ * One can connect to the communicator daemon through several possible
  * connetions:
  *
  * \li TCP / plain text / local (on your computer loopback)
@@ -74,16 +74,16 @@ advgetopt::option const g_options[] =
     // COMMUNICATOR OPTIONS
     //
     advgetopt::define_option(
-          advgetopt::Name("communicator-listen")
+          advgetopt::Name("communicatord-listen")
         , advgetopt::Flags(advgetopt::all_flags<
               advgetopt::GETOPT_FLAG_GROUP_OPTIONS
             , advgetopt::GETOPT_FLAG_COMMAND_LINE
             , advgetopt::GETOPT_FLAG_ENVIRONMENT_VARIABLE
             , advgetopt::GETOPT_FLAG_CONFIGURATION_FILE
             , advgetopt::GETOPT_FLAG_REQUIRED>())
-        , advgetopt::EnvironmentVariableName("COMMUNICATOR_LISTEN")
-        , advgetopt::DefaultValue("cd:///run/communicatord/communicatord.socket")
-        , advgetopt::Help("define the communicator connection type as a scheme (cd://, cdu://, cds://, cdb://) along an \"address:port\" or \"/socket/path\".")
+        , advgetopt::EnvironmentVariableName("COMMUNICATORD_LISTEN")
+        , advgetopt::DefaultValue("cd:///run/communicatord/communicatord.sock")
+        , advgetopt::Help("define the communicator daemon connection type as a scheme (cd://, cdu://, cds://, cdb://) along an \"address:port\" or \"/socket/path\".")
     ),
 
     // END
@@ -129,7 +129,7 @@ communicator::~communicator()
  * function) then by processing the options by calling the
  * process_communicator_options().
  */
-void communicator::add_communicator_options()
+void communicator::add_communicatord_options()
 {
     // add options
     //
@@ -150,12 +150,12 @@ void communicator::add_communicator_options()
  * your service since it would continue to listen for messages on this
  * connection forever.
  */
-void communicator::process_communicator_options()
+void communicator::process_communicatord_options()
 {
     // extract the scheme and segments
     //
     edhttp::uri u;
-    u.set_uri(f_opts.get_string("communicator-listen"), true, true);
+    u.set_uri(f_opts.get_string("communicatord-listen"), true, true);
 
     std::string const scheme(u.scheme());
 

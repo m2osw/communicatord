@@ -45,6 +45,7 @@ then
     #
     LOGDIR=/var/log/${PACKAGENAME}
     LOGFILE=${LOGDIR}/${PACKAGENAME}.log
+    mkdir -p ${LOGDIR}
     touch ${LOGFILE}
     chown ${USERNAME}:${GROUPNAME} ${LOGFILE}
     chmod 640 ${LOGFILE}
