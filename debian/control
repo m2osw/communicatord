@@ -53,7 +53,7 @@ Description: The Communicator, an advanced RPC system.
 Package: communicatord-dev
 Section: libs
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: communicatord, ${shlibs:Depends}, ${misc:Depends}
 Description: The Communicator headers for developers.
  This package adds the necessary files for a developer to compile and link
  against the communicator library.
