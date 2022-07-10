@@ -58,4 +58,6 @@ find_package_handle_standard_args(
         COMMUNICATORD_LIBRARY
 )
 
+set(COMMUNICATORD_SERVICES_INSTALL_DIR share/communicatord/services)
+
 # vim: ts=4 sw=4 et
