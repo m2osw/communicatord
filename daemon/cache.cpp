@@ -31,7 +31,7 @@
 
 // advgetopt
 //
-#include    <advgetopt/validator_integer.h>
+#include    <advgetopt/validator_duration.h>
 
 
 // snaplogger
@@ -59,6 +59,19 @@ namespace communicator_daemon
  *
  * This function caches the specified message.
  *
+ * The "cache" parameter in a message supports the following parameters:
+ *
+ * * "no[=true]" -- do not cache the message
+ * * "reply[=true]" -- send a reply to the sender to let them know that the
+ *   destination is not currently available
+ * * "ttl=<duration>" -- amount of time the message is considered valid; this
+ *   is an approximation; the default is 60 seconds; durations can be defined
+ *   with a time such as 1m for one minute and 3h for three hours
+ *
+ * \warning
+ * The `reply=true` has no effect if the message gets cached. In that case,
+ * the function always returns cache_message_t::CACHE_MESSAGE_CACHED.
+ *
  * \todo
  * Limit the cache size.
  *
@@ -67,18 +80,15 @@ namespace communicator_daemon
  * Problem is: how do we know that a message is a signal message?
  *
  * \param[in] msg  The message to save in the cache.
+ *
+ * \return one of the CACHE_MESSAGE_... values.
  */
-void cache::cache_message(ed::message & msg)
+cache_message_t cache::cache_message(ed::message & msg)
 {
     std::string cache_value;
     if(msg.has_parameter("cache"))
     {
         cache_value = msg.get_parameter("cache");
-    }
-
-    if(cache_value == "no")
-    {
-        return;
     }
 
     // convert `cache` in a map of name/value parameters
@@ -107,41 +117,66 @@ void cache::cache_message(ed::message & msg)
         }
     }
 
-    // get TTL if defined (1 min. per default)
+    // should we send a reply to the sender?
     //
-    std::int64_t ttl(60);
-    auto it(params.find("ttl"));
-    if(it != params.end())
+    cache_message_t response(cache_message_t::CACHE_MESSAGE_IGNORE);
     {
-        std::int64_t value(0);
-        if(!advgetopt::validator_integer::convert_string(it->second, value))
+        auto it(params.find("reply"));
+        if(it != params.end())
         {
-            SNAP_LOG_ERROR
-                << "cache TTL parameter is not a valid integer ("
-                << it->second
-                << ")."
-                << SNAP_LOG_SEND;
+            response = cache_message_t::CACHE_MESSAGE_REPLY;
         }
-        else if(ttl < 10 || ttl > 86400)
+    }
+
+    // are we allowed to cache this message?
+    {
+        auto it(params.find("no"));
+        if(it != params.end())
         {
-            SNAP_LOG_UNIMPORTANT
-                << "cache TTL is out of range ("
-                << it->second
-                << "); expected a number between 10 and 86400."
-                << SNAP_LOG_SEND;
+            return response;
         }
-        else
+    }
+
+    std::int64_t ttl(60);
+    {
+        // get TTL if defined (1 min. per default)
+        //
+        auto it(params.find("ttl"));
+        if(it != params.end())
         {
-            ttl = value;
+            double value(0.0);
+            if(!advgetopt::validator_duration::convert_string(
+                      it->second
+                    , advgetopt::validator_duration::VALIDATOR_DURATION_DEFAULT_FLAGS
+                    , value))
+            {
+                SNAP_LOG_ERROR
+                    << "cache TTL parameter is not a valid integer ("
+                    << it->second
+                    << ")."
+                    << SNAP_LOG_SEND;
+            }
+            else if(ttl < 10.0 || ttl > 86400.0)
+            {
+                SNAP_LOG_UNIMPORTANT
+                    << "cache TTL is out of range ("
+                    << it->second
+                    << "); expected a number between 10 and 86400."
+                    << SNAP_LOG_SEND;
+            }
+            else
+            {
+                ttl = static_cast<std::int64_t>(value);
+            }
         }
     }
 
     // save the message
     //
-    message_cache cache_message;
-    cache_message.f_timeout_timestamp = time(nullptr) + ttl;
-    cache_message.f_message = msg;
-    f_message_cache.push_back(cache_message);
+    message_cache cache_msg;
+    cache_msg.f_timeout_timestamp = time(nullptr) + ttl;
+    cache_msg.f_message = msg;
+    f_message_cache.push_back(cache_msg);
 
 //#ifdef _DEBUG
 //    // to make sure we get messages cached as expected
@@ -155,6 +190,8 @@ void cache::cache_message(ed::message & msg)
 //        << "]"
 //        << SNAP_LOG_SEND;
 //#endif
+
+    return cache_message_t::CACHE_MESSAGE_CACHED;
 }
 
 

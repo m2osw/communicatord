@@ -39,6 +39,7 @@
 #include    "remote_connection.h"
 #include    "remote_communicators.h"
 #include    "service_connection.h"
+#include    "unix_connection.h"
 #include    "unix_listener.h"
 
 
@@ -168,7 +169,7 @@ const advgetopt::option g_options[] =
     ),
     advgetopt::define_option(
           advgetopt::Name("debug-all-messages")
-        , advgetopt::Flags(advgetopt::command_flags<
+        , advgetopt::Flags(advgetopt::standalone_all_flags<
               advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
 #ifdef _DEBUG
         , advgetopt::Help("log all the messages received by the communicatord and verify them (as per the COMMAND message).")
@@ -481,6 +482,7 @@ server::server(int argc, char * argv[])
     if(!snaplogger::process_logger_options(f_opts, "/etc/communicatord/logger"))
     {
         // exit on any error
+        //
         throw advgetopt::getopt_exit("logger options generated an error.", 1);
     }
 
@@ -1113,9 +1115,11 @@ bool server::verify_command(
  * not have sent an ACCEPT as a response to a CONNECT over a UDP
  * connection.)
  *
- * \param[in] message  The message were were just sent.
+ * \param[in] msg  The message were were just sent.
+ *
+ * \return true if the forwarding went as planned.
  */
-void server::process_message(ed::message & msg)
+bool server::forward_message(ed::message & msg)
 {
     //
     // the message includes a service name, so we want to forward that
@@ -1140,13 +1144,23 @@ void server::process_message(ed::message & msg)
     //    to a remote communicatord and not to a service on this system)
     //
 
-//SNAP_LOG_TRACE("---------------- got message for [")(server_name)("] / [")(service)("]");
-
     // if the destination server was specified, we have to forward
     // the message to that specific server
     //
     std::string const server_name(msg.get_server() == "." ? f_server_name : msg.get_server());
     std::string const service(msg.get_service());
+
+#if 0
+SNAP_LOG_VERBOSE
+<< "---------------- forward message ["
+<< msg.get_command()
+<< "] for ["
+<< server_name
+<< "] / ["
+<< service
+<< "]"
+<< SNAP_LOG_SEND;
+#endif
 
     // broadcasting?
     //
@@ -1169,10 +1183,10 @@ void server::process_message(ed::message & msg)
                 << server_name
                 << ") and \"*\" or \"?\" as the service."
                 << SNAP_LOG_SEND;
-            return;
+            return false;
         }
         broadcast_message(msg);
-        return;
+        return true;
     }
 
     base_connection::vector_t accepting_remote_connections;
@@ -1205,7 +1219,8 @@ void server::process_message(ed::message & msg)
                 continue;
             }
             service_connection::pointer_t conn(std::dynamic_pointer_cast<service_connection>(nc));
-            if(conn != nullptr)
+            unix_connection::pointer_t unix(std::dynamic_pointer_cast<unix_connection>(nc));
+            if(conn != nullptr || unix != nullptr)
             {
                 throw communicatord::missing_name(
                           "server name missing in connection "
@@ -1233,10 +1248,26 @@ void server::process_message(ed::message & msg)
         if(all_servers
         || server_name == base_conn->get_server_name())
         {
-            service_connection::pointer_t conn(std::dynamic_pointer_cast<service_connection>(nc));
-            if(conn)
+            bool is_service(false);
             {
-                if(conn->get_name() == service)
+                service_connection::pointer_t conn(std::dynamic_pointer_cast<service_connection>(nc));
+                if(conn != nullptr)
+                {
+                    is_service = true;
+                }
+                else
+                {
+                    unix_connection::pointer_t unix(std::dynamic_pointer_cast<unix_connection>(nc));
+                    if(unix != nullptr)
+                    {
+                        is_service = true;
+                    }
+                }
+            }
+            if(is_service)
+            {
+                ed::connection::pointer_t c(std::dynamic_pointer_cast<ed::connection>(nc));
+                if(c->get_name() == service)
                 {
                     // we have such a service, just forward to it now
                     //
@@ -1245,8 +1276,25 @@ void server::process_message(ed::message & msg)
                     //
                     try
                     {
-                        verify_command(conn, msg);
-                        conn->send_message(msg);
+                        if(verify_command(base_conn, msg))
+                        {
+                            base_conn->send_message_to_connection(msg);
+                        }
+                        else
+                        {
+                            // helper message for programmers with attention
+                            // span having issues
+                            //
+                            base_connection::pointer_t sender(msg.user_data<base_connection>());
+                            if(base_conn == sender)
+                            {
+                                SNAP_LOG_WARNING
+                                    << "service \""
+                                    << service
+                                    << "\" just tried to send itself a message. Forgot to change the destination service name?"
+                                    << SNAP_LOG_SEND;
+                            }
+                        }
                     }
                     catch(std::runtime_error const & e)
                     {
@@ -1256,7 +1304,7 @@ void server::process_message(ed::message & msg)
                         //
                         SNAP_LOG_DEBUG
                             << "communicatord failed to send a message to connection \""
-                            << conn->get_name()
+                            << c->get_name()
                             << "\" (error: "
                             << e.what()
                             << ")"
@@ -1265,7 +1313,7 @@ void server::process_message(ed::message & msg)
                     // we found a specific service to which we could
                     // forward the message so we can stop here
                     //
-                    return;
+                    return false;
                 }
 
                 // if not a local connection with the proper name,
@@ -1275,7 +1323,7 @@ void server::process_message(ed::message & msg)
                 connection_type_t const type(base_conn->get_connection_type());
                 if(type == connection_type_t::CONNECTION_TYPE_REMOTE)
                 {
-                    accepting_remote_connections.push_back(conn);
+                    accepting_remote_connections.push_back(base_conn);
                 }
             }
             else
@@ -1306,9 +1354,31 @@ void server::process_message(ed::message & msg)
         // its a service that is expected on this computer, but it is not
         // running right now... so cache the message
         //
-        f_local_message_cache.cache_message(msg);
+        if(f_local_message_cache.cache_message(msg) == cache_message_t::CACHE_MESSAGE_REPLY)
+        {
+            // let the sender know that the message was not forwarded to
+            // a client
+            //
+            ed::message reply;
+            reply.set_command("SERVICE_UNAVAILABLE");
+            base_connection::pointer_t sender(msg.user_data<base_connection>());
+            if(verify_command(sender, reply))
+            {
+                reply.add_parameter("destination_service", service);
+                reply.add_parameter("unsent_command", msg.get_command());
+                sender->send_message_to_connection(reply);
+            }
+            else
+            {
+                SNAP_LOG_NOTICE
+                    << "a reply on unavailable service was requested, but \""
+                    << service
+                    << "\" does not support message SERVICE_UNAVAILABLE."
+                    << SNAP_LOG_SEND;
+            }
+        }
         transmission_report(msg);
-        return;
+        return true;
     }
 
     // if attempting to send to self, we cannot go on from here
@@ -1325,13 +1395,15 @@ void server::process_message(ed::message & msg)
             << SNAP_LOG_SEND;
 
         transmission_report(msg);
-        return;
+        return false;
     }
 
     if(!accepting_remote_connections.empty())
     {
         broadcast_message(msg, accepting_remote_connections);
     }
+
+    return true;
 }
 
 
@@ -1475,6 +1547,13 @@ bool server::shutting_down(ed::message & msg)
 }
 
 
+/** \brief Overload the dispatch_message().
+ *
+ * The default implementation of dispatch_message() works for all our
+ * services except the communicatord which wants to know whether a message
+ * was being broadcasted, whether it is actively shutting down, or whether
+ * the message is for the communicatord service itself or another service.
+ */
 bool server::dispatch_message(ed::message & msg)
 {
     // check whether this is a timed out or already processed broadcast
@@ -1504,9 +1583,9 @@ bool server::dispatch_message(ed::message & msg)
         return dispatcher_support::dispatch_message(msg);
     }
 
-    // otherwise return false which means `process_message()` will be called
+    // otherwise call `forward_message()`
     //
-    return false;
+    return forward_message(msg);
 }
 
 
@@ -2492,23 +2571,45 @@ void server::msg_register(ed::message & msg)
         return;
     }
 
-    service_connection::pointer_t service_conn(std::dynamic_pointer_cast<service_connection>(conn));
-    if(service_conn == nullptr)
     {
-        SNAP_LOG_ERROR
-            << "only local services are expected to REGISTER with the communicatord service."
-            << SNAP_LOG_SEND;
-        return;
+        unix_connection::pointer_t unix_conn(std::dynamic_pointer_cast<unix_connection>(conn));
+        if(unix_conn == nullptr)
+        {
+            service_connection::pointer_t service_conn(std::dynamic_pointer_cast<service_connection>(conn));
+            if(service_conn == nullptr)
+            {
+                SNAP_LOG_ERROR
+                    << "only local services are expected to REGISTER with the communicatord service."
+                    << SNAP_LOG_SEND;
+                return;
+            }
+            service_conn->properly_named();
+        }
+        else
+        {
+            unix_conn->properly_named();
+        }
     }
 
-    service_conn->set_name(service_name);
-    service_conn->properly_named();
+    ed::connection::pointer_t c(std::dynamic_pointer_cast<ed::connection>(conn));
+    if(c == nullptr)
+    {
+        throw communicatord::logic_error("the service_connection and unix_connection are both derived from ed::connection, c == nullptr should never happen.");
+    }
 
-    service_conn->set_connection_type(connection_type_t::CONNECTION_TYPE_LOCAL);
+    SNAP_LOG_VERBOSE
+        << "service named \""
+        << service_name
+        << "\" just registered."
+        << SNAP_LOG_SEND;
+
+    c->set_name(service_name);
+
+    conn->set_connection_type(connection_type_t::CONNECTION_TYPE_LOCAL);
 
     // connection is up now
     //
-    service_conn->connection_started();
+    conn->connection_started();
 
     // request the COMMANDS of this connection
     //
@@ -2527,20 +2628,20 @@ void server::msg_register(ed::message & msg)
 
     // status changed for this connection
     //
-    send_status(service_conn);
+    send_status(c);
 
     // if we have local messages that were cached, then
     // forward them now
     //
     f_local_message_cache.process_messages(
-        [service_name, service_conn](ed::message & cached_msg)
+        [service_name, conn](ed::message & cached_msg)
         {
             if(cached_msg.get_service() != service_name)
             {
                 return false;
             }
 
-            service_conn->send_message_to_connection(cached_msg);
+            conn->send_message_to_connection(cached_msg);
             return true;
         });
 }
@@ -2801,6 +2902,7 @@ void server::broadcast_message(
             , true);
 
     // we always broadcast to all local services
+    //
     ed::connection::vector_t broadcast_connection;
 
     if(accepting_remote_connections.empty())
@@ -3807,6 +3909,7 @@ void server::refresh_heard_of()
     }
 
     // now remove services we are in control of
+    //
     for(auto const & service : f_local_services_list)
     {
         auto it(f_services_heard_of_list.find(service));
@@ -3817,9 +3920,8 @@ void server::refresh_heard_of()
     }
 
     // generate a string we can send in a CONNECT or an ACCEPT
+    //
     f_services_heard_of = snapdev::join_strings(f_services_heard_of_list, ",");
-
-    // done
 }
 
 

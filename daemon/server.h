@@ -80,16 +80,10 @@ public:
 
     // ed::dispatcher_support implementation
     virtual bool                dispatch_message(ed::message & msg) override;
-    virtual void                process_message(ed::message & msg) override;
 
     // ed::connection_with_send_message implementation
     virtual bool                send_message(ed::message & msg, bool cache = false) override;
     virtual void                stop(bool quitting) override;
-
-    //void                        process_message(
-    //                                      ed::connection::pointer_t connection
-    //                                    , ed::message const & msg
-    //                                    , bool udp);
 
     void                        send_status(
                                           ed::connection::pointer_t connection
@@ -104,6 +98,7 @@ public:
                                           std::shared_ptr<base_connection> connection
                                         , ed::message const & message);
     void                        process_connected(ed::connection::pointer_t connection);
+    bool                        forward_message(ed::message & msg);
     void                        broadcast_message(
                                           ed::message & message
                                         , std::vector<std::shared_ptr<base_connection>> const & accepting_remote_connections = std::vector<std::shared_ptr<base_connection>>());

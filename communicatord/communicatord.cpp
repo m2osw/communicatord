@@ -91,6 +91,80 @@ advgetopt::option const g_options[] =
     advgetopt::end_options()
 };
 
+
+
+class local_stream
+    : public ed::local_stream_client_permanent_message_connection
+{
+public:
+    local_stream(
+              addr::unix const & address
+            , std::string const & service_name)
+        : local_stream_client_permanent_message_connection(
+                  address
+                , ed::DEFAULT_PAUSE_BEFORE_RECONNECTING
+                , true
+                , false
+                , true
+                , service_name)
+    {
+    }
+
+    virtual void process_connected() override
+    {
+        local_stream_client_permanent_message_connection::process_connected();
+        register_service();
+    }
+};
+
+
+class tcp_stream
+    : public ed::tcp_client_permanent_message_connection
+{
+public:
+    tcp_stream(
+              addr::addr_range::vector_t const & ranges
+            , ed::mode_t mode
+            , std::string const service_name)
+        : tcp_client_permanent_message_connection(
+              ranges
+            , mode
+            , ed::DEFAULT_PAUSE_BEFORE_RECONNECTING
+            , true
+            , service_name)
+    {
+    }
+
+    virtual void process_connected() override
+    {
+        tcp_client_permanent_message_connection::process_connected();
+        register_service();
+    }
+};
+
+
+class udp_dgram
+    : public ed::udp_server_message_connection
+{
+public:
+    typedef std::shared_ptr<udp_dgram>  pointer_t;
+
+    udp_dgram(
+              addr::addr const & server
+            , addr::addr const & client
+            , std::string const & service_name)
+        : udp_server_message_connection(server, client, service_name)
+    {
+    }
+
+    void simulate_connected()
+    {
+        register_service();
+    }
+};
+
+
+
 } // no name namespace
 
 
@@ -101,14 +175,33 @@ advgetopt::option const g_options[] =
  * other functions as required to determine the value of options used
  * by this object.
  *
- * See the g_options array for a list of the supported options.
+ * See the g_options array for a list of the options added by this
+ * constructor and made available on your command line.
+ *
+ * The communicator extension allows for your service to connect to
+ * the communicator daemon without effort on your part (well... nearly.
+ * Hopefully eventdispatcher version 2.x will do a lot better on that end.)
+ * This is done by first adding the communicator available options
+ * (i.e. this very function) then by processing the options by calling the
+ * process_communicator_options(). You are responsible for that second call
+ * (see an example in the fluid-settings server.cpp & messenger.cpp files).
  *
  * \param[in] opts  An reference to an advgetopt::getopt object.
  */
-communicator::communicator(advgetopt::getopt & opts)
-    : f_opts(opts)
+communicator::communicator(
+          advgetopt::getopt & opts
+        , std::string const & service_name)
+    : timer(-1)
+    , f_opts(opts)
     , f_communicator(ed::communicator::instance())
+    , f_service_name(service_name)
 {
+    if(f_service_name.empty())
+    {
+        throw invalid_name("the service_name paramter of the communicator constructor cannot be an empty string.");
+    }
+
+    f_opts.parse_options_info(g_options, true);
 }
 
 
@@ -118,22 +211,6 @@ communicator::communicator(advgetopt::getopt & opts)
  */
 communicator::~communicator()
 {
-}
-
-
-/** \brief Add the command line option of communicator extension.
- *
- * The communicator extension allows for your service to connect to
- * the communicator daemon without effort on your part. This is done
- * by first adding the communicator available options (i.e. this very
- * function) then by processing the options by calling the
- * process_communicator_options().
- */
-void communicator::add_communicatord_options()
-{
-    // add options
-    //
-    f_opts.parse_options_info(g_options, true);
 }
 
 
@@ -174,7 +251,7 @@ void communicator::process_communicatord_options()
         }
         addr::unix address('/' + u.path(false));
         address.set_scheme(scheme);
-        f_communicator_connection = std::make_shared<ed::local_stream_client_permanent_message_connection>(address);
+        f_communicator_connection = std::make_shared<local_stream>(address, f_service_name);
     }
     else
     {
@@ -208,7 +285,10 @@ void communicator::process_communicatord_options()
                     throw e;
                 }
             }
-            f_communicator_connection = std::make_shared<ed::tcp_client_permanent_message_connection>(ranges);
+            f_communicator_connection = std::make_shared<tcp_stream>(
+                      ranges
+                    , ed::mode_t::MODE_PLAIN
+                    , f_service_name);
         }
         else if(scheme == "cds")
         {
@@ -224,9 +304,10 @@ void communicator::process_communicatord_options()
                         << SNAP_LOG_SEND;
                 }
             }
-            f_communicator_connection = std::make_shared<ed::tcp_client_permanent_message_connection>(
+            f_communicator_connection = std::make_shared<tcp_stream>(
                       ranges
-                    , ed::mode_t::MODE_ALWAYS_SECURE);
+                    , ed::mode_t::MODE_ALWAYS_SECURE
+                    , f_service_name);
         }
         else if(scheme == "cdu")
         {
@@ -264,9 +345,12 @@ void communicator::process_communicatord_options()
             //
             addr::addr const client(ranges[0].get_from());
 
-            f_communicator_connection = std::make_shared<ed::udp_server_message_connection>(
+            udp_dgram::pointer_t conn = std::make_shared<udp_dgram>(
                       server
-                    , client);
+                    , client
+                    , f_service_name);
+            conn->simulate_connected();
+            f_communicator_connection = conn;
         }
         else if(scheme == "cdb")
         {
@@ -298,6 +382,17 @@ void communicator::process_communicatord_options()
         throw e;
     }
 
+    ed::dispatcher_support::pointer_t d(std::dynamic_pointer_cast<ed::dispatcher_support>(f_communicator_connection));
+    if(d == nullptr)
+    {
+        connection_unavailable const e("the connection does not support the ed::dispatcher.");
+        SNAP_LOG_FATAL
+            << e
+            << SNAP_LOG_SEND;
+        throw e;
+    }
+    d->set_dispatcher(get_dispatcher());
+
     if(!f_communicator->add_connection(f_communicator_connection))
     {
         f_communicator_connection.reset();
@@ -308,6 +403,21 @@ void communicator::process_communicatord_options()
             << SNAP_LOG_SEND;
         throw e;
     }
+}
+
+
+/** \brief Retrieve the service name from the communicator.
+ *
+ * This function returns a reference to the service name as defined when
+ * the communocator object was created. This paramter cannot be an empty
+ * string.
+ *
+ * \return the service name as specified when you constructed this
+ * communicator.
+ */
+std::string const & communicator::service_name() const
+{
+    return f_service_name;
 }
 
 
@@ -348,7 +458,7 @@ void communicator::unregister_communicator(bool quitting)
         }
         else
         {
-            // in this case we can UNREGISTER from the snapcommunicator
+            // in this case we can UNREGISTER from the communicator daemon
             //
             messenger->unregister_service();
         }

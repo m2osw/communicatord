@@ -119,7 +119,7 @@ void listener::process_accept()
         // an error occurred, report in the logs
         int const e(errno);
         SNAP_LOG_ERROR
-            << "somehow accept() failed with errno: "
+            << "somehow accept() of a tcp connection failed with errno: "
             << e
             << " -- "
             << strerror(e)
@@ -160,7 +160,7 @@ void listener::process_accept()
         // set a default name in each new connection, this changes
         // whenever we receive a REGISTER message from that connection
         //
-        service->set_name("client connection");
+        service->set_name("client tcp connection");
 
         service->set_server_name(f_server_name);
     }
@@ -169,7 +169,7 @@ void listener::process_accept()
         if(network_type == addr::network_type_t::NETWORK_TYPE_LOOPBACK)
         {
             SNAP_LOG_ERROR
-                << "received what should be a remote connection from \""
+                << "received what should be a remote tcp connection from \""
                 << service->get_remote_address().to_ipv4or6_string(addr::string_ip_t::STRING_IP_PORT)
                 << "\"."
                 << SNAP_LOG_SEND;
@@ -187,7 +187,7 @@ void listener::process_accept()
         // and as we send the ACCEPT message
         //
         service->set_name(
-                  std::string("remote connection from: ")
+                  std::string("remote tcp connection from: ")
                 + service->get_remote_address().to_ipv4or6_string(addr::string_ip_t::STRING_IP_PORT));
         service->mark_as_remote();
     }
@@ -198,7 +198,7 @@ void listener::process_accept()
         // new pointer
         //
         SNAP_LOG_ERROR
-            << "new client connection could not be added to the ed::communicator list of connections."
+            << "new client tcp connection could not be added to the ed::communicator list of connections."
             << SNAP_LOG_SEND;
     }
 }

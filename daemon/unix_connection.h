@@ -53,7 +53,8 @@ public:
                                 , std::string const & server_name);
     virtual             ~unix_connection() override;
 
-    // ed::local_stream_server_client_message_connection implementation
+    // local_stream_server_client_message_connection implementation
+    //
     virtual void        process_message(ed::message & msg) override;
 
     void                send_status();

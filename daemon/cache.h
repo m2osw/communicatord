@@ -41,11 +41,18 @@ namespace communicator_daemon
 {
 
 
+enum class cache_message_t
+{
+    CACHE_MESSAGE_IGNORE,
+    CACHE_MESSAGE_REPLY,
+    CACHE_MESSAGE_CACHED,
+};
+
 
 class cache
 {
 public:
-    void                cache_message(ed::message & msg);
+    cache_message_t     cache_message(ed::message & msg);
     void                remove_old_messages();
     void                process_messages(std::function<bool(ed::message & msg)> callback);
 
