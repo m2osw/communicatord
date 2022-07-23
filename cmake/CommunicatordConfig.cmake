@@ -1,9 +1,10 @@
 # - Find Communicator Daemon
 #
-# COMMUNICATORD_FOUND        - System has Communicator Daemon library
-# COMMUNICATORD_INCLUDE_DIRS - The Communicator Daemon library include directories
-# COMMUNICATORD_LIBRARIES    - The libraries needed to use the Communicator Daemon library
-# COMMUNICATORD_DEFINITIONS  - Compiler switches required for using Communicator Daemon library
+# COMMUNICATORD_FOUND                - System has Communicator Daemon library
+# COMMUNICATORD_INCLUDE_DIRS         - The Communicator Daemon library include directories
+# COMMUNICATORD_LIBRARIES            - The libraries needed to use the Communicator Daemon library
+# COMMUNICATORD_DEFINITIONS          - Compiler switches required for using Communicator Daemon library
+# COMMUNICATORD_SERVICES_INSTALL_DIR - Directory where to install Communicator Daemon .service files
 #
 # License:
 #
