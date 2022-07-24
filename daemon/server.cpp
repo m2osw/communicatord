@@ -1218,14 +1218,27 @@ SNAP_LOG_VERBOSE
                 //
                 continue;
             }
+            if(base_conn->get_connection_type() != connection_type_t::CONNECTION_TYPE_DOWN)
+            {
+                // not connected yet, forget about it
+                continue;
+            }
+
             service_connection::pointer_t conn(std::dynamic_pointer_cast<service_connection>(nc));
-            unix_connection::pointer_t unix(std::dynamic_pointer_cast<unix_connection>(nc));
-            if(conn != nullptr || unix != nullptr)
+            if(conn != nullptr)
             {
                 throw communicatord::missing_name(
-                          "server name missing in connection "
+                          "DEBUG: server name missing in connection \""
                         + conn->get_name()
-                        + "...");
+                        + "\"...");
+            }
+            unix_connection::pointer_t unix(std::dynamic_pointer_cast<unix_connection>(nc));
+            if(unix != nullptr)
+            {
+                throw communicatord::missing_name(
+                          "DEBUG: server name missing in connection \""
+                        + unix->get_name()
+                        + "\"...");
             }
 
             switch(base_conn->get_connection_type())
@@ -1236,11 +1249,11 @@ SNAP_LOG_VERBOSE
 
             case connection_type_t::CONNECTION_TYPE_LOCAL:
                 throw communicatord::missing_name(
-                          "server name missing in connection \"local service\"...");
+                          "DEBUG: server name missing in connection \"local service\"...");
 
             case connection_type_t::CONNECTION_TYPE_REMOTE:
                 throw communicatord::missing_name(
-                          "server name missing in connection \"remote communicatord\"...");
+                          "DEBUG: server name missing in connection \"remote communicatord\"...");
 
             }
         }
@@ -1815,7 +1828,7 @@ void server::msg_commands(ed::message & msg)
         // (this is only if --debug-all-messages was specified)
         //
         throw communicatord::missing_message(
-                  "Connection \""
+                  "DEBUG: Connection \""
                 + c->get_name()
                 + "\" does not implement some of the required commands. See logs for more details.");
     }
@@ -2667,6 +2680,13 @@ void server::msg_registerforloadavg(ed::message & msg)
 
 void server::msg_servicestatus(ed::message & msg)
 {
+    if(!msg.has_parameter("service"))
+    {
+        SNAP_LOG_ERROR
+            << "The SERVICESTATUS service parameter is mandatory."
+            << SNAP_LOG_SEND;
+        return;
+    }
     std::string const & service_name(msg.get_parameter("service"));
     if(service_name.empty())
     {

@@ -51,6 +51,7 @@
 
 // snapdev
 //
+#include    <snapdev/gethostname.h>
 #include    <snapdev/not_reached.h>
 #include    <snapdev/not_used.h>
 
@@ -506,7 +507,7 @@ public:
             return false;
         }
         std::string const & scheme(f_uri.scheme());
-        if(scheme == "sc")
+        if(scheme == "cd")
         {
             if(f_uri.domain().empty())
             {
@@ -547,7 +548,7 @@ public:
                 f_ip_address = a;
             }
         }
-        else if(scheme == "scs")
+        else if(scheme == "cds")
         {
             if(f_uri.domain().empty())
             {
@@ -580,7 +581,7 @@ public:
             f_ip_address = a;
             f_selected_connection_type = connection_t::SECURE_TCP;
         }
-        else if(scheme == "scu")
+        else if(scheme == "cdu")
         {
             if(f_uri.domain().empty())
             {
@@ -618,7 +619,7 @@ public:
                 f_selected_connection_type = connection_t::UDP;
             }
         }
-        else if(scheme == "scb")
+        else if(scheme == "cdb")
         {
             if(f_uri.domain().empty())
             {
@@ -1080,6 +1081,12 @@ public:
             return false;
         }
 
+        if(command == "/msg_help")
+        {
+            help_message();
+            return false;
+        }
+
         network_connection::pointer_t c(f_connection.lock());
         if(c == nullptr)
         {
@@ -1138,16 +1145,31 @@ private:
         output("Help:");
         output("Internal commands start with a  slash (/). Supported commands:");
         output("  /connect <scheme>://<ip>:<port> | <scheme>:///<path> -- connect to specified URI");
+        output("    i.e. /connect cd://192.168.2.1:4004");
         output("  /disconnect -- explicitly disconnect any existing connection");
         output("  /help or /? or ? or <F1> key -- print this help screen");
         output("  /quit -- leave tool");
         output("  <F2> key -- create a message in a popup window");
-        output("  ... -- message to send to current connection");
+        output("  ... -- message to send to current connection (/msg_help for more)");
         output("    a message is composed of:");
         output("      ['<'<server>:<service>' '][<server>:<service>'/']command[' '<name>=<value>';'...]");
         output("    where the first <server>:<service> is the origin (\"sent from\")");
         output("    where the second <server>:<service> is the destination");
         output("    where <name>=<value> pairs are parameters (can be repeated)");
+    }
+
+    void help_message()
+    {
+        output("Help:");
+        output("Commands/messags to work with the communicator daemon:");
+        output("  /connect cd://192.168.2.1:4004");
+        output("  REGISTER service=message;version=1");
+        output("  COMMANDS list=ACCEPT,HELP,QUITTING,READY,STOP,UNKNOWN,COMMANDS");
+        output("    add more messages as required for your test");
+        output("  <server_name:message server_name:other_service/...");
+        output("    server_name is set to `hostname` by default: " + snapdev::gethostname());
+        output("  <server_name:message server_name:other_service/STOP");
+        output("    ends other_service");
     }
 
     static console_connection *     g_console /* = nullptr; done below because it's static */;
