@@ -198,7 +198,7 @@ communicator::communicator(
 {
     if(f_service_name.empty())
     {
-        throw invalid_name("the service_name paramter of the communicator constructor cannot be an empty string.");
+        throw invalid_name("the service_name parameter of the communicator constructor cannot be an empty string.");
     }
 
     f_opts.parse_options_info(g_options, true);

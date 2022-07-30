@@ -139,8 +139,7 @@ private:
     void                        transmission_report(ed::message & msg);
 
     advgetopt::getopt               f_opts;
-    ed::dispatcher<server>::pointer_t
-                                    f_dispatcher = ed::dispatcher<server>::pointer_t();
+    ed::dispatcher::pointer_t       f_dispatcher = ed::dispatcher::pointer_t();
     std::string                     f_server_name = std::string();
     int                             f_number_of_processors = 1;
     std::string                     f_neighbors_cache_filename = std::string();

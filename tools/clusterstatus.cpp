@@ -24,6 +24,7 @@
 // eventdispatcher
 //
 #include    <eventdispatcher/tcp_client_message_connection.h>
+#include    <eventdispatcher/communicator.h>
 #include    <eventdispatcher/dispatcher.h>
 
 
@@ -97,7 +98,7 @@ cluster_messenger::cluster_messenger(
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
 class cluster
     : public ed::connection_with_send_message
-    , public ed::dispatcher<cluster>
+    , public ed::dispatcher
     , public std::enable_shared_from_this<cluster>
 {
 public:
@@ -125,9 +126,6 @@ private:
     void                        msg_cluster_status(ed::message & message);
     void                        msg_cluster_complete(ed::message & message);
 
-    static ed::dispatcher<cluster>::dispatcher_match::vector_t const
-                                        g_cluster_service_messages;
-
     advgetopt::getopt                   f_opts;
     advgetopt::conf_file::pointer_t     f_communicatord_config = advgetopt::conf_file::pointer_t();
     addr::addr                          f_communicator_addr = addr::addr();
@@ -141,31 +139,6 @@ private:
 
 
 
-/** \brief List of cluster commands.
- *
- * The following table defines the commands understood by cluster,
- * which are pretty limited, mainly we want to gather the status from
- * the communicator process.
- */
-ed::dispatcher<cluster>::dispatcher_match::vector_t const cluster::g_cluster_service_messages =
-{
-    {
-        "CLUSTERUP"
-      , &cluster::msg_cluster_status
-    },
-    {
-        "CLUSTERDOWN"
-      , &cluster::msg_cluster_status
-    },
-    {
-        "CLUSTERCOMPLETE"
-      , &cluster::msg_cluster_complete
-    },
-    {
-        "CLUSTERINCOMPLETE"
-      , &cluster::msg_cluster_complete
-    }
-};
 
 
 
@@ -221,10 +194,17 @@ advgetopt::options_environment const g_options_environment =
 
 
 cluster::cluster(int argc, char * argv[])
-    : dispatcher(this, g_cluster_service_messages)
+    : dispatcher(this)
     , f_opts(g_options_environment)
     , f_communicator(ed::communicator::instance())
 {
+    add_matches({
+        DISPATCHER_MATCH("CLUSTERUP", &cluster::msg_cluster_status),
+        DISPATCHER_MATCH("CLUSTERDOWN", &cluster::msg_cluster_status),
+        DISPATCHER_MATCH("CLUSTERCOMPLETE", &cluster::msg_cluster_complete),
+        DISPATCHER_MATCH("CLUSTERINCOMPLETE", &cluster::msg_cluster_complete),
+    });
+
     // we do not log, this is a command line tool?
     //snaplogger::add_logger_options(f_opts);
     f_opts.finish_parsing(argc, argv);
@@ -237,6 +217,7 @@ cluster::cluster(int argc, char * argv[])
     advgetopt::conf_file_setup setup(f_opts.get_string("communicatord-config"));
     f_communicatord_config = advgetopt::conf_file::get_conf_file(setup);
 
+    // TODO: convert to using the communidatord library object
     f_communicator_addr = addr::string_to_addr(
                   f_communicatord_config->get_parameter("local_listen").c_str()
                 , "localhost"

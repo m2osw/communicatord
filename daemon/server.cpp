@@ -345,104 +345,6 @@ advgetopt::options_environment const g_options_environment =
 #pragma GCC diagnostic pop
 
 
-/** \brief List of messages understood by the communicatord.
- *
- * The communicator daemon propagates messages between services. It
- * also understands a certain number of messages to implement the
- * communication channels appropriately.
- *
- * The following table includes comments about messages that are
- * implemented in the connection_with_send_message class which the
- * server derives from. It would be possible to reimplement those
- * functions here, but the version in that eventdispatcher class
- * work as expected so far.
- */
-ed::dispatcher<server>::dispatcher_match::vector_t const g_server_messages =
-{
-    ed::dispatcher<server>::define_match(
-          ed::dispatcher<server>::Expression("ACCEPT")
-        , ed::dispatcher<server>::Execute(&server::msg_accept)
-    ),
-    // default in dispatcher: ALIVE
-    ed::dispatcher<server>::define_match(
-          ed::dispatcher<server>::Expression("CLUSTERSTATUS")
-        , ed::dispatcher<server>::Execute(&server::msg_clusterstatus)
-    ),
-    ed::dispatcher<server>::define_match(
-          ed::dispatcher<server>::Expression("COMMANDS")
-        , ed::dispatcher<server>::Execute(&server::msg_commands)
-    ),
-    ed::dispatcher<server>::define_match(
-          ed::dispatcher<server>::Expression("CONNECT")
-        , ed::dispatcher<server>::Execute(&server::msg_connect)
-    ),
-    ed::dispatcher<server>::define_match(
-          ed::dispatcher<server>::Expression("DISCONNECT")
-        , ed::dispatcher<server>::Execute(&server::msg_disconnect)
-    ),
-    ed::dispatcher<server>::define_match(
-          ed::dispatcher<server>::Expression("FORGET")
-        , ed::dispatcher<server>::Execute(&server::msg_forget)
-    ),
-    ed::dispatcher<server>::define_match(
-          ed::dispatcher<server>::Expression("GOSSIP")
-        , ed::dispatcher<server>::Execute(&server::msg_gossip)
-    ),
-    // default in dispatcher: HELP
-    // default in dispatcher: LEAK
-    ed::dispatcher<server>::define_match(
-          ed::dispatcher<server>::Expression("LISTENLOADAVG")
-        , ed::dispatcher<server>::Execute(&server::msg_listen_loadavg)
-    ),
-    ed::dispatcher<server>::define_match(
-          ed::dispatcher<server>::Expression("LISTSERVICES")
-        , ed::dispatcher<server>::Execute(&server::msg_list_services)
-    ),
-    ed::dispatcher<server>::define_match(
-          ed::dispatcher<server>::Expression("LOADAVG")
-        , ed::dispatcher<server>::Execute(&server::msg_save_loadavg)
-    ),
-    // default in dispatcher: LOG_ROTATE
-    ed::dispatcher<server>::define_match(
-          ed::dispatcher<server>::Expression("PUBLIC_IP")
-        , ed::dispatcher<server>::Execute(&server::msg_public_ip)
-    ),
-    // default in dispatcher: QUITTING -- the default is not valid for us, we have it overridden, but no need to do anything here
-    // default in dispatcher: READY
-    ed::dispatcher<server>::define_match(
-          ed::dispatcher<server>::Expression("REFUSE")
-        , ed::dispatcher<server>::Execute(&server::msg_refuse)
-    ),
-    ed::dispatcher<server>::define_match(
-          ed::dispatcher<server>::Expression("REGISTER")
-        , ed::dispatcher<server>::Execute(&server::msg_register)
-    ),
-    ed::dispatcher<server>::define_match(
-          ed::dispatcher<server>::Expression("REGISTERFORLOADAVG")
-        , ed::dispatcher<server>::Execute(&server::msg_registerforloadavg)
-    ),
-    // default in dispatcher: RESTART
-    ed::dispatcher<server>::define_match(
-          ed::dispatcher<server>::Expression("SERVICESTATUS")
-        , ed::dispatcher<server>::Execute(&server::msg_servicestatus)
-    ),
-    ed::dispatcher<server>::define_match(
-          ed::dispatcher<server>::Expression("SHUTDOWN")
-        , ed::dispatcher<server>::Execute(&server::msg_shutdown)
-    ),
-    ed::dispatcher<server>::define_match(
-          ed::dispatcher<server>::Expression("UNREGISTER")
-        , ed::dispatcher<server>::Execute(&server::msg_unregister)
-    ),
-    ed::dispatcher<server>::define_match(
-          ed::dispatcher<server>::Expression("UNREGISTERFORLOADAVG")
-        , ed::dispatcher<server>::Execute(&server::msg_unregisterforloadavg)
-    ),
-    // default in dispatcher: STOP -- we overload the stop() which gets called by the message implementation
-    // default in dispatcher: UNKNOWN -- we overload the function to include more details in the log
-
-    // others are handled with the eventdispatcher defaults
-};
 
 
 
@@ -473,9 +375,7 @@ ed::dispatcher<server>::dispatcher_match::vector_t const g_server_messages =
  */
 server::server(int argc, char * argv[])
     : f_opts(g_options_environment)
-    , f_dispatcher(std::make_shared<ed::dispatcher<server>>(
-                          this
-                        , g_server_messages))
+    , f_dispatcher(std::make_shared<ed::dispatcher>(this))
 {
     snaplogger::add_logger_options(f_opts);
     f_opts.finish_parsing(argc, argv);
@@ -486,8 +386,6 @@ server::server(int argc, char * argv[])
         throw advgetopt::getopt_exit("logger options generated an error.", 1);
     }
 
-    f_dispatcher->add_communicator_commands();
-
     f_debug_all_messages = f_opts.is_defined("debug_all_messages");
 #ifdef _DEBUG
     if(f_debug_all_messages)
@@ -496,6 +394,40 @@ server::server(int argc, char * argv[])
     }
 #endif
     set_dispatcher(f_dispatcher);
+
+    f_dispatcher->add_matches({
+        DISPATCHER_MATCH("ACCEPT", &server::msg_accept),
+        // default in dispatcher: ALIVE
+        DISPATCHER_MATCH("CLUSTERSTATUS", &server::msg_clusterstatus),
+        DISPATCHER_MATCH("COMMANDS", &server::msg_commands),
+        DISPATCHER_MATCH("CONNECT", &server::msg_connect),
+        DISPATCHER_MATCH("DISCONNECT", &server::msg_disconnect),
+        DISPATCHER_MATCH("FORGET", &server::msg_forget),
+        DISPATCHER_MATCH("GOSSIP", &server::msg_gossip),
+        // default in dispatcher: HELP
+        // default in dispatcher: LEAK
+        DISPATCHER_MATCH("LISTENLOADAVG", &server::msg_listen_loadavg),
+        DISPATCHER_MATCH("LISTSERVICES", &server::msg_list_services),
+        DISPATCHER_MATCH("LOADAVG", &server::msg_save_loadavg),
+        // default in dispatcher: LOG_ROTATE
+        DISPATCHER_MATCH("PUBLIC_IP", &server::msg_public_ip),
+        // default in dispatcher: QUITTING -- the default is not valid for us, we have it overridden, but no need to do anything here
+        // default in dispatcher: READY
+        DISPATCHER_MATCH("REFUSE", &server::msg_refuse),
+        DISPATCHER_MATCH("REGISTER", &server::msg_register),
+        DISPATCHER_MATCH("REGISTERFORLOADAVG", &server::msg_registerforloadavg),
+        // default in dispatcher: RESTART
+        DISPATCHER_MATCH("SERVICESTATUS", &server::msg_servicestatus),
+        DISPATCHER_MATCH("SHUTDOWN", &server::msg_shutdown),
+        DISPATCHER_MATCH("UNREGISTER", &server::msg_unregister),
+        DISPATCHER_MATCH("UNREGISTERFORLOADAVG", &server::msg_unregisterforloadavg),
+        // default in dispatcher: STOP -- we overload the stop() which gets called by the message implementation
+        // default in dispatcher: UNKNOWN -- we overload the function to include more details in the log
+
+        // others are handled with the eventdispatcher defaults
+    });
+
+    f_dispatcher->add_communicator_commands();
 }
 
 
@@ -3252,6 +3184,20 @@ void server::send_status(
                 sc->send_message(reply);
             }
         }
+        else
+        {
+            unix_connection::pointer_t unix(std::dynamic_pointer_cast<unix_connection>(*reply_connection));
+            if(unix != nullptr)
+            {
+                if(unix->understand_command("STATUS"))
+                {
+                    // send that STATUS message
+                    //
+                    //verify_command(sc, reply); -- we reach this line only if the command is understood
+                    unix->send_message(reply);
+                }
+            }
+        }
     }
     else
     {
@@ -3264,19 +3210,29 @@ void server::send_status(
         for(auto const & conn : all_connections)
         {
             service_connection::pointer_t sc(std::dynamic_pointer_cast<service_connection>(conn));
-            if(sc == nullptr)
+            if(sc != nullptr)
             {
-                // not a service_connection, ignore (i.e. servers)
-                //
+                if(sc->understand_command("STATUS"))
+                {
+                    // send that STATUS message
+                    //
+                    //verify_command(sc, reply); -- we reach this line only if the command is understood
+                    sc->send_message(reply);
+                }
                 continue;
             }
 
-            if(sc->understand_command("STATUS"))
+            unix_connection::pointer_t unix(std::dynamic_pointer_cast<unix_connection>(conn));
+            if(unix != nullptr)
             {
-                // send that STATUS message
-                //
-                //verify_command(sc, reply); -- we reach this line only if the command is understood
-                sc->send_message(reply);
+                if(unix->understand_command("STATUS"))
+                {
+                    // send that STATUS message
+                    //
+                    //verify_command(sc, reply); -- we reach this line only if the command is understood
+                    unix->send_message(reply);
+                }
+                continue;
             }
         }
     }

@@ -71,7 +71,9 @@ public:
                                 communicator(
                                       advgetopt::getopt & opts
                                     , std::string const & service_name);
+                                communicator(communicator const &) = delete;
     virtual                     ~communicator();
+    communicator &              operator = (communicator const &) = delete;
 
     void                        process_communicatord_options();
     std::string const &         service_name() const;
