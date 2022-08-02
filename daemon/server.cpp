@@ -3969,6 +3969,7 @@ void server::stop(bool quitting)
 
             // a remote communicatord needs to also
             // shutdown so duplicate that message there
+            //
             if(quitting)
             {
                 // SHUTDOWN means we shutdown the entire cluster!!!
@@ -3985,6 +3986,7 @@ void server::stop(bool quitting)
 
             // we know this a remote communicatord, no need to verify, and
             // we may not yet have received the ACCEPT message
+            //
             //verify_command(remote_communicator, reply);
             remote_conn->send_message(reply);
 
@@ -3998,15 +4000,18 @@ void server::stop(bool quitting)
         {
             // a standard service connection or a remote communicatord server?
             //
-            service_connection::pointer_t c(std::dynamic_pointer_cast<service_connection>(connection));
-            if(c != nullptr)
+            service_connection::pointer_t conn(std::dynamic_pointer_cast<service_connection>(connection));
+            unix_connection::pointer_t unix(std::dynamic_pointer_cast<unix_connection>(connection));
+            if(conn != nullptr
+            || unix != nullptr)
             {
-                connection_type_t const type(c->get_connection_type());
+                base_connection::pointer_t base_conn(std::dynamic_pointer_cast<base_connection>(connection));
+                connection_type_t const type(base_conn->get_connection_type());
                 if(type == connection_type_t::CONNECTION_TYPE_DOWN)
                 {
                     // not initialized, just get rid of that one
                     //
-                    f_communicator->remove_connection(c);
+                    f_communicator->remove_connection(connection);
                 }
                 else
                 {
@@ -4032,9 +4037,9 @@ void server::stop(bool quitting)
                             reply.set_command("DISCONNECT");
                         }
 
-                        if(verify_command(c, reply))
+                        if(verify_command(base_conn, reply))
                         {
-                            c->send_message(reply);
+                            base_conn->send_message_to_connection(reply);
                         }
 
                         // we cannot yet remove the connection from the
@@ -4053,7 +4058,7 @@ void server::stop(bool quitting)
                         // may want to know when it gets disconnected
                         // from the communicatord...
                         //
-                        if(c->understand_command("DISCONNECTING"))
+                        if(base_conn->understand_command("DISCONNECTING"))
                         {
                             // close connection as soon as the message was
                             // sent (i.e. we are "sending the last message")
@@ -4061,9 +4066,10 @@ void server::stop(bool quitting)
                             connection->mark_done();
 
                             reply.set_command("DISCONNECTING");
-                            c->send_message(reply);
+                            base_conn->send_message_to_connection(reply);
                         }
-                        else if(c->has_output())
+                        else if((conn != nullptr && conn->has_output())
+                             || (unix != nullptr && unix->has_output()))
                         {
                             // we just sent some data to that connection
                             // so we do not want to kill it immediately
@@ -4120,7 +4126,7 @@ void server::stop(bool quitting)
                 SNAP_LOG_DEBUG
                     << "Connection still left after the stop() call: \""
                     << connection->get_name()
-                    << "\""
+                    << "\"."
                     << SNAP_LOG_SEND;
             }
         }

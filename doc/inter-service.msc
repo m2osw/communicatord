@@ -1,0 +1,34 @@
+# Communicating Between Services
+
+msc {
+  A, communicatord, cache, B;
+
+  A -> communicatord [label="message for service B"];
+
+  communicatord -> B [label="message for service B"];
+
+  A note B [label="if service B is unavailable and cache=yes"];
+
+  communicatord >> cache [label="save message in cache"];
+
+  A note B [label="B starts..."];
+
+  communicatord << cache [label="retrieve message from cache"];
+
+  communicatord -> B [label="forward message to B"];
+
+  A note B [label="if service B is unavailable and cache=no"];
+
+  A <- communicatord [label="UNAVAILABLE service=B"];
+
+  A note B [label="if B receives an unknown message"];
+
+  A -> communicatord [label="send message to service B"];
+
+  communicatord -> B [label="forward message to service B"];
+
+  communicatord <- B [label="reply with UNKNOWN"];
+
+  A <- communicatord [label="reply from B to A with UNKNOWN"];
+}
+

@@ -1,0 +1,54 @@
+# Communication between Communicator Daemons
+
+msc {
+  eventdispatcher, ring, A, B, C, other;
+
+  A <- ring [label="A is told about B and C"];
+
+  A note B [label="assume IP of A < IP of B"];
+
+  A >> eventdispatcher [label="connect to B"];
+
+  A << eventdispatcher [label="success"];
+
+  A -> B [label="CONNECT"];
+
+  A <- B [label="ACCEPT"];
+
+  eventdispatcher note other [label="B may refuse a connection"];
+
+  A <- B [label="REFUSE <reason: too busy, shutting down, in conflict (same name)>"];
+
+  A note C [label="assume IP of A > IP of C"];
+
+  A >> eventdispatcher [label="connect to C"];
+
+  A << eventdispatcher [label="success"];
+
+  A -> C [label="GOSSIP ip=<A's IP>"];
+
+  A <- C [label="CONNECT"];
+
+  A -> C [label="ACCEPT"];
+
+  eventdispatcher note other [label="A may refuse a connection"];
+
+  A -> C [label="REFUSE <reason: too busy, shutting down, in conflict (same name)>"];
+
+  eventdispatcher note other [label="Stopping A"];
+
+  A <- other [label="STOP"];
+
+  A -> B [label="DISCONNECT"];
+
+  A -> C [label="DISCONNECT"];
+
+  eventdispatcher note other [label="Stopping A's Computer (shutting down, reboot)"];
+
+  A <- other [label="QUIT"];
+
+  A -> B [label="SHUTDOWN"];
+
+  A -> C [label="SHUTDOWN"];
+}
+

@@ -1,0 +1,30 @@
+# Process to connect/disconnect the communicator
+
+msc {
+  eventdispatcher, communicatord, service, other;
+
+  service => eventdispatcher [label="connect to communicatord"];
+
+  service << eventdispatcher [label="success"];
+
+  service -> communicatord [label="REGISTER name=<service>"];
+
+  service <- communicatord [label="HELP"];
+
+  service -> communicatord [label="COMMANDS list=..."];
+
+  service <- communicatord [label="READY"];
+
+  eventdispatcher note other [label="Stop your service"];
+
+  other -> service [label="STOP"];
+
+  service -> communicatord [label="UNREGISTER"];
+
+  eventdispatcher note other [label="Stop the communicator daemon"];
+
+  other -> communicatord [label="STOP"];
+
+  service <- communicatord [label="DISCONNECTING"];
+}
+
