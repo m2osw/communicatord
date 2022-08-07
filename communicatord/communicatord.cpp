@@ -108,6 +108,7 @@ public:
                 , true
                 , service_name)
     {
+        set_name("communicator_local_stream");
     }
 
     virtual void process_connected() override
@@ -133,6 +134,7 @@ public:
             , true
             , service_name)
     {
+        set_name("communicator_tcp_stream");
     }
 
     virtual void process_connected() override
@@ -155,6 +157,7 @@ public:
             , std::string const & service_name)
         : udp_server_message_connection(server, client, service_name)
     {
+        set_name("communicator_udp_dgram");
     }
 
     void simulate_connected()
@@ -196,6 +199,8 @@ communicator::communicator(
     , f_communicator(ed::communicator::instance())
     , f_service_name(service_name)
 {
+    set_name("communicator_timer");
+
     if(f_service_name.empty())
     {
         throw invalid_name("the service_name parameter of the communicator constructor cannot be an empty string.");
@@ -229,6 +234,11 @@ communicator::~communicator()
  */
 void communicator::process_communicatord_options()
 {
+    if(f_communicator_connection != nullptr)
+    {
+        throw logic_error("process_communicatord_options() called twice.");
+    }
+
     // extract the scheme and segments
     //
     edhttp::uri u;
