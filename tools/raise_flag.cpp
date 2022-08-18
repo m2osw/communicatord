@@ -649,13 +649,13 @@ int raise_flag::list_in_plain_text()
 
 int raise_flag::list_in_json()
 {
-    as2js::JSON json;
-    as2js::JSON::JSONValueRef root(json["flags"]);
+    as2js::json json;
+    as2js::json::json_value_ref root(json["flags"]);
 
     communicatord::flag::list_t flags(communicatord::flag::load_flags());
     for(auto const & f : flags)
     {
-        as2js::JSON::JSONValueRef item(json["flag"][-1]);
+        as2js::json::json_value_ref item(json["flag"][-1]);
 
         item["unit"] =        f->get_unit();
         item["section"] =     f->get_section();
@@ -670,7 +670,7 @@ int raise_flag::list_in_json()
         communicatord::flag::tag_list_t const & tags(f->get_tags());
         if(!tags.empty())
         {
-            as2js::JSON::JSONValueRef tag_list(item["tags"][-1]);
+            as2js::json::json_value_ref tag_list(item["tags"][-1]);
 
             for(auto const & t : tags)
             {
@@ -679,7 +679,7 @@ int raise_flag::list_in_json()
         }
     }
 
-    std::cout << json.get_value()->to_string().to_utf8() << std::endl;
+    std::cout << json.get_value()->to_string() << std::endl;
 
     return 0;
 }

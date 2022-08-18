@@ -34,5 +34,24 @@
 
   This second one should probably be implemented in the eventdispatcher.
 
+* Time Accuracy in your Cluster
+
+  The communicator daemon should be in charge of gathering wallclock time
+  from all the computers in the cluster. Then report to the sitter if there
+  are discrepancy. However, the communicator itself runs on all the computers
+  so it probably isn't practical to have the communicator itself handle this.
+  Instead, we probably want one separate service that can run on one of your
+  backends and determine the differences. In all likelihood, though, having
+  NTP running on one computer and then use that as the source of time for
+  all the other computers should make it a lot more efficient and time
+  accuracy should be much higher. This may not always be possible, though,
+  especially on really large networks which would require separate data
+  centers. In that case, having a tool to verify that our computers are all
+  in sync. is certain quite important.
+
+  Note that the sitter is already setup to verify that some NTP system is
+  up and running your your computer.
+
+
 
 // vim: ts=4 sw=4 et
