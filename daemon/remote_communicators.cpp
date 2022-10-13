@@ -101,7 +101,7 @@ void remote_communicators::add_remote_communicator(std::string const & addr_port
 
 void remote_communicators::add_remote_communicator(addr::addr const & remote_addr)
 {
-    std::string const addr_str(remote_addr.to_ipv4or6_string(addr::string_ip_t::STRING_IP_PORT));
+    std::string const addr_str(remote_addr.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
 
     SNAP_LOG_DEBUG
         << "adding remote communicator at "
@@ -319,7 +319,7 @@ void remote_communicators::too_busy(addr::addr const & address)
         it->second->set_enable(true);
         SNAP_LOG_INFO
             << "remote communicator "
-            << address.to_ipv4or6_string(addr::string_ip_t::STRING_IP_PORT)
+            << address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT)
             << " was marked as too busy. Pause for 1 day before trying to connect again."
             << SNAP_LOG_SEND;
     }
@@ -345,7 +345,7 @@ void remote_communicators::shutting_down(addr::addr const & address)
         it->second->set_enable(true);
         SNAP_LOG_DEBUG
             << "remote communicator "
-            << address.to_ipv4or6_string(addr::string_ip_t::STRING_IP_PORT)
+            << address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT)
             << " said it was shutting down. Pause for "
             << std::setprecision(2)
             << static_cast<double>(remote_connection::REMOTE_CONNECTION_RECONNECT_TIMEOUT) / 60.0
@@ -363,7 +363,7 @@ void remote_communicators::server_unreachable(addr::addr const & address)
     ed::message unreachable;
     unreachable.set_service(".");
     unreachable.set_command("UNREACHABLE");
-    unreachable.add_parameter("who", address.to_ipv4or6_string(addr::string_ip_t::STRING_IP_PORT));
+    unreachable.add_parameter("who", address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
     f_server->broadcast_message(unreachable);
 }
 

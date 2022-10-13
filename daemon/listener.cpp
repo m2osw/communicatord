@@ -151,7 +151,7 @@ void listener::process_accept()
             //
             SNAP_LOG_WARNING
                 << "received what should be a local connection from \""
-                << service->get_remote_address().to_ipv4or6_string(addr::string_ip_t::STRING_IP_PORT)
+                << service->get_remote_address().to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT)
                 << "\"."
                 << SNAP_LOG_SEND;
             //return;
@@ -170,7 +170,7 @@ void listener::process_accept()
         {
             SNAP_LOG_ERROR
                 << "received what should be a remote tcp connection from \""
-                << service->get_remote_address().to_ipv4or6_string(addr::string_ip_t::STRING_IP_PORT)
+                << service->get_remote_address().to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT)
                 << "\"."
                 << SNAP_LOG_SEND;
             return;
@@ -188,7 +188,7 @@ void listener::process_accept()
         //
         service->set_name(
                   std::string("remote tcp connection from: ")
-                + service->get_remote_address().to_ipv4or6_string(addr::string_ip_t::STRING_IP_PORT));
+                + service->get_remote_address().to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
         service->mark_as_remote();
     }
 

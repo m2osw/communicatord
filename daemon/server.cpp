@@ -581,7 +581,7 @@ int server::init()
 
         SNAP_LOG_CONFIGURATION
             << "listening to local connection \""
-            << local_listen.to_ipv4or6_string(addr::string_ip_t::STRING_IP_PORT)
+            << local_listen.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT)
             << "\"."
             << SNAP_LOG_SEND;
     }
@@ -670,7 +670,7 @@ int server::init()
 
         default_remote_port = listen_addr.get_port();
 
-        f_public_ip = listen_addr.to_ipv4or6_string(addr::string_ip_t::STRING_IP_PORT);
+        f_public_ip = listen_addr.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT);
         f_remote_listener = std::make_shared<listener>(
                   shared_from_this()
                 , listen_addr
@@ -744,7 +744,7 @@ int server::init()
         || secure_listen.get_network_type() == addr::network_type_t::NETWORK_TYPE_PRIVATE
         || secure_listen.get_network_type() == addr::network_type_t::NETWORK_TYPE_ANY)
         {
-            f_secure_ip = secure_listen.to_ipv4or6_string(addr::string_ip_t::STRING_IP_PORT);
+            f_secure_ip = secure_listen.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT);
             listener::pointer_t sl(std::make_shared<listener>(
                       shared_from_this()
                     , secure_listen
@@ -805,7 +805,7 @@ int server::init()
         {
             SNAP_LOG_CONFIGURATION
                 << "listening to UDP connection \""
-                << signal_address.to_ipv4or6_string(addr::string_ip_t::STRING_IP_BRACKETS)
+                << signal_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS)
                 << "\"."
                 << SNAP_LOG_SEND;
         }
@@ -831,7 +831,7 @@ int server::init()
     if(addr::find_addr_interface(f_my_address, false) == nullptr)
     {
         std::string msg("my-address \"");
-        msg += f_my_address.to_ipv6_string(addr::string_ip_t::STRING_IP_BRACKETS);
+        msg += f_my_address.to_ipv6_string(addr::STRING_IP_BRACKET_ADDRESS);
         msg += "\" not found on this computer. Did a copy of the configuration file and forgot to change that entry?";
         SNAP_LOG_FATAL
             << msg
@@ -846,7 +846,7 @@ int server::init()
     if(f_my_address.get_network_type() != addr::network_type_t::NETWORK_TYPE_LOOPBACK
     && !f_my_address.is_default())
     {
-        add_neighbors(f_my_address.to_ipv4or6_string(addr::string_ip_t::STRING_IP_PORT));
+        add_neighbors(f_my_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
     }
 
     if(f_opts.is_defined("neighbors"))
@@ -1962,7 +1962,7 @@ void server::msg_connect(ed::message & msg)
                 //
                 reply.set_command("ACCEPT");
                 reply.add_parameter("server_name", f_server_name);
-                reply.add_parameter("my_address", f_my_address.to_ipv4or6_string(addr::string_ip_t::STRING_IP_PORT));
+                reply.add_parameter("my_address", f_my_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
 
                 // services
                 //
@@ -2971,7 +2971,7 @@ void server::broadcast_message(
                 //
                 std::string const address((conn != nullptr
                             ? conn->get_address()
-                            : remote_conn->get_address()).to_ipv4or6_string(addr::string_ip_t::STRING_IP_ONLY));
+                            : remote_conn->get_address()).to_ipv4or6_string(addr::STRING_IP_ADDRESS));
                 auto it(informed_neighbors_list.find(address));
                 if(it == informed_neighbors_list.end())
                 {
@@ -3000,7 +3000,7 @@ void server::broadcast_message(
                 service_connection::pointer_t conn(std::dynamic_pointer_cast<service_connection>(nc));
                 if(conn)
                 {
-                    std::string const address(conn->get_address().to_ipv4or6_string(addr::string_ip_t::STRING_IP_ONLY));
+                    std::string const address(conn->get_address().to_ipv4or6_string(addr::STRING_IP_ADDRESS));
                     auto it(informed_neighbors_list.find(address));
                     if(it == informed_neighbors_list.end())
                     {
@@ -3017,7 +3017,7 @@ void server::broadcast_message(
                     remote_connection::pointer_t remote_conn(std::dynamic_pointer_cast<remote_connection>(nc));
                     if(remote_conn != nullptr)
                     {
-                        std::string const address(remote_conn->get_address().to_ipv4or6_string(addr::string_ip_t::STRING_IP_ONLY));
+                        std::string const address(remote_conn->get_address().to_ipv4or6_string(addr::STRING_IP_ADDRESS));
                         auto it(informed_neighbors_list.find(address));
                         if(it == informed_neighbors_list.end())
                         {
@@ -3039,7 +3039,7 @@ void server::broadcast_message(
         // for the gossiping to work, we include additional
         // information in the message
         //
-        std::string const originator(f_my_address.to_ipv4or6_string(addr::string_ip_t::STRING_IP_BRACKETS));
+        std::string const originator(f_my_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS));
         auto it(informed_neighbors_list.find(originator));
         if(it != informed_neighbors_list.end())
         {
@@ -3545,7 +3545,7 @@ void server::process_load_balancing()
         std::stringstream ss;
         ss << avg;
         load_avg.add_parameter("avg", ss.str());
-        load_avg.add_parameter("my_address", f_my_address.to_ipv4or6_string(addr::string_ip_t::STRING_IP_PORT));
+        load_avg.add_parameter("my_address", f_my_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
         load_avg.add_parameter("timestamp", time(nullptr));
 
         ed::connection::vector_t const & all_connections(f_communicator->get_connections());
@@ -3841,7 +3841,7 @@ void server::save_neighbors()
         return;
     }
 
-    out << addr::setaddrmode(addr::string_ip_t::STRING_IP_PORT)
+    out << addr::setaddrmode(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT)
         << addr::setaddrsep("\n")
         << f_all_neighbors
         << std::endl;
@@ -4146,7 +4146,7 @@ void server::process_connected(ed::connection::pointer_t conn)
     ed::message connect;
     connect.set_command("CONNECT");
     connect.add_version_parameter();
-    connect.add_parameter("my_address", f_my_address.to_ipv4or6_string(addr::string_ip_t::STRING_IP_PORT));
+    connect.add_parameter("my_address", f_my_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
     connect.add_parameter("server_name", f_server_name);
     if(!f_explicit_neighbors.empty())
     {
