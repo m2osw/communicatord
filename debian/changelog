@@ -1,3 +1,9 @@
+communicatord (2.0.1.0~bionic) bionic; urgency=high
+
+  * Added ipload rules to open ports in the firewall.
+
+ -- Alexis Wilke <alexis@m2osw.com>  Fri, 14 Oct 2022 14:08:25 -0700
+
 communicatord (2.0.0.1~bionic) bionic; urgency=high
 
   * Fixed .docs file. There is no INSTALL.txt, but a TODO.md.
