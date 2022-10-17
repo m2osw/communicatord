@@ -3662,7 +3662,7 @@ void server::add_neighbors(std::string const & new_neighbors)
     list.set_allow(addr::allow_t::ALLOW_MULTI_ADDRESSES_SPACES,   true);
     list.set_allow(addr::allow_t::ALLOW_MULTI_ADDRESSES_NEWLINES, true);
     list.set_allow(addr::allow_t::ALLOW_REQUIRED_PORT,            true);
-    list.set_allow(addr::allow_t::ALLOW_COMMENT,                  true);
+    list.set_allow(addr::allow_t::ALLOW_COMMENT_HASH,             true);
     addr::addr_range::vector_t const addresses(list.parse(trimmed));
 
     bool changed(false);
@@ -3784,7 +3784,7 @@ void server::read_neighbors()
         list.set_allow(addr::allow_t::ALLOW_MULTI_ADDRESSES_SPACES,   true);
         list.set_allow(addr::allow_t::ALLOW_MULTI_ADDRESSES_NEWLINES, true);
         list.set_allow(addr::allow_t::ALLOW_REQUIRED_PORT,            true);
-        list.set_allow(addr::allow_t::ALLOW_COMMENT,                  true);
+        list.set_allow(addr::allow_t::ALLOW_COMMENT_HASH,             true);
         addr::addr_range::vector_t const addresses(list.parse(all));
 
         for(auto const & a : addresses)
