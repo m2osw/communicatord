@@ -368,7 +368,7 @@ public:
 
     local_message_connection(
               connection_lost * cl
-            , addr::unix const & address)
+            , addr::addr_unix const & address)
         : local_stream_client_message_connection(address, false, false)
         , f_connection_lost(cl)
     {
@@ -513,7 +513,7 @@ public:
             {
                 // Unix Stream
                 //
-                f_unix_address = addr::unix(address);
+                f_unix_address = addr::addr_unix(address);
                 f_prompt = "local/stream> ";
                 f_selected_connection_type = connection_t::LOCAL_STREAM;
             }
@@ -587,7 +587,7 @@ public:
             {
                 // Unix Datagram
                 //
-                f_unix_address = addr::unix(address);
+                f_unix_address = addr::addr_unix(address);
                 f_prompt = "local/dgram> ";
                 f_selected_connection_type = connection_t::LOCAL_DGRAM;
             }
@@ -920,7 +920,7 @@ private:
     //
     edhttp::uri                             f_uri                       = edhttp::uri();
     addr::addr                              f_ip_address                = addr::addr();
-    addr::unix                              f_unix_address              = addr::unix();
+    addr::addr_unix                         f_unix_address              = addr::addr_unix();
     connection_t                            f_selected_connection_type  { connection_t::UDP }; // never set to NONE; default to UDP unless user uses --tcp on command line
     connection_t                            f_connection_type           { connection_t::NONE };
     std::string                             f_prompt                    = std::string();

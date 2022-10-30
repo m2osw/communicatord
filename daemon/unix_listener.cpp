@@ -88,7 +88,7 @@ namespace communicator_daemon
  */
 unix_listener::unix_listener(
           server::pointer_t cs
-        , addr::unix const & address
+        , addr::addr_unix const & address
         , int max_connections
         , std::string const & server_name)
     : local_stream_server_connection(address, max_connections, true, true)

@@ -46,7 +46,7 @@ class unix_listener
 public:
                         unix_listener(
                               server::pointer_t cs
-                            , addr::unix const & address
+                            , addr::addr_unix const & address
                             , int max_connections
                             , std::string const & server_name);
 

@@ -67,7 +67,7 @@
 //
 #include    <libaddr/addr_parser.h>
 #include    <libaddr/iface.h>
-#include    <libaddr/unix.h>
+#include    <libaddr/addr_unix.h>
 
 
 // snapdev lib
@@ -590,7 +590,7 @@ int server::init()
     //
     if(f_opts.is_defined("unix-listen"))
     {
-        addr::unix unix_listen(addr::unix(f_opts.get_string("unix-listen")));
+        addr::addr_unix unix_listen(addr::addr_unix(f_opts.get_string("unix-listen")));
         unix_listen.set_scheme("cd");
 
         f_unix_listener = std::make_shared<unix_listener>(
@@ -1164,12 +1164,12 @@ SNAP_LOG_VERBOSE
                         + conn->get_name()
                         + "\"...");
             }
-            unix_connection::pointer_t unix(std::dynamic_pointer_cast<unix_connection>(nc));
-            if(unix != nullptr)
+            unix_connection::pointer_t unix_conn(std::dynamic_pointer_cast<unix_connection>(nc));
+            if(unix_conn != nullptr)
             {
                 throw communicatord::missing_name(
                           "DEBUG: server name missing in connection \""
-                        + unix->get_name()
+                        + unix_conn->get_name()
                         + "\"...");
             }
 
@@ -1202,8 +1202,8 @@ SNAP_LOG_VERBOSE
                 }
                 else
                 {
-                    unix_connection::pointer_t unix(std::dynamic_pointer_cast<unix_connection>(nc));
-                    if(unix != nullptr)
+                    unix_connection::pointer_t unix_conn(std::dynamic_pointer_cast<unix_connection>(nc));
+                    if(unix_conn != nullptr)
                     {
                         is_service = true;
                     }
@@ -3186,15 +3186,15 @@ void server::send_status(
         }
         else
         {
-            unix_connection::pointer_t unix(std::dynamic_pointer_cast<unix_connection>(*reply_connection));
-            if(unix != nullptr)
+            unix_connection::pointer_t unix_conn(std::dynamic_pointer_cast<unix_connection>(*reply_connection));
+            if(unix_conn != nullptr)
             {
-                if(unix->understand_command("STATUS"))
+                if(unix_conn->understand_command("STATUS"))
                 {
                     // send that STATUS message
                     //
                     //verify_command(sc, reply); -- we reach this line only if the command is understood
-                    unix->send_message(reply);
+                    unix_conn->send_message(reply);
                 }
             }
         }
@@ -3222,15 +3222,15 @@ void server::send_status(
                 continue;
             }
 
-            unix_connection::pointer_t unix(std::dynamic_pointer_cast<unix_connection>(conn));
-            if(unix != nullptr)
+            unix_connection::pointer_t unix_conn(std::dynamic_pointer_cast<unix_connection>(conn));
+            if(unix_conn != nullptr)
             {
-                if(unix->understand_command("STATUS"))
+                if(unix_conn->understand_command("STATUS"))
                 {
                     // send that STATUS message
                     //
                     //verify_command(sc, reply); -- we reach this line only if the command is understood
-                    unix->send_message(reply);
+                    unix_conn->send_message(reply);
                 }
                 continue;
             }
@@ -4001,9 +4001,9 @@ void server::stop(bool quitting)
             // a standard service connection or a remote communicatord server?
             //
             service_connection::pointer_t conn(std::dynamic_pointer_cast<service_connection>(connection));
-            unix_connection::pointer_t unix(std::dynamic_pointer_cast<unix_connection>(connection));
+            unix_connection::pointer_t unix_conn(std::dynamic_pointer_cast<unix_connection>(connection));
             if(conn != nullptr
-            || unix != nullptr)
+            || unix_conn != nullptr)
             {
                 base_connection::pointer_t base_conn(std::dynamic_pointer_cast<base_connection>(connection));
                 connection_type_t const type(base_conn->get_connection_type());
@@ -4069,7 +4069,7 @@ void server::stop(bool quitting)
                             base_conn->send_message_to_connection(reply);
                         }
                         else if((conn != nullptr && conn->has_output())
-                             || (unix != nullptr && unix->has_output()))
+                             || (unix_conn != nullptr && unix_conn->has_output()))
                         {
                             // we just sent some data to that connection
                             // so we do not want to kill it immediately

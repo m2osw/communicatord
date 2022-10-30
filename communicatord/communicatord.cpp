@@ -38,7 +38,7 @@
 // libaddr
 //
 #include    <libaddr/addr_parser.h>
-#include    <libaddr/unix.h>
+#include    <libaddr/addr_unix.h>
 
 
 // edhttp
@@ -98,7 +98,7 @@ class local_stream
 {
 public:
     local_stream(
-              addr::unix const & address
+              addr::addr_unix const & address
             , std::string const & service_name)
         : local_stream_client_permanent_message_connection(
                   address
@@ -259,7 +259,7 @@ void communicator::process_communicatord_options()
                 << SNAP_LOG_SEND;
             throw e;
         }
-        addr::unix address('/' + u.path(false));
+        addr::addr_unix address('/' + u.path(false));
         address.set_scheme(scheme);
         f_communicator_connection = std::make_shared<local_stream>(address, f_service_name);
     }
