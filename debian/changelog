@@ -1,3 +1,16 @@
+communicatord (2.0.2.0~bionic) bionic; urgency=high
+
+  * This version actually works.
+  * Renamed the "unix" class as "addr_unix" to support gnu++17.
+  * Moved the ipload communicatord.conf file to here.
+  * Fixed the default unix_listen (i.e. it's a path not an IP).
+  * Made communicatord properly quit.
+  * Properly name each connection object.
+  * Prevent calling process_communicatord_options() more than once.
+  * Fixed the send_status() so it works with either TCP or Unix connections.
+
+ -- Alexis Wilke <alexis@m2osw.com>  Mon, 31 Oct 2022 15:09:53 -0700
+
 communicatord (2.0.1.0~bionic) bionic; urgency=high
 
   * Added ipload rules to open ports in the firewall.
