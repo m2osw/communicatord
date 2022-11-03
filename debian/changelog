@@ -1,3 +1,9 @@
+communicatord (2.0.2.1~bionic) bionic; urgency=high
+
+  * Fixed the removal using a prerm script to shred the logs.
+
+ -- Alexis Wilke <alexis@m2osw.com>  Wed, 02 Nov 2022 18:16:34 -0700
+
 communicatord (2.0.2.0~bionic) bionic; urgency=high
 
   * This version actually works.

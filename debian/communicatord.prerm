@@ -1,0 +1,19 @@
+#!/bin/sh -e
+
+# Source debconf library.
+. /usr/share/debconf/confmodule
+
+if [ "$1" = "purge" ]
+then
+    ENVIRONMENTNAME=communicatord
+
+    # make sure to shred all the logs
+    #
+    # This is done in the prerm because we need shredlog to still be installed
+    #
+    shredlog --force --unlink --recursive "/var/log/${ENVIRONMENTNAME}"
+fi
+
+#DEBHELPER#
+
+# vim: ts=4 sw=4 et nocindent

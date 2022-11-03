@@ -10,10 +10,6 @@ then
     USERNAME=communicatord
     GROUPNAME=communicatord
 
-    # make sure to shred all the logs
-    #
-    shredlog --force --unlink --recursive /var/log/${ENVIRONMENTNAME}
-
     # delete various data directories
     #
     rm -rf /var/lib/${ENVIRONMENTNAME}
