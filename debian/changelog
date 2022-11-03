@@ -1,3 +1,9 @@
+communicatord (2.0.2.2~bionic) bionic; urgency=high
+
+  * The prerm script receives a "deconfigure" not a "purge".
+
+ -- Alexis Wilke <alexis@m2osw.com>  Wed, 02 Nov 2022 19:28:04 -0700
+
 communicatord (2.0.2.1~bionic) bionic; urgency=high
 
   * Fixed the removal using a prerm script to shred the logs.

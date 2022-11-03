@@ -3,7 +3,7 @@
 # Source debconf library.
 . /usr/share/debconf/confmodule
 
-if [ "$1" = "purge" ]
+if [ "$1" = "deconfigure" ]
 then
     ENVIRONMENTNAME=communicatord
 
