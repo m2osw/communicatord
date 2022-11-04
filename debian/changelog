@@ -1,3 +1,11 @@
+communicatord (2.0.4.0~bionic) bionic; urgency=high
+
+  * Removed home directory. If the user exists, the folder remains (dh-sysuser
+    versions before 1.4.0 do not correctly remove users).
+  * Really ignore the local network connection is set to the loopback IP.
+
+ -- Alexis Wilke <alexis@m2osw.com>  Thu, 03 Nov 2022 17:03:00 -0700
+
 communicatord (2.0.3.1~bionic) bionic; urgency=high
 
   * Specify home directory.

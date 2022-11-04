@@ -651,42 +651,51 @@ int server::init()
         // two listeners on the local IP address (i.e. the TCP LOCAL is
         // already listening on that IP)
         //
-        if(listen_addr.get_network_type() != addr::network_type_t::NETWORK_TYPE_PRIVATE)
+        if(listen_addr.get_network_type() == addr::network_type_t::NETWORK_TYPE_LOOPBACK)
         {
-            // this is a fatal error!
-            //
-            SNAP_LOG_FATAL
-                << "the communicatord \"listen="
-                << listen_str
-                << "\" parameter is not a private IP address."
-                   " For security reasons, the PLAIN REMOTE connection is"
-                   " not allowed to use a public IP address. If you need"
-                   " that IP address, consider setting up the"
-                   " --secure-listen option instead."
+            SNAP_LOG_CONFIGURATION
+                << "ignoring the \"listen=...\" parameter since it is set to the loopback."
                 << SNAP_LOG_SEND;
-
-            return 1;
         }
+        else
+        {
+            if(listen_addr.get_network_type() != addr::network_type_t::NETWORK_TYPE_PRIVATE)
+            {
+                // this is a fatal error!
+                //
+                SNAP_LOG_FATAL
+                    << "the communicatord \"listen="
+                    << listen_str
+                    << "\" parameter is not a private IP address."
+                       " For security reasons, the PLAIN REMOTE connection is"
+                       " not allowed to use a public IP address. If you need"
+                       " that IP address, consider setting up the"
+                       " --secure-listen option instead."
+                    << SNAP_LOG_SEND;
 
-        default_remote_port = listen_addr.get_port();
+                return 1;
+            }
 
-        f_public_ip = listen_addr.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT);
-        f_remote_listener = std::make_shared<listener>(
-                  shared_from_this()
-                , listen_addr
-                , std::string()
-                , std::string()
-                , max_pending_connections
-                , false
-                , f_server_name);
-        f_remote_listener->set_name("communicator remote listener");
-        f_communicator->add_connection(f_remote_listener);
+            default_remote_port = listen_addr.get_port();
 
-        SNAP_LOG_CONFIGURATION
-            << "listening to plain remote connection \""
-            << f_public_ip
-            << "\"."
-            << SNAP_LOG_SEND;
+            f_public_ip = listen_addr.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT);
+            f_remote_listener = std::make_shared<listener>(
+                      shared_from_this()
+                    , listen_addr
+                    , std::string()
+                    , std::string()
+                    , max_pending_connections
+                    , false
+                    , f_server_name);
+            f_remote_listener->set_name("communicator remote listener");
+            f_communicator->add_connection(f_remote_listener);
+
+            SNAP_LOG_CONFIGURATION
+                << "listening to plain remote connection \""
+                << f_public_ip
+                << "\"."
+                << SNAP_LOG_SEND;
+        }
     }
 
     // secure remote

@@ -4,4 +4,4 @@
 # see: man dh_sysuser
 #
 # Name            Options
-communicatord     home=/var/lib/communicatord
+communicatord     home
