@@ -79,7 +79,7 @@ then
     #
     RAISE_FLAG=/usr/bin/raise-flag
     chown ${USERNAME} ${RAISE_FLAG}
-    chmod u+s ${RAISE_FLAG}
+    chmod ug+s ${RAISE_FLAG}
 fi
 
 
