@@ -276,10 +276,19 @@ const advgetopt::option g_options[] =
         , advgetopt::Help("a secret key used to verify that UDP packets are acceptable.")
     ),
     advgetopt::define_option(
+          advgetopt::Name("unix-group")
+        , advgetopt::Flags(advgetopt::all_flags<
+              advgetopt::GETOPT_FLAG_REQUIRED
+            , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
+        , advgetopt::DefaultValue("communicator-group")
+        , advgetopt::Help("the group to assign to this Unix socket.")
+    ),
+    advgetopt::define_option(
           advgetopt::Name("unix-listen")
         , advgetopt::Flags(advgetopt::all_flags<
               advgetopt::GETOPT_FLAG_REQUIRED
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
+        , advgetopt::DefaultValue("/run/communicatord/communicatord.sock")
         , advgetopt::Help("a Unix socket name to listen for local connections.")
     ),
     advgetopt::define_option(
@@ -593,9 +602,10 @@ int server::init()
         addr::addr_unix unix_listen(addr::addr_unix(f_opts.get_string("unix-listen")));
         unix_listen.set_scheme("cd");
 
-        // make sure everyone can access this socket
+        // let users of the communicator-user group access this socket
         //
-        unix_listen.set_mode(DEFFILEMODE);
+        unix_listen.set_mode(S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+        unix_listen.set_group(f_opts.get_string("unix-group"));
 
         f_unix_listener = std::make_shared<unix_listener>(
                   shared_from_this()

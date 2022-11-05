@@ -12,6 +12,11 @@ then
     PACKAGENAME=communicatord
     USERNAME=communicatord
     GROUPNAME=communicatord
+    SOCKET_GROUP=communicator-user
+
+    # Add communicatord user to communicator-user group
+    #
+    adduser ${USERNAME} ${SOCKET_GROUP}
 
     # Create a default user editable snapmanager.conf file if it does not
     # exist yet

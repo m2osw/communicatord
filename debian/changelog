@@ -1,8 +1,10 @@
 communicatord (2.0.6.0~bionic) bionic; urgency=high
 
-  * Set the Unix socket permissions to 0666 so others can connect to it.
+  * Added group "communicator-user".
+  * Set Unix socket group to "communicator-user".
+  * Set Unix socket permissions to 0660 (srw-rw----).
 
- -- Alexis Wilke <alexis@m2osw.com>  Sat, 05 Nov 2022 09:14:29 -0700
+ -- Alexis Wilke <alexis@m2osw.com>  Sat, 05 Nov 2022 15:40:09 -0700
 
 communicatord (2.0.5.0~bionic) bionic; urgency=high
 
