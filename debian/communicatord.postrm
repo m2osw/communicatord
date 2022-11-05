@@ -9,6 +9,7 @@ then
     PACKAGENAME=communicatord
     USERNAME=communicatord
     GROUPNAME=communicatord
+    SOCKET_GROUP=communicator-user
 
     # delete various data directories
     #
@@ -45,6 +46,18 @@ then
     if test -d /etc/${ENVIRONMENTNAME}
     then
         rmdir --ignore-fail-on-non-empty /etc/${ENVIRONMENTNAME}
+    fi
+
+    # delete socket group, if it exists
+    #
+    if getent group ${SOCKET_GROUP} > /dev/null
+    then
+        if pgrep -G ${SOCKET_GROUP} > /dev/null
+        then
+            echo "warning: Cannot delete group '${SOCKET_GROUP}' because there are still processes running using this group!"
+        else
+            delgroup --quiet ${SOCKET_GROUP} > /dev/null || true
+        fi
     fi
 fi
 

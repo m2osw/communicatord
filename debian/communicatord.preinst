@@ -1,0 +1,19 @@
+#!/bin/sh -e
+
+#DEBHELPER#
+
+# Source various libraries
+. /usr/share/debconf/confmodule
+
+SOCKET_GROUP=communicator-user
+
+if [ "$1" = "install" ]
+then
+    # add the socket group if not there already
+    #
+    if ! getent group ${SOCKET_GROUP} >/dev/null
+    then
+        addgroup --system ${SOCKET_GROUP}
+    fi
+fi
+
