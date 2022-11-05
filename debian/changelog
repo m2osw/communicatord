@@ -1,3 +1,9 @@
+communicatord (2.0.6.0~bionic) bionic; urgency=high
+
+  * Set the Unix socket permissions to 0666 so others can connect to it.
+
+ -- Alexis Wilke <alexis@m2osw.com>  Sat, 05 Nov 2022 09:14:29 -0700
+
 communicatord (2.0.5.0~bionic) bionic; urgency=high
 
   * Fixed the raise-flag implementation:

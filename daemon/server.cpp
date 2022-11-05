@@ -593,6 +593,10 @@ int server::init()
         addr::addr_unix unix_listen(addr::addr_unix(f_opts.get_string("unix-listen")));
         unix_listen.set_scheme("cd");
 
+        // make sure everyone can access this socket
+        //
+        unix_listen.set_mode(DEFFILEMODE);
+
         f_unix_listener = std::make_shared<unix_listener>(
                   shared_from_this()
                 , unix_listen
