@@ -34,6 +34,7 @@
 
 // snapdev
 //
+#include    <snapdev/as_root.h>
 #include    <snapdev/tokenize_string.h>
 #include    <snapdev/join_strings.h>
 
@@ -159,13 +160,22 @@ advgetopt::option const g_command_line_options[] =
         , advgetopt::Help("mark the flag has to be taken down manually.")
     ),
     advgetopt::define_option(
-          advgetopt::Name("owner")
+          advgetopt::Name("user")
         , advgetopt::ShortName(U'o')
         , advgetopt::Flags(advgetopt::all_flags<
               advgetopt::GETOPT_FLAG_REQUIRED
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
         , advgetopt::DefaultValue("communicatord")  // TODO: the default should be changeable
-        , advgetopt::Help("the name of the user running communicatord.")
+        , advgetopt::Help("the name of the user managing the flags at the specified location.")
+    ),
+    advgetopt::define_option(
+          advgetopt::Name("group")
+        , advgetopt::ShortName(U'g')
+        , advgetopt::Flags(advgetopt::all_flags<
+              advgetopt::GETOPT_FLAG_REQUIRED
+            , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
+        , advgetopt::DefaultValue("communicatord")  // TODO: the default should be changeable
+        , advgetopt::Help("the name of the group managing the flags at the specified location.")
     ),
     advgetopt::define_option(
           advgetopt::Name("priority")
@@ -271,6 +281,7 @@ private:
     int                         up();
     int                         build_flag();
     int                         switch_user();
+    void                        clear_privileges();
     int                         count();
     int                         raised();
     int                         list_in_plain_text();
@@ -279,6 +290,7 @@ private:
     advgetopt::getopt           f_opts;
     communicatord::flag::pointer_t
                                 f_flag = communicatord::flag::pointer_t();
+    snapdev::as_root::pointer_t f_as_root = snapdev::as_root::pointer_t();
 };
 
 
@@ -339,6 +351,9 @@ int raise_flag::save()
             return list_in_json();
         }
         SNAP_LOG_FATAL
+            << "unknown output list mode \""
+            << mode
+            << "\"."
             << SNAP_LOG_SEND;
         return 1;
     }
@@ -348,7 +363,8 @@ int raise_flag::save()
         return down();
     }
 
-    //if(f_opts.is_defined("up")) -- up is the default so consider true even if not specified
+    // up is the default so consider true even if not specified
+    //if(f_opts.is_defined("up"))
 
     return up();
 }
@@ -362,7 +378,7 @@ int raise_flag::down()
     || f_opts.is_defined("tags"))
     {
         SNAP_LOG_FATAL
-            << "the --manual, --priority, and --tags command line options are not compatible with --down."
+            << "the --automatic, --manual, --priority, and --tags command line options are not compatible with --down."
             << SNAP_LOG_SEND;
         return 1;
     }
@@ -388,6 +404,8 @@ int raise_flag::down()
     }
 
     f_flag->save();
+
+    clear_privileges();
 
     return 0;
 }
@@ -416,6 +434,8 @@ int raise_flag::up()
 
     f_flag->save();
 
+    clear_privileges();
+
     return 0;
 }
 
@@ -426,6 +446,7 @@ int raise_flag::build_flag()
               f_opts.get_string("--", 0)    // unit
             , f_opts.get_string("--", 1)    // section
             , f_opts.get_string("--", 2));  // name
+    f_flag->set_from_raise_flag();
 
     if(f_opts.size("--") == 4)
     {
@@ -457,7 +478,8 @@ int raise_flag::build_flag()
         if(f_opts.is_defined("automatic"))
         {
             SNAP_LOG_FATAL
-                << "only one of --manual or --automatic is allowed; default is --automatic when neither is specified."
+                << "only one of --manual or --automatic is allowed;"
+                   " default is --automatic when neither is specified."
                 << SNAP_LOG_SEND;
             return 1;
         }
@@ -483,33 +505,31 @@ int raise_flag::build_flag()
 
 int raise_flag::switch_user()
 {
-    std::string const owner(f_opts.get_string("owner"));
-    passwd const * pswd(getpwnam(owner.c_str()));
-    if(pswd == nullptr)
+    std::string const communicator_user(f_opts.get_string("user"));
+    std::string const communicator_group(f_opts.get_string("group"));
+    f_as_root = std::make_shared<snapdev::as_root>(communicator_user, communicator_group);
+    if(!f_as_root->is_switched())
     {
         SNAP_LOG_FATAL
-            << "Cannot locate user \""
-            << owner
-            << "\". Create it first then run the command again."
+            << "wrong user running raise-flag ("
+            << getuid()
+            << ':'
+            << getgid()
+            << ") and could not switch to \""
+            << communicator_user
+            << ':'
+            << communicator_group
+            << "\". Please verify that the executable permissions are properly set."
             << SNAP_LOG_SEND;
         return 1;
     }
-
-    if(seteuid(pswd->pw_uid) != 0)
-    {
-        int const e(errno);
-        SNAP_LOG_FATAL
-            << "Cannot drop privileges to user \""
-            << owner
-            << "\". Create it first then run the command again. errno: "
-            << e
-            << ", "
-            << strerror(e)
-            << SNAP_LOG_SEND;
-        return 1;
-    }
-
     return 0;
+}
+
+
+void raise_flag::clear_privileges()
+{
+    f_as_root.reset();
 }
 
 
@@ -704,12 +724,19 @@ int main(int argc, char * argv[])
     catch(std::exception const & e)
     {
         // clean error on exception
-        std::cerr << "saveflag: an exception occurred: " << e.what() << '\n';
+        std::cerr << "raise-flag: an exception occurred: " << e.what() << '\n';
+        SNAP_LOG_FATAL
+            << "raise-flag: an exception occurred: "
+            << e.what()
+            << SNAP_LOG_SEND;
         return 1;
     }
     catch(...)
     {
-        std::cerr << "saveflag: an unknown exception occurred.\n";
+        std::cerr << "raise-flag: an unknown exception occurred.\n";
+        SNAP_LOG_FATAL
+            << "raise-flag: an unknown exception occurred."
+            << SNAP_LOG_SEND;
         return 1;
     }
 }

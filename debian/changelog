@@ -1,3 +1,15 @@
+communicatord (2.0.5.0~bionic) bionic; urgency=high
+
+  * Fixed the raise-flag implementation:
+    - the tool uses the library and has the ability to change it's effective
+      user ID so it can read/write files to `/var/log/communicatord/flags`.
+    - the library attempts a change, if it fails, it uses the tool.
+    - enhance the library so it can read any parameter from `flags.conf`.
+    - actually create the `/var/log/communicatord/flags` directory.
+  * Added CppProcess as a dependency.
+
+ -- Alexis Wilke <alexis@m2osw.com>  Fri, 04 Nov 2022 13:33:09 -0700
+
 communicatord (2.0.4.0~bionic) bionic; urgency=high
 
   * Removed home directory. If the user exists, the folder remains (dh-sysuser

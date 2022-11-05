@@ -43,6 +43,11 @@
 #include    <advgetopt/conf_file.h>
 
 
+// eventdispatcher
+//
+#include    <cppprocess/process.h>
+
+
 // snaplogger
 //
 #include    <snaplogger/message.h>
@@ -50,9 +55,12 @@
 
 // snapdev
 //
+#include    <snapdev/as_root.h>
+#include    <snapdev/chownnm.h>
 #include    <snapdev/gethostname.h>
 #include    <snapdev/glob_to_list.h>
 #include    <snapdev/join_strings.h>
+#include    <snapdev/mkdir_p.h>
 #include    <snapdev/not_used.h>
 #include    <snapdev/tokenize_string.h>
 
@@ -76,25 +84,21 @@ namespace
 {
 
 
+constexpr char const * const        g_communicatord_flags = "/etc/communicatord/flags.conf";
 
-std::string get_path_to_flag_files_internal()
+
+std::string get_config_param(std::string const & name, std::string const & default_value)
 {
-    std::string path;
-
     // TODO: fix this load, we need to support a sub-directory
     //
-    advgetopt::conf_file_setup setup("/etc/communicatord/flags.conf");
+    advgetopt::conf_file_setup setup(g_communicatord_flags);
     advgetopt::conf_file::pointer_t server_config(advgetopt::conf_file::get_conf_file(setup));
-    if(server_config->has_parameter("path"))
+    if(server_config->has_parameter(name))
     {
-        path = server_config->get_parameter("path");
-    }
-    else
-    {
-        path = "/var/lib/communicatord/flags";
+        return server_config->get_parameter(name);
     }
 
-    return path;
+    return default_value;
 }
 
 
@@ -119,31 +123,73 @@ std::string get_path_to_flag_files()
     {
         // get the path (once unless the directory does not exist)
         //
-        std::string const path(get_path_to_flag_files_internal());
+        std::string const path(get_config_param("path", "/var/lib/communicatord/flags"));
 
         // make sure the directory exists
         //
         struct stat s;
-        if(stat(path.c_str(), &s) != 0)
+        int r(stat(path.c_str(), &s));
+        if(r != 0)
+        {
+            if(errno != ENOENT)
+            {
+                int const e(errno);
+                SNAP_LOG_ERROR
+                    << "found a flags file \""
+                    << path
+                    // TODO: fix the message, we try to create it here!
+                    << "\" but something failed: "
+                    << e
+                    << ", "
+                    << strerror(e)
+                    << SNAP_LOG_SEND;
+                return std::string();
+            }
+
+            // try to create the directory if missing
+            //
+            r = snapdev::mkdir_p(
+                  path.c_str()
+                , false
+                , 0775
+                , "communicatord"   // TODO: make these names come from flags.conf
+                , "communicatord");
+            if(r != 0)
+            {
+                int const e(errno);
+                SNAP_LOG_ERROR
+                    << "could not create the flags directory \""
+                    << path
+                    << "\"; errno: "
+                    << e
+                    << ", "
+                    << strerror(errno)
+                    << SNAP_LOG_SEND;
+                return std::string();
+            }
+
+            r = stat(path.c_str(), &s);
+            if(r != 0)
+            {
+                SNAP_LOG_ERROR
+                    << "could not find the flags directory \""
+                    << path
+                    << "\"; did you start communicatord yet? (it creates it if not yet present)"
+                    << SNAP_LOG_SEND;
+            }
+        }
+
+        if(!S_ISDIR(s.st_mode))
         {
             SNAP_LOG_ERROR
-                << "could not find the flags directory \""
+                << "the flags file \""
                 << path
-                << "\"; did you start communicatord yet? (it creates it if not yet present)"
+                << "\" is not a directory as expected."
                 << SNAP_LOG_SEND;
+            return std::string();
         }
-        else if(!S_ISDIR(s.st_mode))
-        {
-            SNAP_LOG_ERROR
-                << "could not create the flags directory \""
-                << path
-                << "\"; did you make your service part of the flags group?"
-                << SNAP_LOG_SEND;
-        }
-        else
-        {
-            g_path_to_flag_files = path;
-        }
+
+        g_path_to_flag_files = path;
     }
 
     return g_path_to_flag_files;
@@ -306,6 +352,22 @@ flag::flag(std::string const & filename)
     {
         f_version = file->get_parameter("version");
     }
+}
+
+
+/** \brief Mark this flag as beeing set by the raise-flag tool.
+ *
+ * The raise-flag tool calls this function to avoid an infinite loop.
+ * The save() function tries to create the files as "communicatord". If that
+ * fails, it invokes the raise-flag tool instead. That invocation does not
+ * happen if this very function was called before save() is called.
+ *
+ * \return a reference to this flag object.
+ */
+flag & flag::set_from_raise_flag()
+{
+    f_from_raise_flag = true;
+    return *this;
 }
 
 
@@ -839,6 +901,151 @@ bool flag::save()
         return false;
     }
 
+    std::string communicator_user(get_config_param("user", "communicatord"));
+    std::string communicator_group(get_config_param("group", "communicatord"));
+    if(communicator_user.empty())
+    {
+        communicator_user = "communicatord";
+    }
+    if(communicator_group.empty())
+    {
+        communicator_group = "communicatord";
+    }
+
+    snapdev::as_root::pointer_t safe_user;
+    uid_t const uid(geteuid());
+    if(uid != 0)
+    {
+        passwd * user(getpwuid(uid));
+        if(user == nullptr)
+        {
+            // this is really not expected, stop here
+            //
+            int const e(errno);
+            SNAP_LOG_ERROR
+                << "could not find myself as a user in /etc/passwd database: "
+                << e
+                << ", "
+                << strerror(e)
+                << SNAP_LOG_SEND;
+            return false;
+        }
+        if(user->pw_name != communicator_user)
+        {
+            if(f_from_raise_flag)
+            {
+                SNAP_LOG_ERROR
+                    << "user \""
+                    << user->pw_name
+                    << "\" does not match the expected user \""
+                    << communicator_user
+                    << "\"."
+                    << SNAP_LOG_SEND;
+                return false;
+            }
+
+            // try to become communicatord although we do not expect
+            // that to ever happen here
+            //
+            safe_user = std::make_shared<snapdev::as_root>(communicator_user);
+
+            if(!safe_user->is_switched())
+            {
+                SNAP_LOG_VERBOSE
+                    << "Could not become user \""
+                    << communicator_user
+                    << "\". Trying to run raise-flag tool."
+                    << SNAP_LOG_SEND;
+
+                // that failed so far, so try with the raise-flag tool
+                //
+                cppprocess::process raise_flag("raise-flag");
+                raise_flag.set_command("raise-flag");
+
+                raise_flag.add_argument("--user");
+                raise_flag.add_argument(communicator_user);
+                raise_flag.add_argument("--group");
+                raise_flag.add_argument(communicator_group);
+
+                if(!f_source_file.empty())
+                {
+                    raise_flag.add_argument("--source-file");
+                    raise_flag.add_argument(f_source_file);
+                }
+                if(!f_function.empty())
+                {
+                    raise_flag.add_argument("--function");
+                    raise_flag.add_argument(f_function);
+                }
+                if(f_line != 0)
+                {
+                    raise_flag.add_argument("--line");
+                    raise_flag.add_argument(std::to_string(f_line));
+                }
+                if(f_priority != DEFAULT_PRIORITY)
+                {
+                    raise_flag.add_argument("--priority");
+                    raise_flag.add_argument(std::to_string(f_priority));
+                }
+                if(f_manual_down)
+                {
+                    raise_flag.add_argument("--manual");
+                }
+                if(!f_tags.empty())
+                {
+                    raise_flag.add_argument("--tags");
+                    for(auto const & t : f_tags)
+                    {
+                        raise_flag.add_argument(t);
+                    }
+                }
+
+                if(f_state == state_t::STATE_UP)
+                {
+                    raise_flag.add_argument("--up");
+                }
+                else
+                {
+                    raise_flag.add_argument("--down");
+                }
+                raise_flag.add_argument(f_unit);
+                raise_flag.add_argument(f_section);
+                raise_flag.add_argument(f_name);
+
+                if(f_state == state_t::STATE_UP
+                && !f_message.empty())
+                {
+                    // --up also expects a message
+                    //
+                    raise_flag.add_argument(f_message);
+                }
+
+                if(raise_flag.start() != 0)
+                {
+                    SNAP_LOG_ERROR
+                        << "failed running the raise-flag command."
+                        << SNAP_LOG_SEND;
+                    return false;
+                }
+
+                if(!ed::communicator::instance()->is_running())
+                {
+                    int const r(raise_flag.wait());
+                    if(r != 0)
+                    {
+                        SNAP_LOG_ERROR
+                            << "raise-flag command return "
+                            << r
+                            << SNAP_LOG_SEND;
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+        }
+    }
+
     bool result(true);
 
     if(f_state == state_t::STATE_UP)
@@ -896,6 +1103,29 @@ bool flag::save()
         // now save that data to file
         //
         result = file->save_configuration(".bak", true);
+
+        // if we are root, we need to fix the ownership if we just created
+        // the file
+        //
+        if(snapdev::chownnm(filename, communicator_user, communicator_group) != 0)
+        {
+            // the save worked, unfortunate that the chown() failed
+            //
+            int const e(errno);
+            SNAP_LOG_ERROR
+                << "could not properly setup the ownership of the file \""
+                << filename
+                << "\" to \""
+                << communicator_user
+                << ':'
+                << communicator_group
+                << "\" ("
+                << e
+                << ", "
+                << strerror(e)
+                << ')'
+                << SNAP_LOG_SEND;
+        }
     }
     else
     {
@@ -1009,6 +1239,12 @@ void flag::valid_name(std::string & name)
  * small. The function make sure that if more than 100 are defined, only
  * the first 100 are read and another is created warning about the large
  * number of existing flags.
+ *
+ * \todo
+ * At this time, the function returns an empty list_t if the function is
+ * not able to list anything (i.e. the directory does not exist, for instance).
+ * In that case, though, it should be considered that no flags are currently
+ * raised.
  *
  * \return The vector of flag files read from disk.
  */

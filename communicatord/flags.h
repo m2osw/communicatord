@@ -33,6 +33,12 @@ namespace communicatord
 
 
 
+typedef int                         priority_t;
+
+constexpr priority_t const          DEFAULT_PRIORITY = 5;
+
+
+
 class flag
 {
 public:
@@ -52,12 +58,13 @@ public:
                                 flag(std::string const & unit, std::string const & section, std::string const & name);
                                 flag(std::string const & filename);
 
+    flag &                      set_from_raise_flag(); // only raise-flag tool should call this
     flag &                      set_state(state_t state);
     flag &                      set_source_file(std::string const & source_file);
     flag &                      set_function(std::string const & function);
     flag &                      set_line(int line);
     flag &                      set_message(std::string const & message);
-    flag &                      set_priority(int priority);
+    flag &                      set_priority(priority_t priority);
     flag &                      set_manual_down(bool manual);
     flag &                      add_tag(std::string const & tag);
 
@@ -70,7 +77,7 @@ public:
     std::string const &         get_function() const;
     int                         get_line() const;
     std::string const &         get_message() const;
-    int                         get_priority() const;
+    priority_t                  get_priority() const;
     bool                        get_manual_down() const;
     time_t                      get_date() const;
     time_t                      get_modified() const;
@@ -95,8 +102,9 @@ private:
     std::string                 f_function          = std::string();
     int                         f_line              = 0;
     std::string                 f_message           = std::string();
-    int                         f_priority          = 5;
+    priority_t                  f_priority          = DEFAULT_PRIORITY;
     bool                        f_manual_down       = false;
+    bool                        f_from_raise_flag   = false;
     time_t                      f_date              = -1;
     time_t                      f_modified          = -1;
     tag_list_t                  f_tags              = tag_list_t();

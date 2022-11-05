@@ -74,7 +74,7 @@ then
            -subj "/C=US/ST=California/L=Sacramento/O=Snap/OU=Website/CN=snap.website"
     fi
 
-    # The username is created at installation time so we can't have these
+    # The username is created at installation time so we CANNOT have this
     # command work at packaging time (in debian/rules)
     #
     RAISE_FLAG=/usr/bin/raise-flag
