@@ -304,7 +304,7 @@ raise_flag::raise_flag(int argc, char * argv[])
     //
     if(switch_user() != 0)
     {
-        return 1;
+        throw advgetopt::getopt_exit("could not become communicatord user.", 1);
     }
 
     if(!snaplogger::process_logger_options(
