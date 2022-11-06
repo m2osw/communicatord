@@ -70,6 +70,7 @@ then
     #
     SSLDIR=/etc/${ENVIRONMENTNAME}/ssl
     chown ${USERNAME}:${GROUPNAME} ${SSLDIR}
+    chmod 710 ${SSLDIR}
     if test ! -f ${SSLDIR}/${PACKAGENAME}.key \
          -o ! -f ${SSLDIR}/${PACKAGENAME}.crt
     then
