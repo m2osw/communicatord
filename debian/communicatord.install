@@ -1,3 +1,7 @@
+#!/usr/bin/dh-exec
+
+# Service, Scripts, Library
+#
 debian/tmp/usr/bin/clusterstatus                                      usr/bin/
 debian/tmp/usr/bin/message                                            usr/bin/
 debian/tmp/usr/bin/raise-flag                                         usr/bin/
@@ -5,12 +9,17 @@ debian/tmp/usr/sbin/communicatord                                     usr/sbin/
 #debian/tmp/usr/lib/snapmanager/manager_plugins/libcommunicator.so         usr/lib/snapmanager/manager_plugins/
 debian/tmp/usr/lib/libcommunicatord.so.*                              usr/lib
 
+# Configuration Files
+#
 conf/communicatord.conf                                               etc/communicatord/
-conf/conf-README.md                                                   etc/communicatord/communicatord.d/
 conf/confcommunicatord                                                usr/share/communicatord/
 conf/flags.conf                                                       etc/communicatord/
 conf/logger/communicatord.conf                                        usr/share/snaplogger/etc/
 conf/logger/raise-flag.conf                                           usr/share/snaplogger/etc/
-conf/service-README.md                                                usr/share/communicatord/services/
-conf/ssl-README.md                                                    etc/communicatord/ssl/
 conf/ipload/communicatord.conf                                        usr/share/iplock/ipload/services
+
+# README.md
+#
+conf/conf-README.md                                                => etc/communicatord/communicatord.d/README.md
+conf/ssl-README.md                                                 => etc/communicatord/ssl/README.md
+conf/service-README.md                                             => usr/share/communicatord/services/README.md

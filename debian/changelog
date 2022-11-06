@@ -1,3 +1,12 @@
+communicatord (2.0.7.0~bionic) bionic; urgency=high
+
+  * Updated the raise-flag so it can save logs as communicatord.
+  * Removed console output of raise-flag when not a TTY.
+  * Added file output of logs of raise-flag.
+  * Rename the <name>-README.md files to just README.md once installed.
+
+ -- Alexis Wilke <alexis@m2osw.com>  Sat, 05 Nov 2022 20:48:29 -0700
+
 communicatord (2.0.6.0~bionic) bionic; urgency=high
 
   * Added group "communicator-user".

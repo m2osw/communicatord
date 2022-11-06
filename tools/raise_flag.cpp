@@ -281,7 +281,6 @@ private:
     int                         up();
     int                         build_flag();
     int                         switch_user();
-    void                        clear_privileges();
     int                         count();
     int                         raised();
     int                         list_in_plain_text();
@@ -299,6 +298,15 @@ raise_flag::raise_flag(int argc, char * argv[])
 {
     snaplogger::add_logger_options(f_opts);
     f_opts.finish_parsing(argc, argv);
+
+    // become communicatord so we can save the flag file as expected
+    // and also the logger works
+    //
+    if(switch_user() != 0)
+    {
+        return 1;
+    }
+
     if(!snaplogger::process_logger_options(
               f_opts
             , "/etc/communicatord/logger"
@@ -395,17 +403,7 @@ int raise_flag::down()
 
     build_flag();
     f_flag->set_state(communicatord::flag::state_t::STATE_DOWN);
-
-    // become communicatord so we can save the file as expected
-    //
-    if(switch_user() != 0)
-    {
-        return 1;
-    }
-
     f_flag->save();
-
-    clear_privileges();
 
     return 0;
 }
@@ -424,17 +422,7 @@ int raise_flag::up()
 
     build_flag();
     f_flag->set_state(communicatord::flag::state_t::STATE_UP);
-
-    // become communicatord so we can save the file as expected
-    //
-    if(switch_user() != 0)
-    {
-        return 1;
-    }
-
     f_flag->save();
-
-    clear_privileges();
 
     return 0;
 }
@@ -525,13 +513,6 @@ int raise_flag::switch_user()
     }
     return 0;
 }
-
-
-void raise_flag::clear_privileges()
-{
-    f_as_root.reset();
-}
-
 
 
 int raise_flag::count()
