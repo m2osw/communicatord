@@ -1,3 +1,10 @@
+communicatord (2.0.7.5~bionic) bionic; urgency=high
+
+  * The iplock/ipload file generates a trigger cycle now that I added support
+    for triggers in iplock. Moving back to the iplock project.
+
+ -- Alexis Wilke <alexis@m2osw.com>  Sun, 06 Nov 2022 20:25:26 -0800
+
 communicatord (2.0.7.4~bionic) bionic; urgency=high
 
   * Make the ssl sub-directory hidden from 3rd party users.
