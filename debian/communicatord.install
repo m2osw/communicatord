@@ -16,7 +16,6 @@ conf/confcommunicatord                                                usr/share/
 conf/flags.conf                                                       etc/communicatord/
 conf/logger/communicatord.conf                                        usr/share/snaplogger/etc/
 conf/logger/raise-flag.conf                                           usr/share/snaplogger/etc/
-conf/ipload/communicatord.conf                                        usr/share/iplock/ipload/services
 
 # README.md
 #
