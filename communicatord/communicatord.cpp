@@ -46,6 +46,11 @@
 #include    <edhttp/uri.h>
 
 
+// snapdev
+//
+#include    <snapdev/poison.h>
+
+
 
 namespace communicatord
 {
@@ -200,7 +205,7 @@ communicator::communicator(
     , f_communicator(ed::communicator::instance())
     , f_service_name(service_name)
 {
-    set_name("communicator_timer");
+    set_name("communicator_client");
 
     if(f_service_name.empty())
     {

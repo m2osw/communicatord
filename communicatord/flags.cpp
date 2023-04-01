@@ -43,7 +43,7 @@
 #include    <advgetopt/conf_file.h>
 
 
-// eventdispatcher
+// cppprocess
 //
 #include    <cppprocess/process.h>
 
