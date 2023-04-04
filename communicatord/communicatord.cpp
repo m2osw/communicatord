@@ -227,9 +227,9 @@ communicator::~communicator()
 
 /** \brief Call this function after you finalized your own option processing.
  *
- * This function acts on the communicator various command line options.
- * Assuming the command line options were valid, this function opens a
- * connection to the specified communicator daemon.
+ * This function acts on your client's various command line options.
+ * Assuming the command line options are all valid, this function opens
+ * a connection to the specified communicator daemon.
  *
  * Once you are ready to quit your process, make sure to call the
  * disconnect_communicator_messenger() function to send a last message
@@ -333,7 +333,7 @@ void communicator::process_communicatord_options()
             || ranges[0].size() != 1
             || !ranges[0].has_from())
             {
-                connection_unavailable const e("the \"cdu:\" requires at least one address to work.");
+                connection_unavailable const e("the \"cdu:\" requires exactly one address to work.");
                 SNAP_LOG_FATAL
                     << e
                     << SNAP_LOG_SEND;
@@ -370,6 +370,9 @@ void communicator::process_communicatord_options()
         }
         else if(scheme == "cdb")
         {
+            // TBD: I don't think I'll implement that one since broadcasting
+            //      happens in the communicator daemon itself.
+            //
             connection_unavailable const e("the \"cdb:\" scheme is not yet supported.");
             SNAP_LOG_FATAL
                 << e
@@ -425,7 +428,7 @@ void communicator::process_communicatord_options()
 /** \brief Retrieve the service name from the communicator.
  *
  * This function returns a reference to the service name as defined when
- * the communocator object was created. This paramter cannot be an empty
+ * the communocator object was created. This parameter cannot be an empty
  * string.
  *
  * \return the service name as specified when you constructed this
@@ -457,7 +460,7 @@ bool communicator::send_message(ed::message & msg, bool cache)
  * The process takes the \p quitting parameter to know whether the communicator
  * itself is quitting (true) or not (false).
  *
- * \param[in] quitting  true if the communicator itself is quitting.
+ * \param[in] quitting  true if the communicator daemon itself is quitting.
  */
 void communicator::unregister_communicator(bool quitting)
 {

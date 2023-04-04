@@ -154,7 +154,12 @@ protocol name as follow:
 * `cd:` -- basic stream connection
 * `cds:` -- secured stream connection
 * `cdu:` -- basic datagram connection
-* `cdb:` -- broadcast datagram connection (not fully implemented yet)
+* `cdb:` -- broadcast datagram connection (not implemented yet)
+
+_Note: The `cdb:` scheme would be used to send a message to multiple
+       communicator daemons which does not really make sense here. What you
+       actually want to do is mark the message itself for broadcasting and
+       the communicator daemon will take care of the rest._
 
 The address defines whether we have an IP based connection (TCP/IP or UDP/IP)
 or a Unix based connection (path to a socket). The `cds` protocol cannot
