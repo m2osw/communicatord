@@ -52,6 +52,15 @@
   Note that the sitter is already setup to verify that some NTP system is
   up and running your your computer.
 
+* Broadcast to a specific service
+
+  Right now, the broadcasting uses `"*"` or `"?"` or `"."` as a service name.
+  The snaprfs wants to send a message to all the other snaprfs running on the
+  cluster. To do so, we should be able to indicate "snaprfs" as the service
+  name, only if we do that we'll have the message sent to one "snaprfs"
+  (probably ourself). The idea here would be to look into a way to (1) do
+  a broadcast and (2) specific the service so we do not try to send it to
+  all registered services.
 
 
 // vim: ts=4 sw=4 et
