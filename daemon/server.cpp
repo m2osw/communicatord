@@ -215,6 +215,7 @@ const advgetopt::option g_options[] =
               advgetopt::GETOPT_FLAG_REQUIRED
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
         , advgetopt::Help("define the communicatord address (i.e. 10.0.2.33); it has to be defined in one of your interfaces.")
+        , advgetopt::Validator("address")
     ),
     advgetopt::define_option(
           advgetopt::Name("neighbors")
@@ -1585,7 +1586,7 @@ void server::msg_accept(ed::message & msg)
         return;
     }
 
-    // the type is mandatory in an ACCEPT message
+    // the following are mandatory in an ACCEPT message
     //
     if(!msg.has_parameter("server_name")
     || !msg.has_parameter("my_address"))
@@ -2591,6 +2592,7 @@ void server::msg_register(ed::message & msg)
     //
     ed::message reply;
     reply.set_command("READY");
+    reply.add_parameter("my_address", f_my_address);
     //verify_command(base, reply); -- we cannot do that here since we did not yet get the COMMANDS reply
     conn->send_message_to_connection(reply);
 
