@@ -18,11 +18,11 @@ then
     #
     adduser ${USERNAME} ${SOCKET_GROUP}
 
-    # Create a default user editable snapmanager.conf file if it does not
+    # Create a default user editable communicatord.conf file if it does not
     # exist yet
     #
-    COMMUNICATORD_USER_CONFIGURATION_FILE=/etc/${ENVIRONMENTNAME}/${ENVIRONMENTNAME}.d/${PACKAGENAME}.conf
-    if test ! -f $COMMUNICATORD_USER_CONFIGURATION_FILE
+    COMMUNICATORD_USER_CONFIGURATION_FILE=/etc/${ENVIRONMENTNAME}/${ENVIRONMENTNAME}.d/50-${PACKAGENAME}.conf
+    if test ! -f ${COMMUNICATORD_USER_CONFIGURATION_FILE}
     then
         # When first installing, we do not have the public IP address
         # (okay, we do, but we cannot be sure which one is right because
