@@ -2,50 +2,45 @@
 
 # Source debconf library.
 . /usr/share/debconf/confmodule
+. /usr/lib/snaplogger/inst/manage-log-dirs
+. /usr/lib/eventdispathcer/inst/manage-tls-keys
 
 if [ "$1" = "purge" ]
 then
-    ENVIRONMENTNAME=communicatord
-    PACKAGENAME=communicatord
-    USERNAME=communicatord
-    GROUPNAME=communicatord
+    ENVIRONMENT_NAME=communicatord
+    PACKAGE_NAME=communicatord
     SOCKET_GROUP=communicator-user
 
     # delete various data directories
     #
-    rm -rf /var/lib/${ENVIRONMENTNAME}
-    rm -f /var/cache/${ENVIRONMENTNAME}
+    rm -rf /var/lib/${ENVIRONMENT_NAME}
+    rm -f /var/cache/${ENVIRONMENT_NAME}
 
     # delete the admin configuration file
     #
-    rm -f /etc/${ENVIRONMENTNAME}/${ENVIRONMENTNAME}.d/50-${PACKAGENAME}.conf
+    rm -f /etc/${ENVIRONMENT_NAME}/${ENVIRONMENT_NAME}.d/50-${PACKAGE_NAME}.conf
 
-    # delete override.d of communicator
+    # delete override directory of communicator
     #
     rm -rf /etc/systemd/system/communicatord.service.d
 
-    # delete the communicator SSL files
+    # delete all the log files
     #
-    SSLDIR=/etc/${ENVIRONMENTNAME}/ssl
-    rm -f ${SSLDIR}/${PACKAGENAME}.key
-    rm -f ${SSLDIR}/${PACKAGENAME}.crt
+    destroy_log_dirs ${ENVIRONMENT_NAME}
 
-    # delete the SSL directory, but leave it if non-empty
+    # delete the communicator TLS files
     #
-    if test -d ${SSLDIR}
-    then
-        rmdir --ignore-fail-on-non-empty ${SSLDIR}
-    fi
+    delete_tls_keys ${ENVIRONMENT_NAME} ${PACKAGE_NAME}
 
     # delete the settings directories, but leave them if non-empty
     #
-    if test -d /etc/${ENVIRONMENTNAME}/${ENVIRONMENTNAME}.d
+    if test -d /etc/${ENVIRONMENT_NAME}/${ENVIRONMENT_NAME}.d
     then
-        rmdir --ignore-fail-on-non-empty /etc/${ENVIRONMENTNAME}/${ENVIRONMENTNAME}.d
+        rmdir --ignore-fail-on-non-empty /etc/${ENVIRONMENT_NAME}/${ENVIRONMENT_NAME}.d
     fi
-    if test -d /etc/${ENVIRONMENTNAME}
+    if test -d /etc/${ENVIRONMENT_NAME}
     then
-        rmdir --ignore-fail-on-non-empty /etc/${ENVIRONMENTNAME}
+        rmdir --ignore-fail-on-non-empty /etc/${ENVIRONMENT_NAME}
     fi
 
     # delete socket group, if it exists
