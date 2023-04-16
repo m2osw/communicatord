@@ -235,7 +235,7 @@ void gossip_connection::process_connected()
     gossip.set_command("GOSSIP");
     gossip.add_parameter(
               "my_address"
-            , f_remote_communicators->get_my_address().to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
+            , f_remote_communicators->get_connection_address().to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
     send_message(gossip); // do not cache, if we lose the connection, we lose the message and that's fine in this case
 }
 

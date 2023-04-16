@@ -76,15 +76,15 @@ remote_communicators::remote_communicators(
               server::pointer_t server
             , addr::addr const & my_addr)
     : f_server(server)
-    , f_my_address(my_addr)
+    , f_connection_address(my_addr)
 {
 }
 
 
 
-addr::addr const & remote_communicators::get_my_address() const
+addr::addr const & remote_communicators::get_connection_address() const
 {
-    return f_my_address;
+    return f_connection_address;
 }
 
 
@@ -108,7 +108,7 @@ void remote_communicators::add_remote_communicator(addr::addr const & remote_add
         << addr_str
         << SNAP_LOG_SEND;
 
-    if(remote_addr == f_my_address)
+    if(remote_addr == f_connection_address)
     {
         // this is normal: neighbors send us our IP right back to us
         // we also register ourself
@@ -123,7 +123,7 @@ void remote_communicators::add_remote_communicator(addr::addr const & remote_add
     //
     if(f_all_ips.find(remote_addr) != f_all_ips.end())
     {
-        if(remote_addr < f_my_address)
+        if(remote_addr < f_connection_address)
         {
             // make sure it is defined!
             //
@@ -174,7 +174,7 @@ void remote_communicators::add_remote_communicator(addr::addr const & remote_add
 
     // if this new IP is smaller than ours, then we start a connection
     //
-    if(remote_addr < f_my_address)
+    if(remote_addr < f_connection_address)
     {
         // smaller connections are created as remote communicator
         // which are permanent message connections
@@ -226,7 +226,7 @@ void remote_communicators::add_remote_communicator(addr::addr const & remote_add
                 << SNAP_LOG_SEND;
         }
     }
-    else //if(remote_addr != f_my_address) -- already tested at the beginning of the function
+    else //if(remote_addr != f_connection_address) -- already tested at the beginning of the function
     {
         // in case the remote communicatord has a larger address
         // it is expected to CONNECT to us; however, it may not yet

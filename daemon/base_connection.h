@@ -69,8 +69,8 @@ public:
     time_t                      get_connection_ended() const;
     void                        set_server_name(std::string const & server_name);
     std::string                 get_server_name() const;
-    void                        set_my_address(addr::addr const & my_address);
-    addr::addr                  get_my_address() const;
+    void                        set_connection_address(addr::addr const & my_address);
+    addr::addr                  get_connection_address() const;
     void                        set_connection_type(connection_type_t type);
     connection_type_t           get_connection_type() const;
     void                        set_username(std::string const & username);
@@ -104,7 +104,7 @@ private:
     time_t                      f_ended_on = -1;
     connection_type_t           f_type = connection_type_t::CONNECTION_TYPE_DOWN;
     std::string                 f_server_name = std::string();
-    addr::addr                  f_my_address = addr::addr();
+    addr::addr                  f_connection_address = addr::addr();
     sorted_list_of_strings_t    f_services = sorted_list_of_strings_t();
     sorted_list_of_strings_t    f_services_heard_of = sorted_list_of_strings_t();
     std::string                 f_username = std::string();

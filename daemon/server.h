@@ -156,7 +156,7 @@ private:
     ed::connection::pointer_t       f_ping = ed::connection::pointer_t();             // UDP/IP
     ed::connection::pointer_t       f_loadavg_timer = ed::connection::pointer_t();    // a 1 second timer to calculate load (used to load balance)
     float                           f_last_loadavg = 0.0f;
-    addr::addr                      f_my_address = addr::addr();
+    addr::addr                      f_connection_address = addr::addr();
     std::string                     f_local_services = std::string();
     sorted_list_of_strings_t        f_local_services_list = sorted_list_of_strings_t();
     std::string                     f_services_heard_of = std::string();

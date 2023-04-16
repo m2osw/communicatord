@@ -202,9 +202,9 @@ std::string base_connection::get_server_name() const
  * \param[in] my_address  The address of the server that is on the
  *                        other side of this connection.
  */
-void base_connection::set_my_address(addr::addr const & my_address)
+void base_connection::set_connection_address(addr::addr const & connection_address)
 {
-    f_my_address = my_address;
+    f_connection_address = connection_address;
 }
 
 
@@ -216,9 +216,9 @@ void base_connection::set_my_address(addr::addr const & my_address)
  * \return The address of the server that is on the
  *         other side of this connection.
  */
-addr::addr base_connection::get_my_address() const
+addr::addr base_connection::get_connection_address() const
 {
-    return f_my_address;
+    return f_connection_address;
 }
 
 

@@ -847,15 +847,15 @@ int server::init()
     // set because then no remote communicatord can connect to this system
     // via this address (instead, we may be able to use the secure address?)
     //
-    f_my_address = addr::addr(addr::string_to_addr(
+    f_connection_address = addr::addr(addr::string_to_addr(
                   f_opts.get_string("my-address")
                 , std::string()
                 , default_remote_port
                 , "tcp"));
-    if(addr::find_addr_interface(f_my_address, false) == nullptr)
+    if(addr::find_addr_interface(f_connection_address, false) == nullptr)
     {
         std::string msg("my-address \"");
-        msg += f_my_address.to_ipv6_string(addr::STRING_IP_BRACKET_ADDRESS);
+        msg += f_connection_address.to_ipv6_string(addr::STRING_IP_BRACKET_ADDRESS);
         msg += "\" not found on this computer. Did a copy of the configuration file and forgot to change that entry?";
         SNAP_LOG_FATAL
             << msg
@@ -865,12 +865,12 @@ int server::init()
 
     f_remote_communicators = std::make_shared<remote_communicators>(
                                           shared_from_this()
-                                        , f_my_address);
+                                        , f_connection_address);
 
-    if(f_my_address.get_network_type() != addr::network_type_t::NETWORK_TYPE_LOOPBACK
-    && !f_my_address.is_default())
+    if(f_connection_address.get_network_type() != addr::network_type_t::NETWORK_TYPE_LOOPBACK
+    && !f_connection_address.is_default())
     {
-        add_neighbors(f_my_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
+        add_neighbors(f_connection_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
     }
 
     if(f_opts.is_defined("neighbors"))
@@ -1614,7 +1614,7 @@ void server::msg_accept(ed::message & msg)
             , "255.255.255.255"
             , communicatord::REMOTE_PORT   // REMOTE_PORT or SECURE_PORT?
             , "tcp"));
-    conn->set_my_address(his_address);
+    conn->set_connection_address(his_address);
 
     if(msg.has_parameter("services"))
     {
@@ -1838,7 +1838,7 @@ void server::msg_connect(ed::message & msg)
         {
             SNAP_LOG_ERROR
                 << "invalid CONNECT credentials for "
-                << conn->get_my_address()
+                << conn->get_connection_address()
                 << "; please verify your username and password information."
                 << SNAP_LOG_SEND;
 
@@ -1986,7 +1986,7 @@ void server::msg_connect(ed::message & msg)
                 //
                 reply.set_command("ACCEPT");
                 reply.add_parameter("server_name", f_server_name);
-                reply.add_parameter("my_address", f_my_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
+                reply.add_parameter("my_address", f_connection_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
 
                 // services
                 //
@@ -2009,7 +2009,7 @@ void server::msg_connect(ed::message & msg)
                         , communicatord::REMOTE_PORT   // REMOTE_PORT or SECURE_PORT?
                         , "tcp"));
 
-                conn->set_my_address(his_address);
+                conn->set_connection_address(his_address);
 
                 // if a local service was interested in this specific
                 // computer, then we have to start receiving LOADAVG
@@ -2592,7 +2592,7 @@ void server::msg_register(ed::message & msg)
     //
     ed::message reply;
     reply.set_command("READY");
-    reply.add_parameter("my_address", f_my_address);
+    reply.add_parameter("my_address", f_connection_address);
     //verify_command(base, reply); -- we cannot do that here since we did not yet get the COMMANDS reply
     conn->send_message_to_connection(reply);
 
@@ -3064,7 +3064,7 @@ void server::broadcast_message(
         // for the gossiping to work, we include additional
         // information in the message
         //
-        std::string const originator(f_my_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS));
+        std::string const originator(f_connection_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS));
         auto it(informed_neighbors_list.find(originator));
         if(it != informed_neighbors_list.end())
         {
@@ -3444,14 +3444,14 @@ void server::register_for_loadavg(std::string const & ip)
                 remote_connection::pointer_t remote_conn(std::dynamic_pointer_cast<remote_connection>(connection));
                 if(remote_conn != nullptr)
                 {
-                    return remote_conn->get_my_address() == address;
+                    return remote_conn->get_connection_address() == address;
                 }
                 else
                 {
                     service_connection::pointer_t service_conn(std::dynamic_pointer_cast<service_connection>(connection));
                     if(service_conn != nullptr)
                     {
-                        return service_conn->get_my_address() == address;
+                        return service_conn->get_connection_address() == address;
                     }
                 }
 
@@ -3570,7 +3570,7 @@ void server::process_load_balancing()
         std::stringstream ss;
         ss << avg;
         load_avg.add_parameter("avg", ss.str());
-        load_avg.add_parameter("my_address", f_my_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
+        load_avg.add_parameter("my_address", f_connection_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
         load_avg.add_parameter("timestamp", time(nullptr));
 
         ed::connection::vector_t const & all_connections(f_communicator->get_connections());
@@ -4171,7 +4171,7 @@ void server::process_connected(ed::connection::pointer_t conn)
     ed::message connect;
     connect.set_command("CONNECT");
     connect.add_version_parameter();
-    connect.add_parameter("my_address", f_my_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
+    connect.add_parameter("my_address", f_connection_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
     connect.add_parameter("server_name", f_server_name);
     if(!f_explicit_neighbors.empty())
     {

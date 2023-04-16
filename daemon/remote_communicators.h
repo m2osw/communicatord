@@ -60,7 +60,7 @@ public:
                                                   server::pointer_t communicator
                                                 , addr::addr const & my_addr);
 
-    addr::addr const &                      get_my_address() const;
+    addr::addr const &                      get_connection_address() const;
     void                                    add_remote_communicator(std::string const & addr_port);
     void                                    add_remote_communicator(addr::addr const & address);
     void                                    stop_gossiping();
@@ -78,7 +78,7 @@ private:
                                             sorted_gossip_connections_by_address_t;
 
     server::pointer_t                       f_server = server::pointer_t();
-    addr::addr const &                      f_my_address;
+    addr::addr const &                      f_connection_address;
     int64_t                                 f_last_start_date = 0;
     sorted_list_of_addresses_t              f_all_ips = sorted_list_of_addresses_t();
     sorted_remote_connections_by_address_t  f_smaller_ips = sorted_remote_connections_by_address_t();   // we connect to smaller IPs
