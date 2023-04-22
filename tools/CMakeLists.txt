@@ -38,6 +38,7 @@ target_include_directories(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME}
+    communicatord
     ${ADVGETOPT_LIBRARIES}
     ${EDHTTP_LIBRARIES}
     ${EVENTDISPATCHER_LIBRARIES}
@@ -62,10 +63,10 @@ install(
 ## Get your cluster status (UP/DOWN and/or COMPLETE/INCOMPLETE)
 ## TODO: put that status in our Fluid Settings
 ##
-project(clusterstatus)
+project(cluster-status)
 
 add_executable(${PROJECT_NAME}
-    clusterstatus.cpp
+    cluster_status.cpp
 )
 
 target_include_directories(${PROJECT_NAME}
@@ -79,6 +80,7 @@ target_include_directories(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME}
+    communicatord
     ${ADVGETOPT_LIBRARIES}
     ${EVENTDISPATCHER_LIBRARIES}
     ${LIBADDR_LIBRARIES}

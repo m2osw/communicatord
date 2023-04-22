@@ -82,6 +82,13 @@ Thinking about it, though, it's not really any simpler than:
     msg.add_parameter("name", "value");
     connection.send_message(msg, true);
 
+**IMPORTANT NOTE:** In most cases, commands and names are statically defined
+                    values are found in the `names.an` file. You should use
+                    those definition instead by including the `names.h` and
+                    then names such as:
+
+                        communicatord::g_name_communicatord_param_uri
+
 ## Flags
 
 The `communicatord` library inheriated the ability to raise and lower

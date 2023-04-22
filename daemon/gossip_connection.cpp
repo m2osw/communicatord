@@ -37,14 +37,19 @@
 #include    "gossip_connection.h"
 
 
+// communicatord
+//
+#include    <communicatord/names.h>
+
+
 // snaplogger
 //
 #include    <snaplogger/message.h>
 
 
-// included last
+// last include
 //
-#include <snapdev/poison.h>
+#include    <snapdev/poison.h>
 
 
 
@@ -156,13 +161,13 @@ void gossip_connection::process_timeout()
 void gossip_connection::process_message(ed::message & msg)
 {
     SNAP_LOG_TRACE
-        << "gossip connection received a message ["
+        << "gossip connection received message: ["
         << msg.to_message()
         << "]"
         << SNAP_LOG_SEND;
 
     std::string const & command(msg.get_command());
-    if(command == "RECEIVED")
+    if(command == communicatord::g_name_communicatord_cmd_received)
     {
         // we got confirmation that the GOSSIP went across
         //
@@ -232,7 +237,7 @@ void gossip_connection::process_connected()
     // (each time we reconnect!)
     //
     ed::message gossip;
-    gossip.set_command("GOSSIP");
+    gossip.set_command(communicatord::g_name_communicatord_cmd_gossip);
     gossip.add_parameter(
               "my_address"
             , f_remote_communicators->get_connection_address().to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));

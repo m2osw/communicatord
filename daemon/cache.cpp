@@ -29,6 +29,12 @@
 #include    "cache.h"
 
 
+
+// communicatord
+//
+#include    <communicatord/names.h>
+
+
 // advgetopt
 //
 #include    <advgetopt/validator_duration.h>
@@ -86,9 +92,9 @@ namespace communicator_daemon
 cache_message_t cache::cache_message(ed::message & msg)
 {
     std::string cache_value;
-    if(msg.has_parameter("cache"))
+    if(msg.has_parameter(communicatord::g_name_communicatord_param_cache))
     {
-        cache_value = msg.get_parameter("cache");
+        cache_value = msg.get_parameter(communicatord::g_name_communicatord_param_cache);
     }
 
     // convert `cache` in a map of name/value parameters

@@ -41,7 +41,7 @@
 #include    <libaddr/addr_parser.h>
 
 
-// included last
+// last include
 //
 #include    <snapdev/poison.h>
 

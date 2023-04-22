@@ -17,13 +17,13 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
-// C++ lib
+// C++
 //
 #include    <string>
 #include    <vector>
 
 
-// C lib
+// C
 //
 #include    <arpa/inet.h>
 

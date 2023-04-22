@@ -51,7 +51,7 @@
 #include    <snaplogger/message.h>
 
 
-// included last
+// last include
 //
 #include    <snapdev/poison.h>
 

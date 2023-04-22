@@ -20,6 +20,7 @@
 // communicatord
 //
 #include    <communicatord/communicatord.h>
+#include    <communicatord/names.h>
 #include    <communicatord/version.h>
 
 
@@ -54,6 +55,7 @@
 #include    <snapdev/gethostname.h>
 #include    <snapdev/not_reached.h>
 #include    <snapdev/not_used.h>
+#include    <snapdev/stringize.h>
 
 
 // advgetopt
@@ -61,11 +63,6 @@
 #include    <advgetopt/advgetopt.h>
 #include    <advgetopt/conf_file.h>
 #include    <advgetopt/exception.h>
-
-
-// boost
-//
-#include    <boost/preprocessor/stringize.hpp>
 
 
 // C++
@@ -270,7 +267,7 @@ advgetopt::options_environment const g_command_line_options_environment =
     .f_version = COMMUNICATORD_VERSION_STRING,
     .f_license = "GNU GPL v3",
     .f_copyright = "Copyright (c) 2013-"
-                   BOOST_PP_STRINGIZE(UTC_BUILD_YEAR)
+                   SNAPDEV_STRINGIZE(UTC_BUILD_YEAR)
                    " by Made to Order Software Corporation -- All Rights Reserved",
     .f_build_date = UTC_BUILD_DATE,
     .f_build_time = UTC_BUILD_TIME,
@@ -866,7 +863,7 @@ public:
         ed::udp_server_message_connection::send_message(
                       f_ip_address
                     , msg
-                    , config->get_parameter("signal_secret"));
+                    , config->get_parameter(communicatord::g_name_communicatord_config_signal_secret));
     }
 
     void send_dgram_message(ed::message & msg)
@@ -879,7 +876,7 @@ public:
         ed::local_dgram_server_message_connection::send_message(
                       f_unix_address
                     , msg
-                    , config->get_parameter("signal_secret"));
+                    , config->get_parameter(communicatord::g_name_communicatord_config_signal_secret));
     }
 
     connection_t set_selected_connection_type() const

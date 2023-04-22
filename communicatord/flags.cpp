@@ -35,6 +35,7 @@
 #include    <communicatord/flags.h>
 
 #include    <communicatord/exception.h>
+#include    <communicatord/names.h>
 #include    <communicatord/version.h>
 
 
@@ -63,11 +64,6 @@
 #include    <snapdev/mkdir_p.h>
 #include    <snapdev/not_used.h>
 #include    <snapdev/tokenize_string.h>
-
-
-// boost
-//
-#include    <boost/algorithm/string.hpp>
 
 
 // last include
@@ -274,61 +270,62 @@ flag::flag(std::string const & filename)
     advgetopt::conf_file_setup setup(get_filename());
     advgetopt::conf_file::pointer_t file(advgetopt::conf_file::get_conf_file(setup));
 
-    if(!file->has_parameter("unit")
-    || !file->has_parameter("section")
-    || !file->has_parameter("name")
-    || !file->has_parameter("message"))
+    if(!file->has_parameter(communicatord::g_name_communicatord_param_unit)
+    || !file->has_parameter(communicatord::g_name_communicatord_param_section)
+    || !file->has_parameter(communicatord::g_name_communicatord_param_name)
+    || !file->has_parameter(communicatord::g_name_communicatord_param_message))
     {
         throw invalid_parameter("a flag file is expected to include a unit, section, and name field, along with a message field. Other fields are optional.");
     }
 
-    f_unit = file->get_parameter("unit");
-    f_section = file->get_parameter("section");
-    f_name = file->get_parameter("name");
+    f_unit = file->get_parameter(communicatord::g_name_communicatord_param_unit);
+    f_section = file->get_parameter(communicatord::g_name_communicatord_param_section);
+    f_name = file->get_parameter(communicatord::g_name_communicatord_param_name);
 
-    if(file->has_parameter("source_file"))
+    if(file->has_parameter(communicatord::g_name_communicatord_param_source_file))
     {
-        f_source_file = file->get_parameter("source_file");
+        f_source_file = file->get_parameter(communicatord::g_name_communicatord_param_source_file);
     }
 
-    if(file->has_parameter("function"))
+    if(file->has_parameter(communicatord::g_name_communicatord_param_function))
     {
-        f_function = file->get_parameter("function");
+        f_function = file->get_parameter(communicatord::g_name_communicatord_param_function);
     }
 
-    if(file->has_parameter("line"))
+    if(file->has_parameter(communicatord::g_name_communicatord_param_line))
     {
-        f_line = std::stol(file->get_parameter("line"));
+        f_line = std::stol(file->get_parameter(communicatord::g_name_communicatord_param_line));
     }
 
-    f_message = file->get_parameter("message");
+    f_message = file->get_parameter(communicatord::g_name_communicatord_param_message);
 
-    if(file->has_parameter("priority"))
+    if(file->has_parameter(communicatord::g_name_communicatord_param_priority))
     {
-        f_priority = std::stol(file->get_parameter("priority"));
+        f_priority = std::stol(file->get_parameter(communicatord::g_name_communicatord_param_priority));
     }
 
-    if(file->has_parameter("manual_down"))
+    if(file->has_parameter(communicatord::g_name_communicatord_param_manual_down))
     {
-        f_manual_down = file->get_parameter("manual_down") == "yes";
+        f_manual_down = file->get_parameter(communicatord::g_name_communicatord_param_manual_down)
+                                                    == communicatord::g_name_communicatord_value_yes;
     }
 
-    if(file->has_parameter("date"))
+    if(file->has_parameter(communicatord::g_name_communicatord_param_date))
     {
-        f_date = std::stol(file->get_parameter("date"));
+        f_date = std::stol(file->get_parameter(communicatord::g_name_communicatord_param_date));
     }
 
-    if(file->has_parameter("modified"))
+    if(file->has_parameter(communicatord::g_name_communicatord_param_modified))
     {
-        f_modified = std::stol(file->get_parameter("modified"));
+        f_modified = std::stol(file->get_parameter(communicatord::g_name_communicatord_param_modified));
     }
 
-    if(file->has_parameter("tags"))
+    if(file->has_parameter(communicatord::g_name_communicatord_param_tags))
     {
         // here we use an intermediate tag_list vector so the tokenize_string
         // works then add those string in the f_tags parameter
         //
-        std::string const tags(file->get_parameter("tags"));
+        std::string const tags(file->get_parameter(communicatord::g_name_communicatord_param_tags));
         std::vector<std::string> tag_list;
         snapdev::tokenize_string(tag_list
                       , tags
@@ -338,19 +335,19 @@ flag::flag(std::string const & filename)
         f_tags.insert(tag_list.begin(), tag_list.end());
     }
 
-    if(file->has_parameter("hostname"))
+    if(file->has_parameter(communicatord::g_name_communicatord_param_hostname))
     {
-        f_hostname = file->get_parameter("hostname");
+        f_hostname = file->get_parameter(communicatord::g_name_communicatord_param_hostname);
     }
 
-    if(file->has_parameter("count"))
+    if(file->has_parameter(communicatord::g_name_communicatord_param_count))
     {
-        f_count = std::stol(file->get_parameter("count"));
+        f_count = std::stol(file->get_parameter(communicatord::g_name_communicatord_param_count));
     }
 
-    if(file->has_parameter("version"))
+    if(file->has_parameter(communicatord::g_name_communicatord_param_version))
     {
-        f_version = file->get_parameter("version");
+        f_version = file->get_parameter(communicatord::g_name_communicatord_param_version);
     }
 }
 
@@ -1062,8 +1059,8 @@ bool flag::save()
         bool has_count(false);
         if(exists)
         {
-            has_date = file->has_parameter("date");
-            has_count = file->has_parameter("count");
+            has_date = file->has_parameter(communicatord::g_name_communicatord_param_date);
+            has_count = file->has_parameter(communicatord::g_name_communicatord_param_count);
         }
 
         std::string const now(std::to_string(time(nullptr)));
@@ -1071,33 +1068,36 @@ bool flag::save()
         // setup all the fields as required
         // (note that setting up the first one will read the file if it exists...)
         //
-        file->set_parameter(std::string(), "unit",        f_unit);
-        file->set_parameter(std::string(), "section",     f_section);
-        file->set_parameter(std::string(), "name",        f_name);
-        file->set_parameter(std::string(), "source_file", f_source_file);
-        file->set_parameter(std::string(), "function",    f_function);
-        file->set_parameter(std::string(), "line",        std::to_string(f_line));
-        file->set_parameter(std::string(), "message",     f_message);
-        file->set_parameter(std::string(), "priority",    std::to_string(f_priority));
-        file->set_parameter(std::string(), "manual_down", f_manual_down ? "yes" : "no");
+        file->set_parameter(std::string(), communicatord::g_name_communicatord_param_unit,        f_unit);
+        file->set_parameter(std::string(), communicatord::g_name_communicatord_param_section,     f_section);
+        file->set_parameter(std::string(), communicatord::g_name_communicatord_param_name,        f_name);
+        file->set_parameter(std::string(), communicatord::g_name_communicatord_param_source_file, f_source_file);
+        file->set_parameter(std::string(), communicatord::g_name_communicatord_param_function,    f_function);
+        file->set_parameter(std::string(), communicatord::g_name_communicatord_param_line,        std::to_string(f_line));
+        file->set_parameter(std::string(), communicatord::g_name_communicatord_param_message,     f_message);
+        file->set_parameter(std::string(), communicatord::g_name_communicatord_param_priority,    std::to_string(f_priority));
+        file->set_parameter(std::string(), communicatord::g_name_communicatord_param_manual_down, f_manual_down
+                                                                                                    ? communicatord::g_name_communicatord_value_yes
+                                                                                                    : communicatord::g_name_communicatord_value_no);
         if(!has_date)
         {
-            file->set_parameter(std::string(), "date",    now);
+            file->set_parameter(std::string(), communicatord::g_name_communicatord_param_date, now);
         }
-        file->set_parameter(std::string(), "modified",    now);
-        file->set_parameter(std::string(), "tags",        snapdev::join_strings(f_tags, ","));
-        file->set_parameter(std::string(), "hostname",    snapdev::gethostname());
-        file->set_parameter(std::string(), "version",     COMMUNICATORD_VERSION_STRING);
+        file->set_parameter(std::string(), communicatord::g_name_communicatord_param_modified,    now);
+        file->set_parameter(std::string(), communicatord::g_name_communicatord_param_tags,        snapdev::join_strings(f_tags, ","));
+        file->set_parameter(std::string(), communicatord::g_name_communicatord_param_hostname,    snapdev::gethostname());
+        file->set_parameter(std::string(), communicatord::g_name_communicatord_param_version,     COMMUNICATORD_VERSION_STRING);
 
         if(has_count)
         {
             // increment existing counter by 1
             //
-            file->set_parameter(std::string(), "count", std::to_string(std::stol(file->get_parameter("count")) + 1));
+            file->set_parameter(std::string(), communicatord::g_name_communicatord_param_count,
+                                std::to_string(std::stol(file->get_parameter(communicatord::g_name_communicatord_param_count)) + 1));
         }
         else
         {
-            file->set_parameter(std::string(), "count", "1");
+            file->set_parameter(std::string(), communicatord::g_name_communicatord_param_count, "1");
         }
 
         // now save that data to file

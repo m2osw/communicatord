@@ -32,17 +32,17 @@
 
 // eventdispatcher
 //
-#include <eventdispatcher/tcp_bio_client.h>
+#include    <eventdispatcher/tcp_bio_client.h>
 
 
 // snaplogger
 //
-#include <snaplogger/message.h>
+#include    <snaplogger/message.h>
 
 
-// included last
+// last include
 //
-#include <snapdev/poison.h>
+#include    <snapdev/poison.h>
 
 
 

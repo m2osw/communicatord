@@ -31,9 +31,14 @@
 
 
 
-// included last
+// communicatord
 //
-#include <snapdev/poison.h>
+#include    <communicatord/names.h>
+
+
+// last include
+//
+#include    <snapdev/poison.h>
 
 
 
@@ -121,7 +126,7 @@ unix_connection::~unix_connection()
     // make sure that if we had a connection understanding STATUS
     // we do not send that status
     //
-    remove_command("STATUS");
+    remove_command(communicatord::g_name_communicatord_cmd_status);
 
     // now ask the server to send a new STATUS to all connections
     // that understand that message; we pass our pointer since we
@@ -213,9 +218,9 @@ void unix_connection::process_hup()
         //       process_invalid(), process_error(), process_timeout()?
         //
         ed::message hangup;
-        hangup.set_command("HANGUP");
-        hangup.set_service(".");
-        hangup.add_parameter("server_name", get_server_name());
+        hangup.set_command(communicatord::g_name_communicatord_cmd_hangup);
+        hangup.set_service(communicatord::g_name_communicatord_service_local_broadcast);
+        hangup.add_parameter(communicatord::g_name_communicatord_param_server_name, get_server_name());
         f_server->broadcast_message(hangup);
 
         f_server->cluster_status(shared_from_this());

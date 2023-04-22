@@ -44,7 +44,7 @@
 #include    <advgetopt/advgetopt.h>
 
 
-// libaddr lib
+// libaddr
 //
 #include    <libaddr/addr.h>
 
@@ -108,7 +108,7 @@ public:
     bool                        is_tcp_connection(ed::message & msg); // connection defined in message is TCP (or Unix) opposed to UDP
 
     void                        msg_accept(ed::message & msg);
-    void                        msg_clusterstatus(ed::message & msg);
+    void                        msg_cluster_status(ed::message & msg);
     void                        msg_commands(ed::message & msg);
     void                        msg_connect(ed::message & msg);
     void                        msg_disconnect(ed::message & msg);
@@ -121,12 +121,12 @@ public:
     void                        msg_quitting(ed::message & msg);
     void                        msg_refuse(ed::message & msg);
     void                        msg_register(ed::message & msg);
-    void                        msg_registerforloadavg(ed::message & msg);
+    void                        msg_register_for_loadavg(ed::message & msg);
     void                        msg_save_loadavg(ed::message & msg);
-    void                        msg_servicestatus(ed::message & msg);
+    void                        msg_service_status(ed::message & msg);
     void                        msg_shutdown(ed::message & msg);
     void                        msg_unregister(ed::message & msg);
-    void                        msg_unregisterforloadavg(ed::message & msg);
+    void                        msg_unregister_from_loadavg(ed::message & msg);
 
 private:
     int                         init();

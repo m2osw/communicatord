@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+AtomicNames(names.an)
+
 ##
 ## communicatord library
 ##
@@ -31,6 +33,7 @@ add_library(${PROJECT_NAME} SHARED
     communicatord.cpp
     flags.cpp
     loadavg.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/names.cpp
     version.cpp
 )
 
@@ -83,6 +86,7 @@ install(
         exception.h
         flags.h
         loadavg.h
+        ${CMAKE_CURRENT_BINARY_DIR}/names.h
         ${CMAKE_CURRENT_BINARY_DIR}/version.h
 
     DESTINATION

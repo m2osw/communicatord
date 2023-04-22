@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2022  Made to Order Software Corp.  All Rights Reserved
+// Copyright (c) 2011-2023  Made to Order Software Corp.  All Rights Reserved
 //
 // https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
@@ -18,6 +18,7 @@
 
 // communicatord
 //
+#include    <communicatord/names.h>
 #include    <communicatord/version.h>
 
 
@@ -36,6 +37,7 @@
 // snapdev
 //
 #include    <snapdev/not_reached.h>
+#include    <snapdev/stringize.h>
 
 
 // advgetopt
@@ -43,11 +45,6 @@
 #include    <advgetopt/advgetopt.h>
 #include    <advgetopt/conf_file.h>
 #include    <advgetopt/exception.h>
-
-
-// boost
-//
-#include    <boost/preprocessor/stringize.hpp>
 
 
 // last include
@@ -180,7 +177,7 @@ advgetopt::options_environment const g_options_environment =
     .f_version = COMMUNICATORD_VERSION_STRING,
     .f_license = "GNU GPL v3",
     .f_copyright = "Copyright (c) 2011-"
-                   BOOST_PP_STRINGIZE(UTC_BUILD_YEAR)
+                   SNAPDEV_STRINGIZE(UTC_BUILD_YEAR)
                    " by Made to Order Software Corporation -- All Rights Reserved",
     //.f_build_date = UTC_BUILD_DATE,
     //.f_build_time = UTC_BUILD_TIME
@@ -199,10 +196,10 @@ cluster::cluster(int argc, char * argv[])
     , f_communicator(ed::communicator::instance())
 {
     add_matches({
-        DISPATCHER_MATCH("CLUSTERUP", &cluster::msg_cluster_status),
-        DISPATCHER_MATCH("CLUSTERDOWN", &cluster::msg_cluster_status),
-        DISPATCHER_MATCH("CLUSTERCOMPLETE", &cluster::msg_cluster_complete),
-        DISPATCHER_MATCH("CLUSTERINCOMPLETE", &cluster::msg_cluster_complete),
+        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_cluster_up, &cluster::msg_cluster_status),
+        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_cluster_down, &cluster::msg_cluster_status),
+        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_cluster_complete, &cluster::msg_cluster_complete),
+        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_cluster_incomplete, &cluster::msg_cluster_complete),
     });
 
     // we do not log, this is a command line tool?
@@ -219,7 +216,7 @@ cluster::cluster(int argc, char * argv[])
 
     // TODO: convert to using the communidatord library object
     f_communicator_addr = addr::string_to_addr(
-                  f_communicatord_config->get_parameter("local_listen").c_str()
+                  f_communicatord_config->get_parameter(communicatord::g_name_communicatord_config_local_listen).c_str()
                 , "localhost"
                 , 4040
                 , "tcp");
@@ -239,8 +236,10 @@ int cluster::run()
     // an exception so this works)
     //
     ed::message register_cluster;
-    register_cluster.set_command("REGISTER");
-    register_cluster.add_parameter("service", "cluster");
+    register_cluster.set_command(communicatord::g_name_communicatord_cmd_register);
+    register_cluster.add_parameter(
+                      communicatord::g_name_communicatord_param_service
+                    , communicatord::g_name_communicatord_service_cluster);
     register_cluster.add_version_parameter();
     send_message(register_cluster);
 
@@ -261,8 +260,8 @@ void cluster::ready(ed::message & message)
     snapdev::NOT_USED(message);
 
     ed::message clusterstatus_message;
-    clusterstatus_message.set_command("CLUSTERSTATUS");
-    clusterstatus_message.set_service("communicator");
+    clusterstatus_message.set_command(communicatord::g_name_communicatord_cmd_cluster_status);
+    clusterstatus_message.set_service(communicatord::g_name_communicatord_service_communicatord);
     send_message(clusterstatus_message);
 }
 

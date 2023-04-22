@@ -65,7 +65,7 @@
 #include    <snapdev/tokenize_string.h>
 
 
-// included last
+// last include
 //
 #include    <snapdev/poison.h>
 

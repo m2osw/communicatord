@@ -31,9 +31,14 @@
 
 
 
-// included last
+// communicatord
 //
-#include <snapdev/poison.h>
+#include    <communicatord/names.h>
+
+
+// last include
+//
+#include    <snapdev/poison.h>
 
 
 
@@ -136,7 +141,7 @@ service_connection::~service_connection()
     // make sure that if we had a connection understanding STATUS
     // we do not send that status
     //
-    remove_command("STATUS");
+    remove_command(communicatord::g_name_communicatord_cmd_status);
 
     // now ask the server to send a new STATUS to all connections
     // that understand that message; we pass our pointer since we
@@ -236,9 +241,9 @@ void service_connection::process_hup()
         //       process_invalid(), process_error(), process_timeout()?
         //
         ed::message hangup;
-        hangup.set_command("HANGUP");
-        hangup.set_service(".");
-        hangup.add_parameter("server_name", get_server_name());
+        hangup.set_command(communicatord::g_name_communicatord_cmd_hangup);
+        hangup.set_service(communicatord::g_name_communicatord_service_local_broadcast);
+        hangup.add_parameter(communicatord::g_name_communicatord_param_server_name, get_server_name());
         f_server->broadcast_message(hangup);
 
         f_server->cluster_status(shared_from_this());
@@ -342,13 +347,19 @@ void service_connection::block_ip()
     //
     if(r >= 3)
     {
+        // send a block to anyone listening (i.e. the iplock service anywhere)
+        //
         ed::message block;
-        block.set_command("BLOCK");
-        block.set_service("*");
-        block.add_parameter("uri", a.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS));
-        block.add_parameter("period", "1h");
-        block.add_parameter("profile", "system-login-attempts");
-        block.add_parameter("reason", "Three or more attempts at connecting to communicator daemon with the wrong credentials");
+        block.set_command(communicatord::g_name_communicatord_cmd_block);
+        block.set_service(communicatord::g_name_communicatord_service_public_broadcast);
+
+        // TBD: these parameter names are really part of the iplock, which
+        //      depends on the communicatord (through the fluid-settings)
+        //
+        block.add_parameter(communicatord::g_name_communicatord_param_uri, a.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS));
+        block.add_parameter(communicatord::g_name_communicatord_param_period, "1h");
+        block.add_parameter(communicatord::g_name_communicatord_param_profile, "system-login-attempts");
+        block.add_parameter(communicatord::g_name_communicatord_param_reason, "Three or more attempts at connecting to communicator daemon with the wrong credentials");
         f_server->broadcast_message(block);
     }
 }

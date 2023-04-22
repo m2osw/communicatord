@@ -95,7 +95,7 @@ install(
 ## testcommunicatordaemon
 ##
 #
-# This is a "library-like" version used by the tests
+# This is a "library-like" version (i.e. no main() function) used by the tests
 #
 project(testcommunicatordaemon)
 

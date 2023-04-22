@@ -32,7 +32,7 @@
 #include    "server.h"
 
 
-// eventdispatcher lib
+// eventdispatcher
 //
 #include    <eventdispatcher/connection.h>
 

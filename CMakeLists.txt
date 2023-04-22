@@ -25,7 +25,7 @@ project(communicatord_project)
 
 find_package(AdvGetOpt        REQUIRED)
 find_package(As2Js            REQUIRED)
-find_package(Boost            REQUIRED)
+find_package(AtomicNames      REQUIRED)
 find_package(CppProcess       REQUIRED)
 find_package(EdHttp           REQUIRED)
 find_package(EventDispatcher  REQUIRED)

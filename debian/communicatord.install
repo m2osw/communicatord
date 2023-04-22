@@ -2,7 +2,7 @@
 
 # Service, Scripts, Library
 #
-debian/tmp/usr/bin/clusterstatus                                      usr/bin/
+debian/tmp/usr/bin/cluster-status                                     usr/bin/
 debian/tmp/usr/bin/message                                            usr/bin/
 debian/tmp/usr/bin/raise-flag                                         usr/bin/
 debian/tmp/usr/sbin/communicatord                                     usr/sbin/

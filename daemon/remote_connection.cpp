@@ -29,9 +29,11 @@
 #include    "remote_connection.h"
 
 
+
 // communicatord
 //
 #include    <communicatord/flags.h>
+#include    <communicatord/names.h>
 
 
 // libaddr
@@ -151,9 +153,9 @@ void remote_connection::process_connection_failed(std::string const & error_mess
         f_connected = false;
 
         ed::message hangup;
-        hangup.set_command("HANGUP");
-        hangup.set_service(".");
-        hangup.add_parameter("server_name", f_server_name);
+        hangup.set_command(communicatord::g_name_communicatord_cmd_hangup);
+        hangup.set_service(communicatord::g_name_communicatord_service_local_broadcast);
+        hangup.add_parameter(communicatord::g_name_communicatord_param_server_name, f_server_name);
         f_server->broadcast_message(hangup);
     }
 

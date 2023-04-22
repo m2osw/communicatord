@@ -40,6 +40,11 @@
 #include    "remote_connection.h"
 
 
+// communicatord
+//
+#include    <communicatord/names.h>
+
+
 // snapdev
 //
 #include    <snapdev/gethostname.h>
@@ -50,20 +55,20 @@
 #include    <snaplogger/message.h>
 
 
-// libaddr lib
+// libaddr
 //
-#include <libaddr/addr_parser.h>
+#include    <libaddr/addr_parser.h>
 
 
-// C++ lib
+// C++
 //
-#include <iomanip>
-#include <thread>
+#include    <iomanip>
+#include    <thread>
 
 
-// included last
+// last include
 //
-#include <snapdev/poison.h>
+#include    <snapdev/poison.h>
 
 
 
@@ -361,9 +366,9 @@ void remote_communicators::server_unreachable(addr::addr const & address)
     // we just broadcast the IP address of the non-responding computer
     //
     ed::message unreachable;
-    unreachable.set_service(".");
-    unreachable.set_command("UNREACHABLE");
-    unreachable.add_parameter("who", address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
+    unreachable.set_service(communicatord::g_name_communicatord_service_local_broadcast);
+    unreachable.set_command(communicatord::g_name_communicatord_cmd_unreachable);
+    unreachable.add_parameter(communicatord::g_name_communicatord_param_who, address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
     f_server->broadcast_message(unreachable);
 }
 
