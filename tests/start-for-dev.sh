@@ -10,6 +10,7 @@ then
 	echo "error: could not find the communicatord binary, was it compiled?"
 	exit 1
 fi
+TMP_DIR=${BINARY_DIR}/tmp
 
 MY_ADDRESS="192.168.2.1"
 REMOTE_LISTEN="192.168.2.1"
@@ -25,23 +26,29 @@ do
 	"--help"|"-h")
 		echo "Usage: $0 [-opts]"
 		echo "where -opts are:"
-		echo "  "
+		echo "   --my-address | -a          define this computer's address"
+		echo "   --secure-listen | -s       define the secure-listen IP address (public network)"
+		echo "   --remote-listen | -r       define the remote-listen IP address (private network)"
+		echo
+		echo "the communicator daemon will always have a Unix socket created in:"
+		echo "     ${TMP_DIR}"
 		;;
+
 	"--my-address"|"-a")
 		shift
-		MY_ADDRESS="$1"
+		MY_ADDRESS="${1}"
 		shift
 		;;
 
 	"--remote-listen"|"-r")
 		shift
-		REMOTE_LISTEN="$1"
+		REMOTE_LISTEN="${1}"
 		shift
 		;;
 
 	"--secure-listen"|"-s")
 		shift
-		SECURE_LISTEN=192.168.3.1
+		SECURE_LISTEN="${1}"
 		shift
 		;;
 
@@ -53,7 +60,6 @@ do
 	esac
 done
 
-TMP_DIR=${BINARY_DIR}/tmp
 mkdir -p ${TMP_DIR}
 
 if test ! -f ${TMP_DIR}/priv.key \
