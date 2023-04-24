@@ -7,16 +7,51 @@ BINARY_DIR=`cd ../../BUILD/Debug/contrib/communicatord && pwd`
 COMMUNICATORD=${BINARY_DIR}/daemon/communicatord
 if test ! -x "${COMMUNICATORD}"
 then
-	echo "error: could not find the communicatord binary."
+	echo "error: could not find the communicatord binary, was it compiled?"
 	exit 1
 fi
 
-if test "$1" = "-d"
-then
-	GDB="gdb --args"
-else
-	GDB=""
-fi
+MY_ADDRESS="192.168.2.1"
+REMOTE_LISTEN="192.168.2.1"
+SECURE_LISTEN="192.168.3.1"
+GDB=""
+while test -n "$1"
+do
+	case "$1" in
+	"--debug"|"-d")
+		GDB="gdb --args"
+		;;
+
+	"--help"|"-h")
+		echo "Usage: $0 [-opts]"
+		echo "where -opts are:"
+		echo "  "
+		;;
+	"--my-address"|"-a")
+		shift
+		MY_ADDRESS="$1"
+		shift
+		;;
+
+	"--remote-listen"|"-r")
+		shift
+		REMOTE_LISTEN="$1"
+		shift
+		;;
+
+	"--secure-listen"|"-s")
+		shift
+		SECURE_LISTEN=192.168.3.1
+		shift
+		;;
+
+	*)
+		echo "error: unrecognized option $1"
+		exit 1
+		;;
+
+	esac
+done
 
 TMP_DIR=${BINARY_DIR}/tmp
 mkdir -p ${TMP_DIR}
@@ -31,10 +66,10 @@ then
 fi
 
 ${GDB} ${COMMUNICATORD} \
-	--my-address 192.168.2.1:4042 \
+	--my-address ${MY_ADDRESS}:4042 \
 	--unix-listen ${TMP_DIR}/communicatord.sock \
-	--remote-listen 192.168.2.1:4042 \
-	--secure-listen admin:password1@192.168.3.1:4043 \
+	--remote-listen ${REMOTE_LISTEN}:4042 \
+	--secure-listen admin:password1@${SECURE_LISTEN}:4043 \
 	--certificate ${TMP_DIR}/cert.crt \
 	--private-key ${TMP_DIR}/priv.key \
 	--services ${BINARY_DIR}/../../dist/share/communicatord/services
