@@ -19,6 +19,11 @@
 /** \file
  * \brief Implementation of the clock verification process.
  *
+ * \todo
+ * At this time, we try once for 1 minute. If that fails, the clock will
+ * permanently be considered unstable. We want to look at a way to try
+ * again and again. Also, we could look at firing a process that would
+ * try to restart ntp if installed and crashed.
  */
 
 // self
