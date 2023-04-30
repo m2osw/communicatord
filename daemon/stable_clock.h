@@ -64,7 +64,8 @@ class stable_clock
     : public ed::thread_done_signal
 {
 public:
-    typedef std::shared_ptr<stable_clock>  pointer_t;
+    typedef std::shared_ptr<stable_clock>   pointer_t;
+    typedef std::weak_ptr<stable_clock>     weak_pointer_t;
 
                             stable_clock(server::pointer_t cs);
 

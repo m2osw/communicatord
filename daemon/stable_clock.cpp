@@ -60,9 +60,9 @@ public:
     virtual void        run() override;
 
 private:
-    stable_clock::pointer_t     f_clock = stable_clock::pointer_t();
-    mutable cppthread::mutex    f_mutex = cppthread::mutex();
-    clock_status_t              f_status = clock_status_t::CLOCK_STATUS_UNKNOWN;
+    stable_clock::weak_pointer_t    f_clock = stable_clock::weak_pointer_t();
+    mutable cppthread::mutex        f_mutex = cppthread::mutex();
+    clock_status_t                  f_status = clock_status_t::CLOCK_STATUS_UNKNOWN;
 };
 
 
@@ -114,7 +114,11 @@ void ntp_wait::run()
                     : clock_status_t::CLOCK_STATUS_INVALID;
     }
 
-    f_clock->thread_done();
+    stable_clock::pointer_t clock(f_clock.lock());
+    if(clock != nullptr)
+    {
+        clock->thread_done();
+    }
 }
 
 
