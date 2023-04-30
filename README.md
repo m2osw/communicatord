@@ -145,6 +145,56 @@ The Communicator is primarily a deamon which can graphically map your
 network and the location of each of your services to allow for messages to
 seamlessly travel between all the services.
 
+## Initialization Process
+
+Whenever your service registers with the communicator daemon using the
+REGISTER message, you are expected to receive a reply: READY.
+
+At the time you receive this reply, your service is generally ready to start.
+You want to finish up your initialization and then go for it.
+
+In some cases, though, you may want to know a little. There are two other
+messages that you can request: `CLUSTER_COMPLETE` and `CLOCK_STABLE`. Once
+you received all of those messages, everything is 100% ready. In most cases,
+though, most processes do not care much whether the cluster is ready or not
+and whether the clock is properly synchronized (although it can be a pain,
+it is very unlikely that the clock will be off by much on most modern
+systems so most of our services ignore that message).
+
+    Client          Communicator Daemon
+
+       ---- REGISTER --------->
+
+       <--- HELP --------------
+       <--- READY -------------
+       (<-- cached messages --)    // if the client was already sent messages
+
+       ---- COMMANDS --------->
+
+       ---- CLOCK_STATUS ----->
+
+       <--- CLOCK_STABLE ------
+
+       ---- CLUSTER_STATUS --->
+
+       <--- CLUSTER_UP --------
+
+The order in which the `CLUSTER_UP` and `CLOCK_STABLE` are received
+may vary in case the state changes before you send the `CLUSTER_STATUS`
+and `CLOCK_STATUS` messages.
+
+Note that if the cluster is not up yet, the communicator daemon sends a
+`CLUSTER_DOWN` message instead. Similar, if the clock is not yet verified
+as stable, it sends a `CLOCK_UNSTABLE`. So your process wants to understand
+those messages too.
+
+**WARNING:** The `CLUSTER_COMPLETE` should nearly never be used. Instead
+             you want to consider using `CLUSTER_UP`. The cluster is
+             considered up once we reach a sufficient quorum. The
+             `CLUSTER_COMPLETE`, on the other hand, is only sent once
+             all the computer in the cluster are up. This may never
+             happen, especially on really large clusters.
+
 
 # Tools
 
