@@ -3800,6 +3800,17 @@ void server::add_neighbors(std::string const & new_neighbors)
                 << SNAP_LOG_SEND;
             continue;
         }
+        if(a.get_from().get_network_type() == addr::network_type_t::NETWORK_TYPE_LOOPBACK)
+        {
+            // SNAP-418: this has happened and it caused issues
+            //           there is a fix above as well, in server::init()
+            //
+            SNAP_LOG_RECOVERABLE_ERROR
+                << "a neighbor IP cannot be the loopback IP address: "
+                << a.to_string()
+                << SNAP_LOG_SEND;
+            continue;
+        }
 
         if(f_all_neighbors.insert(a.get_from()).second)
         {
