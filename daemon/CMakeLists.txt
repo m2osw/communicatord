@@ -32,6 +32,7 @@ set(COMMUNICATORD_SOURCE_FILES
         # system
         interrupt.cpp
         load_timer.cpp
+        stable_clock.cpp
 
         # listeners (a.k.a. servers)
         listener.cpp
@@ -63,6 +64,7 @@ add_executable(${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME}
     PUBLIC
         ${ADVGETOPT_INCLUDE_DIRS}
+        ${CPPTHREAD_INCLUDE_DIRS}
         ${EDHTTP_INCLUDE_DIRS}
         ${EVENTDISPATCHER_INCLUDE_DIRS}
         ${LIBADDR_INCLUDE_DIRS}
@@ -73,6 +75,7 @@ target_include_directories(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
     communicatord
     ${ADVGETOPT_LIBRARIES}
+    ${CPPTHREAD_LIBRARIES}
     ${EDHTTP_LIBRARIES}
     ${EVENTDISPATCHER_LIBRARIES}
     ${LIBADDR_LIBRARIES}

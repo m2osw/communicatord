@@ -6,6 +6,9 @@ project=communicatord
 [public]
 cmd_accept=ACCEPT
 cmd_block=BLOCK
+cmd_clock_stable=CLOCK_STABLE
+cmd_clock_status=CLOCK_STATUS
+cmd_clock_unstable=CLOCK_UNSTABLE
 cmd_cluster_up=CLUSTER_UP
 cmd_cluster_down=CLUSTER_DOWN
 cmd_cluster_complete=CLUSTER_COMPLETE
@@ -47,6 +50,8 @@ param_broadcast_msgid=broadcast_msgid
 param_broadcast_originator=broadcast_originator
 param_broadcast_timeout=broadcast_timeout
 param_cache=cache
+param_clock_error=clock_error
+param_clock_resolution=clock_resolution
 param_command=command
 param_conflict=conflict
 param_count=count
@@ -101,12 +106,16 @@ service_local_broadcast=.
 service_private_broadcast=?
 service_public_broadcast=*
 
+value_checking=checking
 value_down=down
 value_failed=failed
+value_invalid=invalid
 value_name=name
 value_no=no
+value_no_ntp=no_ntp
 value_true=true
 value_up=up
+value_verified=verified
 value_yes=yes
 
 # vim: syntax=dosini

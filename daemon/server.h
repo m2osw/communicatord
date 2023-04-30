@@ -58,6 +58,15 @@ class base_connection;
 class remote_communicators;
 
 
+enum clock_status_t
+{
+    CLOCK_STATUS_UNKNOWN,       // i.e. we did not yet receive an answer from ntp-wait
+
+    CLOCK_STATUS_NO_NTP,
+    CLOCK_STATUS_STABLE,
+    CLOCK_STATUS_INVALID,
+};
+
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
@@ -85,6 +94,8 @@ public:
     virtual bool                send_message(ed::message & msg, bool cache = false) override;
     virtual void                stop(bool quitting) override;
 
+    void                        set_clock_status(clock_status_t status);
+    void                        send_clock_status(ed::connection::pointer_t reply_connection);
     void                        send_status(
                                           ed::connection::pointer_t connection
                                         , ed::connection::pointer_t * reply_connection = nullptr);
@@ -108,6 +119,7 @@ public:
     bool                        is_tcp_connection(ed::message & msg); // connection defined in message is TCP (or Unix) opposed to UDP
 
     void                        msg_accept(ed::message & msg);
+    void                        msg_clock_status(ed::message & msg);
     void                        msg_cluster_status(ed::message & msg);
     void                        msg_commands(ed::message & msg);
     void                        msg_connect(ed::message & msg);
@@ -155,6 +167,7 @@ private:
     ed::connection::pointer_t       f_unix_listener = ed::connection::pointer_t();    // Unix socket
     ed::connection::pointer_t       f_ping = ed::connection::pointer_t();             // UDP/IP
     ed::connection::pointer_t       f_loadavg_timer = ed::connection::pointer_t();    // a 1 second timer to calculate load (used to load balance)
+    clock_status_t                  f_clock_status = CLOCK_STATUS_UNKNOWN;
     float                           f_last_loadavg = 0.0f;
     addr::addr                      f_connection_address = addr::addr();
     std::string                     f_local_services = std::string();

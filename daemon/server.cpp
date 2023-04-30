@@ -39,6 +39,7 @@
 #include    "remote_connection.h"
 #include    "remote_communicators.h"
 #include    "service_connection.h"
+#include    "stable_clock.h"
 #include    "unix_connection.h"
 #include    "unix_listener.h"
 
@@ -410,6 +411,7 @@ server::server(int argc, char * argv[])
     f_dispatcher->add_matches({
         DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_accept, &server::msg_accept),
         // default in dispatcher: ALIVE
+        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_clock_status, &server::msg_clock_status),
         DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_cluster_status, &server::msg_cluster_status),
         DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_commands, &server::msg_commands),
         DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_connect, &server::msg_connect),
@@ -467,6 +469,7 @@ server::~server()
 int server::init()
 {
     // keep a copy of the server name handy
+    //
     if(f_opts.is_defined("server-name"))
     {
         f_server_name = f_opts.get_string("server-name");
@@ -535,6 +538,9 @@ int server::init()
     ed::connection::pointer_t ctrl_c(std::make_shared<interrupt>(shared_from_this()));
     f_communicator->add_connection(ctrl_c);
     f_interrupt = ctrl_c;
+
+    ed::connection::pointer_t check_clock_status(std::make_shared<stable_clock>(shared_from_this()));
+    f_communicator->add_connection(check_clock_status);
 
     int const max_pending_connections(f_opts.get_long("max-pending-connections"));
     if(max_pending_connections < 5
@@ -886,7 +892,7 @@ int server::init()
     f_group_name = f_opts.get_string("group-name");
 
     // if we are in a one computer environment this call would never happen
-    // unless someone sends us a CLUSTERSTATUS, but that does not have the
+    // unless someone sends us a CLUSTER_STATUS, but that does not have the
     // exact same effect
     //
     cluster_status(nullptr);
@@ -914,7 +920,7 @@ void server::drop_privileges()
             std::stringstream ss;
             ss << "Cannot locate group \""
                << f_group_name
-               << "\"! Create it first, then run the server.";
+               << "\"! Create it first, then start the server again.";
             SNAP_LOG_FATAL << ss << SNAP_LOG_SEND;
             throw communicatord::user_missing(ss.str());
         }
@@ -977,6 +983,12 @@ int server::run()
     {
         return r;
     }
+
+    // if we were started as root, try to drop privileges
+    // (in the newest version, though, we are expected to be started
+    // as communicatord:communicatord from systemd)
+    //
+    drop_privileges();
 
     // run "forever" (until we receive a QUIT message)
     //
@@ -1671,6 +1683,18 @@ void server::msg_accept(ed::message & msg)
     new_remote_connection.set_service(communicatord::g_name_communicatord_service_local_broadcast);
     new_remote_connection.add_parameter(communicatord::g_name_communicatord_param_server_name, remote_server_name);
     broadcast_message(new_remote_connection);
+}
+
+
+void server::msg_clock_status(ed::message & msg)
+{
+    base_connection::pointer_t conn(msg.user_data<base_connection>());
+    if(conn == nullptr)
+    {
+        return;
+    }
+
+    send_clock_status(std::dynamic_pointer_cast<ed::connection>(conn));
 }
 
 
@@ -3227,6 +3251,72 @@ void server::broadcast_message(
 }
 
 
+void server::set_clock_status(clock_status_t status)
+{
+    if(f_clock_status == status)
+    {
+        // status did not change, do nothing
+        //
+        return;
+    }
+    f_clock_status = status;
+    send_clock_status(ed::connection::pointer_t());
+}
+
+
+void server::send_clock_status(ed::connection::pointer_t reply_connection)
+{
+    ed::message clock_status_msg;
+
+    clock_status_msg.set_command(communicatord::g_name_communicatord_cmd_clock_unstable);
+    switch(f_clock_status)
+    {
+    case clock_status_t::CLOCK_STATUS_STABLE:
+        clock_status_msg.set_command(communicatord::g_name_communicatord_cmd_clock_stable);
+        clock_status_msg.add_parameter(
+                  communicatord::g_name_communicatord_param_clock_resolution
+                , communicatord::g_name_communicatord_value_verified);
+        break;
+
+    case clock_status_t::CLOCK_STATUS_NO_NTP:
+        clock_status_msg.set_command(communicatord::g_name_communicatord_cmd_clock_stable);
+        clock_status_msg.add_parameter(
+                  communicatord::g_name_communicatord_param_clock_resolution
+                , communicatord::g_name_communicatord_value_no_ntp);
+        break;
+
+    case clock_status_t::CLOCK_STATUS_INVALID:
+        clock_status_msg.add_parameter(
+                  communicatord::g_name_communicatord_param_clock_error
+                , communicatord::g_name_communicatord_value_invalid);
+        break;
+
+    default:
+        clock_status_msg.add_parameter(
+                  communicatord::g_name_communicatord_param_clock_error
+                , communicatord::g_name_communicatord_value_checking);
+        break;
+
+    }
+
+    if(reply_connection != nullptr)
+    {
+        // reply to a direct CLOCK_STATUS
+        //
+        service_connection::pointer_t r(std::dynamic_pointer_cast<service_connection>(reply_connection));
+        if(r->understand_command(clock_status_msg.get_command()))
+        {
+            r->send_message(clock_status_msg);
+        }
+    }
+    else
+    {
+        clock_status_msg.set_service(communicatord::g_name_communicatord_service_local_broadcast);
+        broadcast_message(clock_status_msg);
+    }
+}
+
+
 /** \brief Send the current status of a client to connections.
  *
  * Some connections (at this time only the sitter) may be interested
@@ -3361,7 +3451,7 @@ void server::send_status(
  * need to determine (again) whether we are part of a cluster
  * or not.
  *
- * This function is also called when we receive the CLUSTERSTATUS
+ * This function is also called when we receive the CLUSTER_STATUS
  * which is a query to know now what the status of the cluster is.
  * This is generally sent by daemons who need to know and may have
  * missed our previous broadcasts.
@@ -3406,7 +3496,7 @@ void server::cluster_status(ed::connection::pointer_t reply_connection)
         cluster_status_msg.add_parameter(communicatord::g_name_communicatord_param_neighbors_count, total_count);
         if(reply_connection != nullptr)
         {
-            // reply to a direct CLUSTERSTATUS
+            // reply to a direct CLUSTER_STATUS
             //
             service_connection::pointer_t r(std::dynamic_pointer_cast<service_connection>(reply_connection));
             if(r->understand_command(cluster_status_msg.get_command()))
@@ -3442,7 +3532,7 @@ void server::cluster_status(ed::connection::pointer_t reply_connection)
         cluster_complete_msg.add_parameter(communicatord::g_name_communicatord_param_neighbors_count, total_count);
         if(reply_connection != nullptr)
         {
-            // reply to a direct CLUSTERSTATUS
+            // reply to a direct CLUSTER_STATUS
             //
             service_connection::pointer_t r(std::dynamic_pointer_cast<service_connection>(reply_connection));
             if(r->understand_command(cluster_complete_msg.get_command()))
