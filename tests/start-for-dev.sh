@@ -20,7 +20,8 @@ while test -n "$1"
 do
 	case "$1" in
 	"--debug"|"-d")
-		GDB="gdb --args"
+		shift
+		GDB='gdb -ex "catch throw" -ex run --args'
 		;;
 
 	"--help"|"-h")
@@ -32,6 +33,7 @@ do
 		echo
 		echo "the communicator daemon will always have a Unix socket created in:"
 		echo "     ${TMP_DIR}"
+		exit 1
 		;;
 
 	"--my-address"|"-a")

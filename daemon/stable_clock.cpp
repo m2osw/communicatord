@@ -56,7 +56,9 @@ class ntp_wait
 public:
     typedef std::shared_ptr<ntp_wait>   pointer_t;
 
-                        ntp_wait(stable_clock::pointer_t c);
+                        ntp_wait(stable_clock * c);
+                        ntp_wait(ntp_wait const &) = delete;
+    ntp_wait &          operator = (ntp_wait const &) = delete;
 
     clock_status_t      get_status() const;
 
@@ -65,13 +67,13 @@ public:
     virtual void        run() override;
 
 private:
-    stable_clock::weak_pointer_t    f_clock = stable_clock::weak_pointer_t();
+    stable_clock *                  f_clock = nullptr;
     mutable cppthread::mutex        f_mutex = cppthread::mutex();
     clock_status_t                  f_status = clock_status_t::CLOCK_STATUS_UNKNOWN;
 };
 
 
-ntp_wait::ntp_wait(stable_clock::pointer_t c)
+ntp_wait::ntp_wait(stable_clock * c)
     : runner("ntp-wait")
     , f_clock(c)
 {
@@ -119,11 +121,7 @@ void ntp_wait::run()
                     : clock_status_t::CLOCK_STATUS_INVALID;
     }
 
-    stable_clock::pointer_t clock(f_clock.lock());
-    if(clock != nullptr)
-    {
-        clock->thread_done();
-    }
+    f_clock->thread_done();
 }
 
 
@@ -161,7 +159,7 @@ void ntp_wait::run()
  */
 stable_clock::stable_clock(server::pointer_t cs)
     : f_server(cs)
-    , f_runner(std::make_shared<detail::ntp_wait>(std::dynamic_pointer_cast<stable_clock>(shared_from_this())))
+    , f_runner(std::make_shared<detail::ntp_wait>(this))
     , f_thread(std::make_shared<cppthread::thread>("stable-clock", f_runner))
 {
     f_thread->start();
