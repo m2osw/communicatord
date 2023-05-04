@@ -1115,6 +1115,15 @@ bool server::forward_message(ed::message & msg)
     //    to a remote communicatord and not to a service on this system)
     //
 
+    if(f_debug_all_messages)
+    {
+        SNAP_LOG_TRACE
+            << "forward message \""
+            << msg.to_message()
+            << "\"."
+            << SNAP_LOG_SEND;
+    }
+
     // if the destination server was specified, we have to forward
     // the message to that specific server
     //
