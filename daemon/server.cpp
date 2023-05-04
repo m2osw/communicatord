@@ -1115,6 +1115,10 @@ bool server::forward_message(ed::message & msg)
     //    to a remote communicatord and not to a service on this system)
     //
 
+    // if the user wants to debug all messages, show the messages being
+    // forwarded; the messages sent to the communicatord itself are shown
+    // by the eventdispatcher/dipatcher.cpp class
+    //
     if(f_debug_all_messages)
     {
         SNAP_LOG_TRACE
