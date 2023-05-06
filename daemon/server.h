@@ -171,12 +171,12 @@ private:
     float                           f_last_loadavg = 0.0f;
     addr::addr                      f_connection_address = addr::addr();
     std::string                     f_local_services = std::string();
-    sorted_list_of_strings_t        f_local_services_list = sorted_list_of_strings_t();
+    advgetopt::string_set_t         f_local_services_list = advgetopt::string_set_t();
     std::string                     f_services_heard_of = std::string();
-    sorted_list_of_strings_t        f_services_heard_of_list = sorted_list_of_strings_t();
+    advgetopt::string_set_t         f_services_heard_of_list = advgetopt::string_set_t();
     std::string                     f_explicit_neighbors = std::string();
     addr::addr::set_t               f_all_neighbors = addr::addr::set_t();
-    sorted_list_of_strings_t        f_registered_neighbors_for_loadavg = sorted_list_of_strings_t();
+    advgetopt::string_set_t         f_registered_neighbors_for_loadavg = advgetopt::string_set_t();
     std::shared_ptr<remote_communicators>
                                     f_remote_communicators = std::shared_ptr<remote_communicators>();
     size_t                          f_max_connections = COMMUNICATORD_MAX_CONNECTIONS;

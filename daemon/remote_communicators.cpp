@@ -42,6 +42,7 @@
 
 // communicatord
 //
+#include    <communicatord/communicatord.h>
 #include    <communicatord/names.h>
 
 
@@ -97,8 +98,11 @@ void remote_communicators::add_remote_communicator(std::string const & addr_port
 {
     // no default address for neighbors
     //
-    addr::addr remote_addr(
-            addr::string_to_addr(addr_port, std::string(), 4040, "tcp"));
+    addr::addr remote_addr(addr::string_to_addr(
+                  addr_port
+                , std::string()
+                , communicatord::LOCAL_PORT
+                , "tcp"));
 
     add_remote_communicator(remote_addr);
 }
@@ -353,7 +357,7 @@ void remote_communicators::shutting_down(addr::addr const & address)
             << address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT)
             << " said it was shutting down. Pause for "
             << std::setprecision(2)
-            << static_cast<double>(remote_connection::REMOTE_CONNECTION_RECONNECT_TIMEOUT) / 60.0
+            << static_cast<double>(remote_connection::REMOTE_CONNECTION_RECONNECT_TIMEOUT) / 60'000'000.0
             << " minutes before trying to connect again."
             << SNAP_LOG_SEND;
     }

@@ -83,7 +83,7 @@ namespace
  * \li database -- this is a service specifically running a database;
  * in most cases, this is also a backend service
  */
-sorted_list_of_strings_t const g_valid_types =
+advgetopt::string_set_t const g_valid_types =
 {
       "proxy"
     , "frontend"
@@ -109,9 +109,9 @@ sorted_list_of_strings_t const g_valid_types =
  *
  * \return A set of string each representing a service.
  */
-sorted_list_of_strings_t canonicalize_services(std::string const & services)
+advgetopt::string_set_t canonicalize_services(std::string const & services)
 {
-    sorted_list_of_strings_t list;
+    advgetopt::string_set_t list;
     snapdev::tokenize_string(list, services, ",", true, " ");
     return list;
 }
@@ -129,10 +129,10 @@ sorted_list_of_strings_t canonicalize_services(std::string const & services)
  */
 std::string canonicalize_server_types(std::string const & server_types)
 {
-    sorted_list_of_strings_t raw_types;
+    advgetopt::string_set_t raw_types;
     snapdev::tokenize_string(raw_types, server_types, ",", true, " ");
 
-    sorted_list_of_strings_t types;
+    advgetopt::string_set_t types;
     std::set_intersection(
               raw_types.begin()
             , raw_types.end()
@@ -142,7 +142,7 @@ std::string canonicalize_server_types(std::string const & server_types)
 
     if(types.size() != raw_types.size())
     {
-        sorted_list_of_strings_t unwanted;
+        advgetopt::string_set_t unwanted;
         std::set_difference(
                   raw_types.begin()
                 , raw_types.end()

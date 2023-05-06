@@ -78,10 +78,10 @@ public:
     void                        set_password(std::string const & password);
     std::string                 get_password() const;
     void                        set_services(std::string const & services);
-    void                        get_services(sorted_list_of_strings_t & services);
+    void                        get_services(advgetopt::string_set_t & services);
     bool                        has_service(std::string const & name);
     void                        set_services_heard_of(std::string const & services);
-    void                        get_services_heard_of(sorted_list_of_strings_t & services);
+    void                        get_services_heard_of(advgetopt::string_set_t & services);
     void                        set_commands(std::string const & commands);
     bool                        understand_command(std::string const & command);
     bool                        has_commands() const;
@@ -99,14 +99,14 @@ protected:
     server::pointer_t           f_server = server::pointer_t();
 
 private:
-    sorted_list_of_strings_t    f_understood_commands = sorted_list_of_strings_t();
+    advgetopt::string_set_t     f_understood_commands = advgetopt::string_set_t();
     time_t                      f_started_on = -1;
     time_t                      f_ended_on = -1;
     connection_type_t           f_type = connection_type_t::CONNECTION_TYPE_DOWN;
     std::string                 f_server_name = std::string();
     addr::addr                  f_connection_address = addr::addr();
-    sorted_list_of_strings_t    f_services = sorted_list_of_strings_t();
-    sorted_list_of_strings_t    f_services_heard_of = sorted_list_of_strings_t();
+    advgetopt::string_set_t     f_services = advgetopt::string_set_t();
+    advgetopt::string_set_t     f_services_heard_of = advgetopt::string_set_t();
     std::string                 f_username = std::string();
     std::string                 f_password = std::string();
     bool                        f_remote_connection = false;

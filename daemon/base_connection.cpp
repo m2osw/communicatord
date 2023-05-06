@@ -324,7 +324,7 @@ void base_connection::set_services(std::string const & services)
  *
  * \param[in,out] services  The map where all the services are defined.
  */
-void base_connection::get_services(sorted_list_of_strings_t & services)
+void base_connection::get_services(advgetopt::string_set_t & services)
 {
     f_services.merge(services);
 }
@@ -371,7 +371,7 @@ void base_connection::set_services_heard_of(std::string const & services)
  *
  * \param[in,out] services  The map where all the services are defined.
  */
-void base_connection::get_services_heard_of(sorted_list_of_strings_t & services)
+void base_connection::get_services_heard_of(advgetopt::string_set_t & services)
 {
     f_services_heard_of.merge(services);
 }

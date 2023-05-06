@@ -23,6 +23,11 @@
  * Useful types and functions for the Communicator.
  */
 
+// advgetopt
+//
+#include    <advgetopt/utils.h>
+
+
 // libaddr
 //
 #include    <libaddr/addr.h>
@@ -39,13 +44,11 @@ namespace communicator_daemon
 {
 
 
-typedef std::set<std::string>                 sorted_list_of_strings_t;
-typedef std::set<addr::addr>                  sorted_list_of_addresses_t;
 
-
-sorted_list_of_strings_t    canonicalize_services(std::string const & services);
+advgetopt::string_set_t     canonicalize_services(std::string const & services);
 std::string                 canonicalize_server_types(std::string const & server_types);
 std::string                 canonicalize_neighbors(std::string const & neighbors);
+
 
 
 } // namespace communicator_daemon

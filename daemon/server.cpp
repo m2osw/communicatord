@@ -864,8 +864,8 @@ int server::init()
     if(addr::find_addr_interface(f_connection_address, false) == nullptr)
     {
         std::string msg("my-address \"");
-        msg += f_connection_address.to_ipv6_string(addr::STRING_IP_BRACKET_ADDRESS);
-        msg += "\" not found on this computer. Did a copy of the configuration file and forgot to change that entry?";
+        msg += f_connection_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS);
+        msg += "\" not found on this computer. Did you copy the configuration file and forgot to change that variable?";
         SNAP_LOG_FATAL
             << msg
             << SNAP_LOG_SEND;
@@ -1404,6 +1404,15 @@ SNAP_LOG_VERBOSE
 
     if(!accepting_remote_connections.empty())
     {
+        // TODO: if the server is "?", then we need to fix it at the moment
+        //       otherwise the receiver doesn't do anything with the message
+        //       (or tries to further broadcast it, but it does not correctly
+        //       send it to the final destination)
+        //
+        if(remote_servers)
+        {
+            msg.set_server(communicatord::g_name_communicatord_server_any);
+        }
         broadcast_message(msg, accepting_remote_connections);
     }
 
@@ -2401,7 +2410,7 @@ void server::msg_gossip(ed::message & msg)
         // from us
         //
         // in this case we just reply with RECEIVED to
-        // confirm that we get the GOSSIP message
+        // confirm that we got the GOSSIP message
         //
         std::string const reply_to(msg.get_parameter(communicatord::g_name_communicatord_param_my_address));
         add_neighbors(reply_to);
@@ -2413,6 +2422,13 @@ void server::msg_gossip(ed::message & msg)
         //                                so no HELP+COMMANDS and thus no
         //                                verification possible
         conn->send_message_to_connection(reply);
+
+        // "re-adding" (if already there) will trigger an immediate attempt
+        // to reconnect to that other communicator; otherwise, it can take
+        // as long as remote_connection::REMOTE_CONNECTION_RECONNECT_TIMEOUT
+        // which is currently 5 minutes
+        //
+        f_remote_communicators->add_remote_communicator(reply_to);
         return;
     }
 
@@ -2993,7 +3009,7 @@ void server::broadcast_message(
         hops = msg.get_integer_parameter("broadcast_hops");
     }
 
-    sorted_list_of_strings_t informed_neighbors_list;
+    advgetopt::string_set_t informed_neighbors_list;
     snapdev::tokenize_string(
               informed_neighbors_list
             , informed_neighbors
@@ -3148,7 +3164,7 @@ void server::broadcast_message(
                 // the dynamic_cast<>() should always work in this direction
                 //
                 service_connection::pointer_t conn(std::dynamic_pointer_cast<service_connection>(nc));
-                if(conn)
+                if(conn != nullptr)
                 {
                     std::string const address(conn->get_address().to_ipv4or6_string(addr::STRING_IP_ADDRESS));
                     auto it(informed_neighbors_list.find(address));
@@ -3208,12 +3224,12 @@ void server::broadcast_message(
         // in a many to many broadcasting system because you must block
         // duplicates here
         //
-        ++g_broadcast_sequence;
         if(broadcast_msgid.empty())
         {
+            ++g_broadcast_sequence;
             broadcast_msgid += f_server_name;
             broadcast_msgid += '-';
-            broadcast_msgid += g_broadcast_sequence;
+            broadcast_msgid += std::to_string(g_broadcast_sequence);
         }
         broadcast_msg.add_parameter(communicatord::g_name_communicatord_param_broadcast_msgid, broadcast_msgid);
 
