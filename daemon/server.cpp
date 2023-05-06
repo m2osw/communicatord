@@ -1179,6 +1179,7 @@ SNAP_LOG_VERBOSE
     base_connection::vector_t accepting_remote_connections;
     bool const all_servers(server_name.empty()
                 || server_name == communicatord::g_name_communicatord_server_any);
+    bool const remote_servers(server_name == communicatord::g_name_communicatord_server_remote);
 
     // service is local, check whether the service is registered,
     // if registered, forward the message immediately
@@ -1206,7 +1207,7 @@ SNAP_LOG_VERBOSE
                 //
                 continue;
             }
-            if(base_conn->get_connection_type() != connection_type_t::CONNECTION_TYPE_DOWN)
+            if(base_conn->get_connection_type() == connection_type_t::CONNECTION_TYPE_DOWN)
             {
                 // not connected yet, forget about it
                 continue;
@@ -1216,7 +1217,7 @@ SNAP_LOG_VERBOSE
             if(conn != nullptr)
             {
                 throw communicatord::missing_name(
-                          "DEBUG: server name missing in connection \""
+                          "DEBUG: server name missing in service connection \""
                         + conn->get_name()
                         + "\"...");
             }
@@ -1224,7 +1225,7 @@ SNAP_LOG_VERBOSE
             if(unix_conn != nullptr)
             {
                 throw communicatord::missing_name(
-                          "DEBUG: server name missing in connection \""
+                          "DEBUG: server name missing in unix connection \""
                         + unix_conn->get_name()
                         + "\"...");
             }
@@ -1232,7 +1233,7 @@ SNAP_LOG_VERBOSE
             switch(base_conn->get_connection_type())
             {
             case connection_type_t::CONNECTION_TYPE_DOWN:
-                // not connected yet, forget about it
+                // already handled above
                 continue;
 
             case connection_type_t::CONNECTION_TYPE_LOCAL:
@@ -1246,6 +1247,7 @@ SNAP_LOG_VERBOSE
             }
         }
 
+        bool try_remote(true);
         if(all_servers
         || server_name == base_conn->get_server_name())
         {
@@ -1277,24 +1279,23 @@ SNAP_LOG_VERBOSE
                     //
                     try
                     {
+                        // helper message for programmers with attention
+                        // span having issues
+                        //
+                        base_connection::pointer_t sender(msg.user_data<base_connection>());
+                        if(base_conn == sender)
+                        {
+                            SNAP_LOG_WARNING
+                                << "service \""
+                                << service
+                                << "\" just tried to send itself a message. Forgot to change the destination service name?"
+                                << SNAP_LOG_SEND;
+                            return false;
+                        }
+
                         if(verify_command(base_conn, msg))
                         {
                             base_conn->send_message_to_connection(msg);
-                        }
-                        else
-                        {
-                            // helper message for programmers with attention
-                            // span having issues
-                            //
-                            base_connection::pointer_t sender(msg.user_data<base_connection>());
-                            if(base_conn == sender)
-                            {
-                                SNAP_LOG_WARNING
-                                    << "service \""
-                                    << service
-                                    << "\" just tried to send itself a message. Forgot to change the destination service name?"
-                                    << SNAP_LOG_SEND;
-                            }
                         }
                     }
                     catch(std::runtime_error const & e)
@@ -1316,35 +1317,37 @@ SNAP_LOG_VERBOSE
                     //
                     return false;
                 }
-
-                // if not a local connection with the proper name,
-                // still send it to that connection but only if it
-                // is a remote connection
-                //
-                connection_type_t const type(base_conn->get_connection_type());
-                if(type == connection_type_t::CONNECTION_TYPE_REMOTE)
-                {
-                    accepting_remote_connections.push_back(base_conn);
-                }
             }
-            else
+        }
+        else
+        {
+            try_remote = remote_servers;
+        }
+        if(try_remote)
+        {
+            // TODO: limit sending to remote only if they have that service?
+            //       (if we have the 'all_servers' set, otherwise it is not
+            //       required, for sure... also, if we have multiple remote
+            //       connections that support the same service we should
+            //       randomize which one is to receive that message--or
+            //       even better, check the current server load--but
+            //       seriously, if none of our direct connections know
+            //       of that service, we need to check for those that heard
+            //       of that service, and if that is also empty, send to
+            //       all... for now we send to all anyway--plus this section
+            //       is about broadcasting. What we really need is the graph
+            //       and whether we want to send to any one service or
+            //       broadcast)
+            //
+
+            // if this is a remote connection add it to our list of remote
+            // connections and if we cannot find a local service, forward
+            // the message to all our remote connections
+            //
+            connection_type_t const type(base_conn->get_connection_type());
+            if(type == connection_type_t::CONNECTION_TYPE_REMOTE)
             {
-                remote_connection::pointer_t new_remote_connection(std::dynamic_pointer_cast<remote_connection>(nc));
-                // TODO: limit sending to remote only if they have that service?
-                //       (if we have the 'all_servers' set, otherwise it is not
-                //       required, for sure... also, if we have multiple remote
-                //       connections that support the same service we should
-                //       randomize which one is to receive that message--or
-                //       even better, check the current server load--but
-                //       seriously, if none of our direct connections know
-                //       of that service, we need to check for those that heard
-                //       of that service, and if that is also empty, send to
-                //       all... for now we send to all anyway)
-                //
-                if(new_remote_connection != nullptr /*&& new_remote_connection->has_service(service)*/)
-                {
-                    accepting_remote_connections.push_back(new_remote_connection);
-                }
+                accepting_remote_connections.push_back(base_conn);
             }
         }
     }

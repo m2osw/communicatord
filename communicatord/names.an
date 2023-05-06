@@ -98,6 +98,7 @@ param_version=version
 param_who=who
 
 server_any=*
+server_remote=?
 server_me=.
 
 service_cluster=cluster

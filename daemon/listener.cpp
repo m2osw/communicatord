@@ -147,7 +147,7 @@ void listener::process_accept()
             //       effect viewing the error as a problem and refusing the
             //       connection (we had a problem with the IP detection
             //       which should be resolved now that we use the `addr`
-            //       class
+            //       class)
             //
             SNAP_LOG_WARNING
                 << "received what should be a local connection from \""
