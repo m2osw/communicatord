@@ -128,7 +128,6 @@ void remote_connection::process_message(ed::message & msg)
         f_server_name = msg.get_sent_from_server();
     }
 
-    //f_server->process_message(shared_from_this(), message, false);
     base_connection::pointer_t conn(std::dynamic_pointer_cast<base_connection>(shared_from_this()));
     msg.user_data(conn);
     f_server->dispatch_message(msg);

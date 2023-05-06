@@ -3233,6 +3233,11 @@ void server::broadcast_message(
         }
         broadcast_msg.add_parameter(communicatord::g_name_communicatord_param_broadcast_msgid, broadcast_msgid);
 
+        // TODO: mark true if we are sending the message through a secure
+        //       connection
+        //
+        broadcast_msg.add_parameter(communicatord::g_name_communicatord_param_secure_remote, "false");
+
         // increase the number of hops; if we reach the limit, we still
         // want to forward the message, the destination will not forward
         // (broadcast) more, but it will possibly send that to its own
