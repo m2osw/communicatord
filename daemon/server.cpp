@@ -501,6 +501,11 @@ int server::init()
             << SNAP_LOG_SEND;
         f_server_name = "communicatord";
     }
+    SNAP_LOG_INFO
+        << "server name is \""
+        << f_server_name
+        << "\"."
+        << SNAP_LOG_SEND;
 
     f_number_of_processors = std::max(1U, std::thread::hardware_concurrency());
 
