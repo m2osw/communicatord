@@ -478,7 +478,7 @@ int server::init()
     if(f_server_name.empty())
     {
         f_server_name = snapdev::gethostname();
-        snapdev::string_replace_many(
+        f_server_name = snapdev::string_replace_many(
                           f_server_name
                         , {
                             { "-", "_" },
