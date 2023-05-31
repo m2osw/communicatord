@@ -85,6 +85,7 @@
 #include    <snapdev/join_strings.h>
 #include    <snapdev/pathinfo.h>
 #include    <snapdev/stringize.h>
+#include    <snapdev/string_replace_many.h>
 #include    <snapdev/tokenize_string.h>
 #include    <snapdev/trim_string.h>
 
@@ -477,6 +478,28 @@ int server::init()
     if(f_server_name.empty())
     {
         f_server_name = snapdev::gethostname();
+        snapdev::string_replace_many(
+                          f_server_name
+                        , {
+                            { "-", "_" },
+                            { ".", "" },
+                          });
+    }
+    try
+    {
+        ed::verify_message_name(f_server_name, true);
+    }
+    catch(ed::invalid_message const & e)
+    {
+        SNAP_LOG_RECOVERABLE_ERROR
+            << "\""
+            << f_server_name
+            << "\" is not a valid server name (as far as communicatord is concerned."
+               " Please consider defining a valid name in"
+               " /etc/communicatord/communicatod.d/50-communicatord.conf."
+               " Using \"communicatord\" as a default."
+            << SNAP_LOG_SEND;
+        f_server_name = "communicatord";
     }
 
     f_number_of_processors = std::max(1U, std::thread::hardware_concurrency());
