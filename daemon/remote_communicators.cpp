@@ -377,24 +377,54 @@ void remote_communicators::server_unreachable(addr::addr const & address)
 }
 
 
+/** \brief Mark gossip connection as disabled.
+ *
+ * This function is called whenever a connection between two communicator
+ * daemons succeeds. In that case, there is no need to keep the GOSSIP
+ * going so it gets disabled. However, we keep the GOSSIP connection in
+ * case the remote connection is lost. This is important if somehow the
+ * other communicator is having issues saving our IP address (i.e. the
+ * `/var/lib/communicatord` directory was not properly created).
+ *
+ * \param[in] address  The address of the remote communicator daemon.
+ */
 void remote_communicators::gossip_received(addr::addr const & address)
 {
     auto it(f_gossip_ips.find(address));
     if(it != f_gossip_ips.end())
     {
-        ed::communicator::instance()->remove_connection(it->second);
-        f_gossip_ips.erase(it);
+        it->second->set_enable(false);
+    }
+}
+
+
+void remote_communicators::connection_lost(addr::addr const & address)
+{
+    auto it(f_gossip_ips.find(address));
+    if(it != f_gossip_ips.end())
+    {
+        it->second->set_enable(true);
     }
 }
 
 
 void remote_communicators::forget_remote_connection(addr::addr const & address)
 {
-    auto it(f_smaller_ips.find(address));
-    if(it != f_smaller_ips.end())
     {
-        ed::communicator::instance()->remove_connection(it->second);
-        f_smaller_ips.erase(it);
+        auto it(f_smaller_ips.find(address));
+        if(it != f_smaller_ips.end())
+        {
+            ed::communicator::instance()->remove_connection(it->second);
+            f_smaller_ips.erase(it);
+        }
+    }
+
+    {
+        auto it(f_gossip_ips.find(address));
+        if(it != f_gossip_ips.end())
+        {
+            f_gossip_ips.erase(it);
+        }
     }
 }
 
@@ -487,6 +517,7 @@ size_t remote_communicators::count_live_connections() const
 
     return count;
 }
+
 
 
 } // namespace communicator_daemon

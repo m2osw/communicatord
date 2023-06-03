@@ -2153,14 +2153,13 @@ void server::msg_connect(ed::message & msg)
                 // connection; it won't hurt, but it is a waste if
                 // we do not need it
                 //
-                // Note: the name of the function is "GOSSIP"
-                //       received because if the "RECEIVED"
-                //       message was sent back from that remote
-                //       communicatord then it means that
-                //       remote daemon received our GOSSIP message
-                //       and receiving the "CONNECT" message is
-                //       very similar to receiving the "RECEIVED"
-                //       message after a "GOSSIP"
+                // Note: the name of the function is gossip_received
+                //       because if the "RECEIVED" message was sent
+                //       back from that remote communicatord then it
+                //       means that the remote daemon received our
+                //       GOSSIP message and receiving the "CONNECT"
+                //       message is very similar to receiving the
+                //       "RECEIVED" message after a "GOSSIP"
                 //
                 f_remote_communicators->gossip_received(his_address);
 
@@ -4025,13 +4024,11 @@ void server::remove_neighbor(std::string const & neighbor)
         save_neighbors();
     }
 
-    // make sure we stop all gossiping toward that address
-    //
-    f_remote_communicators->gossip_received(n);
-
     // also remove the remote connection otherwise it will send that
     // info in broadcast messages and the neighbor resaved in those
     // other platforms neighbors.txt files
+    //
+    // this call also makes sure we stop all gossiping toward that address
     //
     f_remote_communicators->forget_remote_connection(n);
 }
@@ -4460,6 +4457,13 @@ void server::process_connected(ed::connection::pointer_t conn)
     //
     send_status(conn);
 }
+
+
+void server::connection_lost(addr::addr const & address)
+{
+    f_remote_communicators->connection_lost(address);
+}
+
 
 
 

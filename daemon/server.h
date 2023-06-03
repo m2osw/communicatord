@@ -109,6 +109,7 @@ public:
                                           std::shared_ptr<base_connection> connection
                                         , ed::message const & message);
     void                        process_connected(ed::connection::pointer_t connection);
+    void                        connection_lost(addr::addr const & address);
     bool                        forward_message(ed::message & msg);
     void                        broadcast_message(
                                           ed::message & message

@@ -261,6 +261,14 @@ void service_connection::process_invalid()
 }
 
 
+void service_connection::connection_removed()
+{
+    tcp_server_client_message_connection::connection_removed();
+
+    f_server->connection_lost(get_address());
+}
+
+
 /** \brief Tell that the connection was given a real name.
  *
  * Whenever we receive an event through this connection,

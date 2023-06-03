@@ -290,6 +290,5 @@ addr::addr const & remote_connection::get_address() const
 }
 
 
-
 } // namespace communicator_daemon
 // vim: ts=4 sw=4 et

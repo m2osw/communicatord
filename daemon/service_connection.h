@@ -56,12 +56,13 @@ public:
     // ed::tcp_server_client_message_connection implementation
     virtual void        process_message(ed::message & msg) override;
     virtual bool        send_message(ed::message & msg, bool cache = false) override;
-
-    void                send_status();
     virtual void        process_timeout() override;
     virtual void        process_error() override;
     virtual void        process_hup() override;
     virtual void        process_invalid() override;
+    virtual void        connection_removed() override;
+
+    void                send_status();
     void                properly_named();
     addr::addr const &  get_address() const;
     void                block_ip();

@@ -69,6 +69,7 @@ public:
     void                                    shutting_down(addr::addr const & address);
     void                                    server_unreachable(addr::addr const & address);
     void                                    gossip_received(addr::addr const & address);
+    void                                    connection_lost(addr::addr const & address);
     void                                    forget_remote_connection(addr::addr const & address);
     size_t                                  count_live_connections() const;
 
