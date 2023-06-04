@@ -121,7 +121,7 @@ advgetopt::option const g_command_line_options[] =
         , advgetopt::ShortName(U'r')
         , advgetopt::Flags(advgetopt::command_flags<
               advgetopt::GETOPT_FLAG_GROUP_COMMANDS>())
-        , advgetopt::Help("check whether any flag is raised, exit with 1 if so otherwise exit with 0.")
+        , advgetopt::Help("check whether any flag is raised, exit with 1 if so, otherwise exit with 0.")
     ),
 
     // OPTIONS

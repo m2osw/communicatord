@@ -1160,22 +1160,38 @@ bool flag::save()
         file->set_parameter(std::string(), communicatord::g_name_communicatord_param_unit,        f_unit);
         file->set_parameter(std::string(), communicatord::g_name_communicatord_param_section,     f_section);
         file->set_parameter(std::string(), communicatord::g_name_communicatord_param_name,        f_name);
-        file->set_parameter(std::string(), communicatord::g_name_communicatord_param_source_file, f_source_file);
-        file->set_parameter(std::string(), communicatord::g_name_communicatord_param_function,    f_function);
-        file->set_parameter(std::string(), communicatord::g_name_communicatord_param_line,        std::to_string(f_line));
         file->set_parameter(std::string(), communicatord::g_name_communicatord_param_message,     f_message);
         file->set_parameter(std::string(), communicatord::g_name_communicatord_param_priority,    std::to_string(f_priority));
         file->set_parameter(std::string(), communicatord::g_name_communicatord_param_manual_down, f_manual_down
                                                                                                     ? communicatord::g_name_communicatord_value_yes
                                                                                                     : communicatord::g_name_communicatord_value_no);
-        if(!has_date)
-        {
-            file->set_parameter(std::string(), communicatord::g_name_communicatord_param_date, now);
-        }
         file->set_parameter(std::string(), communicatord::g_name_communicatord_param_modified,    now);
-        file->set_parameter(std::string(), communicatord::g_name_communicatord_param_tags,        snapdev::join_strings(f_tags, ","));
         file->set_parameter(std::string(), communicatord::g_name_communicatord_param_hostname,    snapdev::gethostname());
         file->set_parameter(std::string(), communicatord::g_name_communicatord_param_version,     COMMUNICATORD_VERSION_STRING);
+
+        if(!f_function.empty())
+        {
+            file->set_parameter(std::string(), communicatord::g_name_communicatord_param_function, f_function);
+        }
+        if(f_line > 0)
+        {
+            file->set_parameter(std::string(), communicatord::g_name_communicatord_param_line, std::to_string(f_line));
+        }
+        if(!f_source_file.empty())
+        {
+            file->set_parameter(std::string(), communicatord::g_name_communicatord_param_source_file, f_source_file);
+        }
+        if(!has_date)
+        {
+            // do not update the "date" parameter if already defined
+            // see the "modified" parameter, which gets set to "now" each time
+            //
+            file->set_parameter(std::string(), communicatord::g_name_communicatord_param_date, std::to_string(f_date));
+        }
+        if(!f_tags.empty())
+        {
+            file->set_parameter(std::string(), communicatord::g_name_communicatord_param_tags, snapdev::join_strings(f_tags, ","));
+        }
 
         if(has_count)
         {
