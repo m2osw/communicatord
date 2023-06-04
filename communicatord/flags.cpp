@@ -1398,7 +1398,7 @@ flag::list_t flag::load_flags()
             flag->set_priority(97);
             flag->add_tag("flag");
             flag->add_tag("too-many");
-            result.push_back(flag);
+            result.push_back(flag); // passed to user, not saved
             break;
         }
 
