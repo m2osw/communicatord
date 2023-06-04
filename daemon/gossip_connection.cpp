@@ -135,12 +135,13 @@ gossip_connection::gossip_connection(
  */
 void gossip_connection::set_enable(bool enabled)
 {
-    tcp_client_permanent_message_connection::set_enable(enabled);
-
-    if(!enabled)
+    if(!is_enabled() && enabled)
     {
         f_wait = FIRST_TIMEOUT;
+        set_timeout_delay(f_wait);
     }
+
+    tcp_client_permanent_message_connection::set_enable(enabled);
 }
 
 

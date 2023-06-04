@@ -993,7 +993,18 @@ bool flag::save()
             // try to become communicatord although we do not expect
             // that to ever happen here
             //
-            safe_user = std::make_shared<snapdev::as_root>(communicator_user);
+            try
+            {
+                safe_user = std::make_shared<snapdev::as_root>(communicator_user);
+            }
+            catch(snapdev::unknown_user const & e)
+            {
+                SNAP_LOG_ERROR
+                    << "Could not become communicator user: "
+                    << e.what()
+                    << SNAP_LOG_SEND;
+                return false;
+            }
 
             if(!safe_user->is_switched())
             {
