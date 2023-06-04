@@ -883,8 +883,6 @@ std::string flag::to_string() const
        << "/"
        << get_name()
        << "):"
-       << get_filename()
-       << ":"
        << get_source_file()
        << ":"
        << get_function()

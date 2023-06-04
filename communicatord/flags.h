@@ -68,11 +68,12 @@ public:
     flag &                      set_manual_down(bool manual);
     flag &                      add_tag(std::string const & tag);
 
+    std::string const &         get_filename() const;
+
     state_t                     get_state() const;
     std::string const &         get_unit() const;
     std::string const &         get_section() const;
     std::string const &         get_name() const;
-    std::string const &         get_filename() const;
     std::string const &         get_source_file() const;
     std::string const &         get_function() const;
     int                         get_line() const;
