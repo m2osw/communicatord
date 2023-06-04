@@ -999,9 +999,14 @@ bool flag::save()
             }
             catch(snapdev::unknown_user const & e)
             {
+                // there is no reason to try to run the raise-flag command
+                // in this case since it's probably not (properly) installed
+                //
                 SNAP_LOG_ERROR
                     << "Could not become communicator user: "
                     << e.what()
+                    << "\" -- "
+                    << to_string()
                     << SNAP_LOG_SEND;
                 return false;
             }
@@ -1011,7 +1016,7 @@ bool flag::save()
                 SNAP_LOG_VERBOSE
                     << "Could not become user \""
                     << communicator_user
-                    << "\". Trying to run raise-flag tool."
+                    << "\". Trying to run the `raise-flag` tool."
                     << SNAP_LOG_SEND;
 
                 // that failed so far, so try with the raise-flag tool
