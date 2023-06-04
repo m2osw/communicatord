@@ -111,8 +111,20 @@ service_connection::service_connection(
     : tcp_server_client_message_connection(client)
     , base_connection(cs, false)
     , f_server_name(server_name)
-    , f_address(client->get_address())  // peer address:port (computer on the other side)
+    , f_address(client->get_client_address())  // peer address:port (IP of computer on the other side)
 {
+    // the f_address now has the client address & ephemeral port, try to
+    // get the correct port from our address
+    //
+    // NOTE: local services could just use get_address(), but remote
+    //       connections (i.e. connections to other communicatord instances)
+    //       would not get the correct IP address
+    //
+    addr::addr our_address(client->get_address());
+    if(our_address.get_port() != 0)
+    {
+        f_address.set_port(our_address.get_port());
+    }
 }
 
 
@@ -227,7 +239,7 @@ void service_connection::process_error()
  *
  * It is important for some processes to know when a remote connection
  * is lost (i.e. for dynamic QUORUM calculations in snaplock, for
- * example.) So we handle the process_hup() event and send a
+ * example). So we handle the process_hup() event and send a
  * HANGUP if this connection is a remote connection.
  */
 void service_connection::process_hup()
@@ -265,7 +277,11 @@ void service_connection::connection_removed()
 {
     tcp_server_client_message_connection::connection_removed();
 
-    f_server->connection_lost(get_address());
+    if(is_remote())
+    {
+        addr::addr remote_addr(get_address());
+        f_server->connection_lost(get_address());
+    }
 }
 
 

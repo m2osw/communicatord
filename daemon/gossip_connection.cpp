@@ -124,27 +124,6 @@ gossip_connection::gossip_connection(
 }
 
 
-/** \brief Reset the timeout on a disable.
- *
- * Now that we clearly reuse the gossip connections, we want to reset the
- * timeout (f_wait field). This function detects when the remote connection
- * is gone and sets the timeout back to FIRST_TIMEOUT.
- *
- * \param[in] enabled  Whether to enable (true) or disable (false) the
- * gossip connection.
- */
-void gossip_connection::set_enable(bool enabled)
-{
-    if(!is_enabled() && enabled)
-    {
-        f_wait = FIRST_TIMEOUT;
-        set_timeout_delay(f_wait);
-    }
-
-    tcp_client_permanent_message_connection::set_enable(enabled);
-}
-
-
 /** \brief Process one timeout.
  *
  * We do not really have anything to do when a timeout happens. The
@@ -170,7 +149,7 @@ void gossip_connection::process_timeout()
     // increase the delay on each timeout until we reach
     // 'g_max_gossip_timeout'
     //
-    std::int64_t const next_wait(std::max(f_wait * 2, g_max_gossip_timeout));
+    std::int64_t const next_wait(std::min(f_wait * 2, g_max_gossip_timeout));
     if(next_wait != f_wait)
     {
         f_wait = next_wait;

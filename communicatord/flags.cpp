@@ -310,14 +310,23 @@ flag::flag(std::string const & filename)
                                                     == communicatord::g_name_communicatord_value_yes;
     }
 
+    time_t const now(time(nullptr));
     if(file->has_parameter(communicatord::g_name_communicatord_param_date))
     {
         f_date = std::stol(file->get_parameter(communicatord::g_name_communicatord_param_date));
+    }
+    else
+    {
+        f_date = now;
     }
 
     if(file->has_parameter(communicatord::g_name_communicatord_param_modified))
     {
         f_modified = std::stol(file->get_parameter(communicatord::g_name_communicatord_param_modified));
+    }
+    else
+    {
+        f_modified = now;
     }
 
     if(file->has_parameter(communicatord::g_name_communicatord_param_tags))
@@ -874,9 +883,13 @@ std::string flag::to_string() const
 {
     std::stringstream ss;
 
-    snapdev::timespec_ex date(std::max(get_date(), get_modified()), 0);
+    bool const down(get_state() == state_t::STATE_DOWN);
+    bool const no_message(get_message().empty());
+    snapdev::timespec_ex date(get_modified(), 0);
     ss << date.to_string("%Y/%m/%d %T")
-       << ": flag("
+       << ": "
+       << (down ? "un" : "")
+       << "flag("
        << get_unit()
        << "/"
        << get_section()
@@ -889,12 +902,12 @@ std::string flag::to_string() const
        << ":"
        << get_line()
        << ": "
-       << get_message()
+       << (down && no_message ? std::string("unflag error") : get_message())
        << " (priority: "
        << get_priority()
-       << (get_manual_down() ? " manual-down" : "")
+       << (get_manual_down() ? ", manual-down" : "")
        << ", count: "
-       << get_count()
+       << get_count() + 1
        << ")";
 
     // field not yet included above
@@ -959,6 +972,17 @@ bool flag::save()
     uid_t const uid(geteuid());
     if(uid != 0)
     {
+        // if the flag doesn't exist and it is to be taken down, we may be
+        // able to ignore the safe_user request altogether
+        //
+        if(f_state == state_t::STATE_DOWN)
+        {
+            if(remove(filename))
+            {
+                return true;
+            }
+        }
+
         passwd * user(getpwuid(uid));
         if(user == nullptr)
         {
@@ -1195,20 +1219,27 @@ bool flag::save()
     }
     else
     {
-        // state is down, delete the file if it still exists
-        //
-        result = unlink(filename.c_str()) == 0;
-        if(!result && errno == ENOENT)
-        {
-            // deleting a flag that does not exist "works" every time
-            //
-            result = true;
-        }
+        remove(filename);
     }
 
     return result;
 }
 
+
+bool flag::remove(std::string const & filename)
+{
+    // state is down, delete the file if it still exists
+    //
+    bool result(unlink(filename.c_str()) == 0);
+    if(!result && errno == ENOENT)
+    {
+        // deleting a flag that does not exist "works" every time
+        //
+        result = true;
+    }
+
+    return result;
+}
 
 
 /** \brief Validate a name so we make sure they are as expected.

@@ -94,6 +94,7 @@ public:
 
 private:
     static void                 valid_name(std::string & name);
+    bool                        remove(std::string const & filename);
 
     state_t                     f_state             = state_t::STATE_UP;
     std::string                 f_unit              = std::string();

@@ -101,7 +101,7 @@ void remote_communicators::add_remote_communicator(std::string const & addr_port
     addr::addr remote_addr(addr::string_to_addr(
                   addr_port
                 , std::string()
-                , communicatord::LOCAL_PORT
+                , communicatord::REMOTE_PORT
                 , "tcp"));
 
     add_remote_communicator(remote_addr);
@@ -244,35 +244,7 @@ void remote_communicators::add_remote_communicator(addr::addr const & remote_add
         // send the GOSSIP message up until it succeeds or the
         // application quits
         //
-        f_gossip_ips[remote_addr] = std::make_shared<gossip_connection>(
-                                      shared_from_this()
-                                    , remote_addr);
-        f_gossip_ips[remote_addr]->set_name("gossip to remote communicator: " + addr_str);
-
-        if(!ed::communicator::instance()->add_connection(f_gossip_ips[remote_addr]))
-        {
-            // this should never happens here since each new creates a
-            // new pointer
-            //
-            SNAP_LOG_ERROR
-                << "new gossip connection to "
-                << addr_str
-                << " could not be added to the ed::communicator list of connections."
-                << SNAP_LOG_SEND;
-
-            auto it(f_gossip_ips.find(remote_addr));
-            if(it != f_gossip_ips.end())
-            {
-                f_gossip_ips.erase(it);
-            }
-        }
-        else
-        {
-            SNAP_LOG_DEBUG
-                << "new gossip connection added for "
-                << addr_str
-                << SNAP_LOG_SEND;
-        }
+        connection_lost(remote_addr);
     }
 }
 
@@ -315,12 +287,12 @@ void remote_communicators::stop_gossiping()
  * At some point we may want to look into having seeds instead
  * of allowing connections to all the nodes.
  *
- * \param[in] address  The address of the communicatord that refused a
- *                     CONNECT because it is too busy.
+ * \param[in] remote_addr  The address of the communicatord that refused a
+ *                         CONNECT because it is too busy.
  */
-void remote_communicators::too_busy(addr::addr const & address)
+void remote_communicators::too_busy(addr::addr const & remote_addr)
 {
-    auto it(f_smaller_ips.find(address));
+    auto it(f_smaller_ips.find(remote_addr));
     if(it != f_smaller_ips.end())
     {
         // wait for 1 day and try again (is 1 day too long?)
@@ -328,7 +300,7 @@ void remote_communicators::too_busy(addr::addr const & address)
         it->second->set_enable(true);
         SNAP_LOG_INFO
             << "remote communicator "
-            << address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT)
+            << remote_addr.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT)
             << " was marked as too busy. Pause for 1 day before trying to connect again."
             << SNAP_LOG_SEND;
     }
@@ -340,12 +312,12 @@ void remote_communicators::too_busy(addr::addr const & address)
  * This function makes sure we wait for some time, instead of waisting
  * our time trying to reconnect again and again.
  *
- * \param[in] addr  The address of the communicatord that refused a
- *                  CONNECT because it is shutting down.
+ * \param[in] remote_addr  The address of the communicatord that refused a
+ *                         CONNECT because it is shutting down.
  */
-void remote_communicators::shutting_down(addr::addr const & address)
+void remote_communicators::shutting_down(addr::addr const & remote_addr)
 {
-    auto it(f_smaller_ips.find(address));
+    auto it(f_smaller_ips.find(remote_addr));
     if(it != f_smaller_ips.end())
     {
         // wait for 5 minutes and try again
@@ -354,7 +326,7 @@ void remote_communicators::shutting_down(addr::addr const & address)
         it->second->set_enable(true);
         SNAP_LOG_DEBUG
             << "remote communicator "
-            << address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT)
+            << remote_addr.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT)
             << " said it was shutting down. Pause for "
             << std::setprecision(2)
             << static_cast<double>(remote_connection::REMOTE_CONNECTION_RECONNECT_TIMEOUT) / 60'000'000.0
@@ -364,7 +336,7 @@ void remote_communicators::shutting_down(addr::addr const & address)
 }
 
 
-void remote_communicators::server_unreachable(addr::addr const & address)
+void remote_communicators::server_unreachable(addr::addr const & remote_addr)
 {
     // we do not have the name of the computer in communicatord so
     // we just broadcast the IP address of the non-responding computer
@@ -372,46 +344,99 @@ void remote_communicators::server_unreachable(addr::addr const & address)
     ed::message unreachable;
     unreachable.set_service(communicatord::g_name_communicatord_service_local_broadcast);
     unreachable.set_command(communicatord::g_name_communicatord_cmd_unreachable);
-    unreachable.add_parameter(communicatord::g_name_communicatord_param_who, address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
+    unreachable.add_parameter(communicatord::g_name_communicatord_param_who, remote_addr.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
     f_server->broadcast_message(unreachable);
 }
 
 
-/** \brief Mark gossip connection as disabled.
+/** \brief Remove the gossip connection.
  *
- * This function is called whenever a connection between two communicator
- * daemons succeeds. In that case, there is no need to keep the GOSSIP
- * going so it gets disabled. However, we keep the GOSSIP connection in
- * case the remote connection is lost. This is important if somehow the
- * other communicator is having issues saving our IP address (i.e. the
- * `/var/lib/communicatord` directory was not properly created).
+ * This function is called whenever a full message connection between
+ * two communicator daemons succeeds. In that case, there is no need
+ * to keep the GOSSIP connection in parallel.
  *
- * \param[in] address  The address of the remote communicator daemon.
+ * In the event we lose the full message connection between the two
+ * communicator daemons, the connection_lost() function is called allowing
+ * us to re-establish this GOSSIP connection.
+ *
+ * \param[in] remote_addr  The address of the remote communicator daemon.
  */
-void remote_communicators::gossip_received(addr::addr const & address)
+void remote_communicators::gossip_received(addr::addr const & remote_addr)
 {
-    auto it(f_gossip_ips.find(address));
+    auto it(f_gossip_ips.find(remote_addr));
     if(it != f_gossip_ips.end())
     {
-        it->second->set_enable(false);
+        ed::communicator::instance()->remove_connection(it->second);
+        f_gossip_ips.erase(it);
     }
 }
 
 
-void remote_communicators::connection_lost(addr::addr const & address)
+/** \brief Connection between two remote communicator daemons was lost.
+ *
+ * This function re-establish the GOSSIP connection between two remote
+ * communicators. This is important since the GOSSIP connection is
+ * completely removed whenever the normal message connection is
+ * established.
+ *
+ * This is useful if somehow a remote communicator daemon is otherwise
+ * having difficulties remembering us.
+ *
+ * \param[in] remote_addr  The IP address of the remote communicator daemon.
+ *
+ * \sa gossip_received()
+ * \sa add_remote_communicator()
+ */
+void remote_communicators::connection_lost(addr::addr const & remote_addr)
 {
-    auto it(f_gossip_ips.find(address));
-    if(it != f_gossip_ips.end())
+    if(f_gossip_ips.contains(remote_addr))
     {
-        it->second->set_enable(true);
+        // this should not happen since the connection_lost() call
+        // implies that the GOSSIP connection doesn't exist
+        //
+        return;
+    }
+
+    std::string const addr_str(remote_addr.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
+
+    f_gossip_ips[remote_addr] = std::make_shared<gossip_connection>(
+                                  shared_from_this()
+                                , remote_addr);
+    f_gossip_ips[remote_addr]->set_name("gossip to remote communicator: " + addr_str);
+
+    if(!ed::communicator::instance()->add_connection(f_gossip_ips[remote_addr]))
+    {
+        // this should never happens here since each new creates a
+        // new pointer
+        //
+        SNAP_LOG_ERROR
+            << "new gossip connection to "
+            << addr_str
+            << " could not be added to the ed::communicator list of connections."
+            << SNAP_LOG_SEND;
+
+        auto it(f_gossip_ips.find(remote_addr));
+        if(it != f_gossip_ips.end())
+        {
+            f_gossip_ips.erase(it);
+        }
+    }
+    else
+    {
+        SNAP_LOG_DEBUG
+            << "new gossip connection added for "
+            << addr_str
+            << SNAP_LOG_SEND;
     }
 }
 
 
-void remote_communicators::forget_remote_connection(addr::addr const & address)
+void remote_communicators::forget_remote_connection(addr::addr const & remote_addr)
 {
+    // this remote connection may be one we connect to (smaller IP) or
+    // one we GOSSIP to (larger IP), check both just in case
     {
-        auto it(f_smaller_ips.find(address));
+        auto it(f_smaller_ips.find(remote_addr));
         if(it != f_smaller_ips.end())
         {
             ed::communicator::instance()->remove_connection(it->second);
@@ -420,7 +445,7 @@ void remote_communicators::forget_remote_connection(addr::addr const & address)
     }
 
     {
-        auto it(f_gossip_ips.find(address));
+        auto it(f_gossip_ips.find(remote_addr));
         if(it != f_gossip_ips.end())
         {
             f_gossip_ips.erase(it);

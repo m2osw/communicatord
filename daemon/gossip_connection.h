@@ -55,7 +55,6 @@ public:
                                         , addr::addr const & address);
 
     // tcp_client_permanent_message_connection implementation
-    virtual void                set_enable(bool enabled) override;
     virtual void                process_timeout() override;
     virtual void                process_message(ed::message & msg) override;
     virtual void                process_connection_failed(std::string const & error_message) override;

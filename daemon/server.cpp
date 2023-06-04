@@ -64,6 +64,7 @@
 //
 #include    <advgetopt/exception.h>
 #include    <advgetopt/options.h>
+#include    <advgetopt/validator_duration.h>
 
 
 // serverplugins
@@ -205,6 +206,15 @@ const advgetopt::option g_options[] =
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
         , advgetopt::DefaultValue("100")
         , advgetopt::Help("maximum number of connections allowed by this communicatord.")
+    ),
+    advgetopt::define_option(
+          advgetopt::Name("max-gossip-timeout")
+        , advgetopt::Flags(advgetopt::all_flags<
+              advgetopt::GETOPT_FLAG_REQUIRED
+            , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
+        , advgetopt::DefaultValue("3600")
+        , advgetopt::Validator("duration")
+        , advgetopt::Help("maximum number of seconds to wait between GOSSIP messages.")
     ),
     advgetopt::define_option(
           advgetopt::Name("max-pending-connections")
@@ -903,7 +913,11 @@ int server::init()
 
     if(f_opts.is_defined("max-gossip-timeout"))
     {
-        std::int64_t const timeout(f_opts.get_long("max-gossip-timeout"));
+        double timeout(0.0);
+        if(advgetopt::validator_duration::convert_string(
+                      f_opts.get_string("max-gossip-timeout")
+                    , advgetopt::validator_duration::VALIDATOR_DURATION_DEFAULT_FLAGS
+                    , timeout))
         if(timeout > 0)
         {
             gossip_connection::set_max_gossip_timeout(timeout * 1'000'000LL);
@@ -4492,9 +4506,9 @@ void server::process_connected(ed::connection::pointer_t conn)
 }
 
 
-void server::connection_lost(addr::addr const & address)
+void server::connection_lost(addr::addr const & remote_addr)
 {
-    f_remote_communicators->connection_lost(address);
+    f_remote_communicators->connection_lost(remote_addr);
 }
 
 
