@@ -85,6 +85,7 @@ public:
     std::string const &         get_hostname() const;
     int                         get_count() const;
     std::string const &         get_version() const;
+    std::string                 to_string() const;
 
     bool                        save();
 

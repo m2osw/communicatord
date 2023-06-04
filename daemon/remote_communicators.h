@@ -81,7 +81,7 @@ private:
 
     server::pointer_t                       f_server = server::pointer_t();
     addr::addr const &                      f_connection_address;
-    int64_t                                 f_last_start_date = 0;
+    std::int64_t                            f_last_start_date = 0;
     addr::addr::set_t                       f_all_ips = addr::addr::set_t();
     sorted_remote_connections_by_address_t  f_smaller_ips = sorted_remote_connections_by_address_t();   // we connect to smaller IPs
     sorted_gossip_connections_by_address_t  f_gossip_ips = sorted_gossip_connections_by_address_t();    // we gossip with larger IPs

@@ -47,25 +47,25 @@ class gossip_connection
 public:
     typedef std::shared_ptr<gossip_connection> pointer_t;
 
-    static int64_t const        FIRST_TIMEOUT = 5LL * 1000000L;  // 5 seconds before first attempt
+    static std::int64_t const   FIRST_TIMEOUT = 5LL * 1'000'000LL;  // 5 seconds before first attempt
+    static std::int64_t const   MAX_TIMEOUT = 3600LL * 1'000'000LL; // wait up to 1h for the next attempt
 
                                 gossip_connection(
                                           remote_communicators::pointer_t rcs
                                         , addr::addr const & address);
 
-    // connection implementation
-    virtual void                process_timeout();
-
     // tcp_client_permanent_message_connection implementation
+    virtual void                set_enable(bool enabled) override;
+    virtual void                process_timeout() override;
     virtual void                process_message(ed::message & msg) override;
     virtual void                process_connection_failed(std::string const & error_message) override;
     virtual void                process_connected() override;
 
-    void                        kill();
+    static void                 set_max_gossip_timeout(std::int64_t max_gossip_timeout);
 
 private:
     addr::addr const            f_address;
-    int64_t                     f_wait = FIRST_TIMEOUT;
+    std::int64_t                f_wait = FIRST_TIMEOUT;
     remote_communicators::pointer_t
                                 f_remote_communicators = remote_communicators::pointer_t();
 };

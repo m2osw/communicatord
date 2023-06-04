@@ -57,6 +57,16 @@ namespace communicator_daemon
 {
 
 
+namespace
+{
+
+
+
+std::int64_t    g_max_gossip_timeout = gossip_connection::MAX_TIMEOUT;
+
+
+
+}
 
 
 /** \class gossip_connection
@@ -114,6 +124,26 @@ gossip_connection::gossip_connection(
 }
 
 
+/** \brief Reset the timeout on a disable.
+ *
+ * Now that we clearly reuse the gossip connections, we want to reset the
+ * timeout (f_wait field). This function detects when the remote connection
+ * is gone and sets the timeout back to FIRST_TIMEOUT.
+ *
+ * \param[in] enabled  Whether to enable (true) or disable (false) the
+ * gossip connection.
+ */
+void gossip_connection::set_enable(bool enabled)
+{
+    tcp_client_permanent_message_connection::set_enable(enabled);
+
+    if(!enabled)
+    {
+        f_wait = FIRST_TIMEOUT;
+    }
+}
+
+
 /** \brief Process one timeout.
  *
  * We do not really have anything to do when a timeout happens. The
@@ -136,14 +166,13 @@ void gossip_connection::process_timeout()
 {
     tcp_client_permanent_message_connection::process_timeout();
 
-    // increase the delay on each timeout until we reach 1h and then
-    // repeat every 1h or so (i.e. if you change the FIRST_TIMEOUT
-    // you may not reach exactly 1h here, also the time it takes
-    // to try to connect is added to the delay each time.)
+    // increase the delay on each timeout until we reach
+    // 'g_max_gossip_timeout'
     //
-    if(f_wait < 3600LL * 1000000LL)
+    std::int64_t const next_wait(std::max(f_wait * 2, g_max_gossip_timeout));
+    if(next_wait != f_wait)
     {
-        f_wait *= 2;
+        f_wait = next_wait;
         set_timeout_delay(f_wait);
     }
 }
@@ -242,6 +271,12 @@ void gossip_connection::process_connected()
               "my_address"
             , f_remote_communicators->get_connection_address().to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
     send_message(gossip); // do not cache, if we lose the connection, we lose the message and that's fine in this case
+}
+
+
+void gossip_connection::set_max_gossip_timeout(std::int64_t max_gossip_timeout)
+{
+    g_max_gossip_timeout = max_gossip_timeout;
 }
 
 

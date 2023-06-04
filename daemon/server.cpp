@@ -32,6 +32,7 @@
 //
 #include    "server.h"
 
+#include    "gossip_connection.h"
 #include    "interrupt.h"
 #include    "listener.h"
 #include    "load_timer.h"
@@ -898,6 +899,15 @@ int server::init()
             << msg
             << SNAP_LOG_SEND;
         throw communicatord::address_missing(msg);
+    }
+
+    if(f_opts.is_defined("max-gossip-timeout"))
+    {
+        std::int64_t const timeout(f_opts.get_long("max-gossip-timeout"));
+        if(timeout > 0)
+        {
+            gossip_connection::set_max_gossip_timeout(timeout * 1'000'000LL);
+        }
     }
 
     f_remote_communicators = std::make_shared<remote_communicators>(
@@ -4123,8 +4133,31 @@ void server::save_neighbors()
             << f_neighbors_cache_filename
             << "\" for writing."
             << SNAP_LOG_SEND;
+
+        // if the folder is missing or not writable by communicatord, then
+        // the flags won't work either, but try anyhow also report to
+        // the other communicators
+        //
+        communicatord::flag::pointer_t flag(COMMUNICATORD_FLAG_UP(
+                "communicatord",
+                "neighbors",
+                "file-write",
+                "could not open neighbor cache file for writing."));
+        flag->set_priority(97);
+        flag->add_tag("cache");
+        flag->add_tag("file-system");
+        flag->save();
+
         return;
     }
+
+    // cancel the flag if it was created above
+    //
+    communicatord::flag::pointer_t flag(COMMUNICATORD_FLAG_DOWN(
+            "communicatord",
+            "neighbors",
+            "file-write"));
+    flag->save();
 
     out << addr::setaddrmode(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT)
         << addr::setaddrsep("\n")

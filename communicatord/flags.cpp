@@ -178,7 +178,7 @@ std::string get_path_to_flag_files()
         if(!S_ISDIR(s.st_mode))
         {
             SNAP_LOG_ERROR
-                << "the flags file \""
+                << "the flags path \""
                 << path
                 << "\" is not a directory as expected."
                 << SNAP_LOG_SEND;
@@ -865,11 +865,55 @@ std::string const & flag::get_version() const
 }
 
 
+/** \brief Transform the flag in a string.
+ *
+ * This function transforms the flag object in a string. In most cases, we
+ * use this to print errors if the flag cannot be saved to disk.
+ */
+std::string flag::to_string() const
+{
+    std::stringstream ss;
+
+    snapdev::timespec_ex date(std::max(get_date(), get_modified()), 0);
+    ss << date.to_string("%Y/%m/%d %T")
+       << ": flag("
+       << get_unit()
+       << "/"
+       << get_section()
+       << "/"
+       << get_name()
+       << "):"
+       << get_filename()
+       << ":"
+       << get_source_file()
+       << ":"
+       << get_function()
+       << ":"
+       << get_line()
+       << ": "
+       << get_message()
+       << " (priority: "
+       << get_priority()
+       << (get_manual_down() ? " manual-down" : "")
+       << ", count: "
+       << get_count()
+       << ")";
+
+    // field not yet included above
+    //state_t                     get_state() const;
+    //tag_list_t const &          get_tags() const;
+    //std::string const &         get_hostname() const;
+    //std::string const &         get_version() const;
+
+    return ss.str();
+}
+
+
 /** \brief Save the data to file.
  *
  * This function is used to save the flag to file.
  *
- * Note that if  the status is DOWN, then the file gets deleted.
+ * Note that if the status is DOWN, then the file gets deleted.
  *
  * The file format used is the same as our configuration files:
  *
@@ -895,6 +939,10 @@ bool flag::save()
     std::string const filename(get_filename());
     if(filename.empty())
     {
+        SNAP_LOG_ERROR
+            << "flag output filename could not be generated -- "
+            << to_string()
+            << SNAP_LOG_SEND;
         return false;
     }
 
@@ -924,6 +972,8 @@ bool flag::save()
                 << e
                 << ", "
                 << strerror(e)
+                << " -- "
+                << to_string()
                 << SNAP_LOG_SEND;
             return false;
         }
@@ -936,7 +986,8 @@ bool flag::save()
                     << user->pw_name
                     << "\" does not match the expected user \""
                     << communicator_user
-                    << "\"."
+                    << "\" -- "
+                    << to_string()
                     << SNAP_LOG_SEND;
                 return false;
             }
@@ -1123,7 +1174,8 @@ bool flag::save()
                 << e
                 << ", "
                 << strerror(e)
-                << ')'
+                << ") -- "
+                << to_string()
                 << SNAP_LOG_SEND;
         }
     }
@@ -1246,7 +1298,7 @@ void flag::valid_name(std::string & name)
  * In that case, though, it should be considered that no flags are currently
  * raised.
  *
- * \return The vector of flag files read from disk.
+ * \return The list of flag files read from disk.
  */
 flag::list_t flag::load_flags()
 {
