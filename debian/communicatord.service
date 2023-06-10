@@ -3,6 +3,7 @@
 
 [Unit]
 Description=Snap! Websites communicator daemon
+Documentation=https://snapwebsites.org/project/communicatord file:/usr/share/doc/communicatord-doc/html/
 After=network.target
 
 [Service]
