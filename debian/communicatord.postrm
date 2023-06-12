@@ -16,8 +16,9 @@ then
     rm -rf /var/lib/${ENVIRONMENT_NAME}
     rm -f /var/cache/${ENVIRONMENT_NAME}
 
-    # delete the admin configuration file
+    # delete the admin configuration files
     #
+    rm -f /etc/${ENVIRONMENT_NAME}/${ENVIRONMENT_NAME}.d/35-${PACKAGE_NAME}.conf
     rm -f /etc/${ENVIRONMENT_NAME}/${ENVIRONMENT_NAME}.d/50-${PACKAGE_NAME}.conf
 
     # delete override directory of communicator
