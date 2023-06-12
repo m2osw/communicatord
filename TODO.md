@@ -52,6 +52,23 @@
   Note that the sitter is already setup to verify that some NTP system is
   up and running your your computer.
 
+* Address parsing
+
+  I just switched the `secure_listen=...` to accept a `cds://...` URI.
+  I think all our IPs should be supported in a similar way. This allows
+  me to include the login name and password in the URI and not have
+  additional command line parameters.
+
+  It does look somewhat strange to include the scheme in such an IP address,
+  but at the same time to connect to it you need that scheme. So it is not
+  really that bad, I think.
+
+  Note that in this case we could also consider having just one `listen=...`
+  parameter and use spaces or commas to separate each URI. Then you could
+  define any number of URIs with their proper scheme. However, I think I
+  prefer to keep the separate variables since it makes it a lot easier to
+  override the value between several .conf file.
+
 * Broadcast to a specific service
 
   Right now, the broadcasting uses `"*"` or `"?"` or `"."` as a service name.

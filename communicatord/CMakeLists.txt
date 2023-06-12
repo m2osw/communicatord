@@ -34,6 +34,7 @@ add_library(${PROJECT_NAME} SHARED
     flags.cpp
     loadavg.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/names.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/names.h
     version.cpp
 )
 

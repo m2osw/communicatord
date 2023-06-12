@@ -98,6 +98,11 @@ param_username=username
 param_version=version
 param_who=who
 
+scheme_cd=cd
+scheme_cds=cds
+scheme_cdu=cdu
+scheme_cdb=cdb
+
 server_any=*
 server_remote=?
 server_me=.

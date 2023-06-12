@@ -72,6 +72,11 @@
 #include    <serverplugins/plugin.h>
 
 
+// edhttp
+//
+#include    <edhttp/uri.h>
+
+
 // libaddr
 //
 #include    <libaddr/addr_parser.h>
@@ -769,57 +774,109 @@ int server::init()
     && !private_key.empty()
     && f_opts.is_defined("secure-listen"))
     {
-        std::string const secure_info(f_opts.get_string("secure-listen"));
-        std::string::size_type const pos(secure_info.find('@'));
-        if(pos == std::string::npos)
+        std::string const secure_listen(f_opts.get_string("secure-listen"));
+        edhttp::uri u;
+        u.set_port(communicatord::SECURE_PORT);
+        if(!u.set_uri(secure_listen, false, true))
         {
-            SNAP_LOG_FATAL
-                << "the --secure-listen parameter must include a user name, a password, an IP address, and optionally a port."
+            SNAP_LOG_ERROR
+                << "the \"secure_listen=...\" parameter \""
+                << secure_listen
+                << "\" is not a valid URI: "
+                << u.get_last_error_message()
+                << SNAP_LOG_SEND;
+            stop(false);
+            return 1;
+        }
+        if(u.scheme() != communicatord::g_name_communicatord_scheme_cds)
+        {
+            SNAP_LOG_RECOVERABLE_ERROR
+                << "the \"secure_listen=...\" parameter must have an address with the scheme set to \"cds\" not \""
+                << u.scheme()
+                << "\". \""
+                << secure_listen
+                << "\" is not supported."
+                << SNAP_LOG_SEND;
+        }
+
+        //std::string::size_type const pos(secure_listen.find('@'));
+        //if(pos == std::string::npos)
+        //{
+        //    SNAP_LOG_FATAL
+        //        << "the --secure-listen parameter must include a user name, a password, an IP address, and optionally a port."
+        //        << SNAP_LOG_SEND;
+        //    return 1;
+        //}
+        //std::string user_password(secure_listen.substr(0, pos));
+        //std::string::size_type const colon(user_password.find(':'));
+        //if(colon == std::string::npos)
+        //{
+        //    SNAP_LOG_FATAL
+        //        << "the user and password of the --secure-listen parameter must separated by a colon."
+        //        << SNAP_LOG_SEND;
+        //    return 1;
+        //}
+        //std::string const username(user_password.substr(0, colon));
+        //std::string const password(user_password.substr(colon + 1));
+        //if(username.empty()
+        //|| password.empty())
+        //{
+        //    SNAP_LOG_FATAL
+        //        << "the user and password of the --secure-listen parameter cannot be empty."
+        //        << SNAP_LOG_SEND;
+        //    return 1;
+        //}
+        //std::string const ip_port(secure_listen.substr(pos + 1));
+
+        std::string const username(u.get_username());
+        std::string const password(u.get_password());
+        if(username.empty())
+        {
+            SNAP_LOG_ERROR
+                << "the \"secure_listen=...\" parameter must include a non-empty username."
+                << SNAP_LOG_SEND;
+            return 1;
+        }
+        if(password.empty())
+        {
+            SNAP_LOG_ERROR
+                << "the \"secure_listen=...\" parameter must include a non-empty password."
                 << SNAP_LOG_SEND;
             return 1;
         }
 
-        // TODO: make use of our password service to keep the password
-        //       encrypted instead of having it visible in your .conf files
-        //
-        std::string user_password(secure_info.substr(0, pos));
-        std::string::size_type const colon(user_password.find(':'));
-        if(colon == std::string::npos)
+        addr::addr_range::vector_t const & ranges(u.address_ranges());
+        if(ranges.size() != 1
+        || ranges[0].size() != 1
+        || !ranges[0].has_from())
         {
-            SNAP_LOG_FATAL
-                << "the user and password of the --secure-listen parameter must separated by a colon."
+            SNAP_LOG_ERROR
+                << "the \"secure_listen=...\" parameter must have an address with the scheme set to \"rfs\". \""
+                << secure_listen
+                << "\" is not supported."
                 << SNAP_LOG_SEND;
-            return 1;
-        }
-        std::string const username(user_password.substr(0, colon));
-        std::string const password(user_password.substr(colon + 1));
-        if(username.empty()
-        || password.empty())
-        {
-            SNAP_LOG_FATAL
-                << "the user and password of the --secure-listen parameter cannot be empty."
-                << SNAP_LOG_SEND;
+            stop(false);
             return 1;
         }
 
-        std::string const ip_port(secure_info.substr(pos + 1));
-        addr::addr const secure_listen(addr::string_to_addr(
-                  ip_port
-                , "0.0.0.0"
-                , communicatord::SECURE_PORT
-                , "tcp"));
+        //addr::addr const a(addr::string_to_addr(
+        //          ip_port
+        //        , "0.0.0.0"
+        //        , communicatord::SECURE_PORT
+        //        , "tcp"));
+        addr::addr const a(ranges[0].get_from());
 
         // this listener is the secure listener so it is expected to use
         // a public or at least a private IP address
         //
-        if(secure_listen.get_network_type() == addr::network_type_t::NETWORK_TYPE_PUBLIC
-        || secure_listen.get_network_type() == addr::network_type_t::NETWORK_TYPE_PRIVATE
-        || secure_listen.get_network_type() == addr::network_type_t::NETWORK_TYPE_ANY)
+        if(a.get_network_type() == addr::network_type_t::NETWORK_TYPE_PUBLIC
+        || a.get_network_type() == addr::network_type_t::NETWORK_TYPE_PRIVATE
+        || a.get_network_type() == addr::network_type_t::NETWORK_TYPE_ANY)
         {
-            f_secure_ip = secure_listen.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT);
+            f_secure_ip = a.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT);
             listener::pointer_t sl(std::make_shared<listener>(
                       shared_from_this()
-                    , secure_listen
+                    , a
                     , certificate
                     , private_key
                     , max_pending_connections
@@ -841,7 +898,7 @@ int server::init()
         {
             SNAP_LOG_WARNING
                 << "remote \"secure_listen\" parameter is \""
-                << ip_port
+                << secure_listen
                 << "\" (not public or private) so it is ignored and no secure remote connections will be possible."
                 << SNAP_LOG_SEND;
         }

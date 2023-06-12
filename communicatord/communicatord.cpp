@@ -18,9 +18,10 @@
 
 // self
 //
-#include    "communicatord.h"
+#include    "communicatord/communicatord.h"
 
-#include    "exception.h"
+#include    "communicatord/exception.h"
+#include    "communicatord/names.h"
 
 
 // snaplogger
@@ -283,7 +284,7 @@ void communicator::process_communicatord_options()
             throw e;
         }
 
-        if(scheme == "cd")
+        if(scheme == g_name_communicatord_scheme_cd)
         {
             for(auto const & r : ranges)
             {
@@ -306,7 +307,7 @@ void communicator::process_communicatord_options()
                     , ed::mode_t::MODE_PLAIN
                     , f_service_name);
         }
-        else if(scheme == "cds")
+        else if(scheme == g_name_communicatord_scheme_cds)
         {
             for(auto const & r : ranges)
             {
@@ -325,7 +326,7 @@ void communicator::process_communicatord_options()
                     , ed::mode_t::MODE_ALWAYS_SECURE
                     , f_service_name);
         }
-        else if(scheme == "cdu")
+        else if(scheme == g_name_communicatord_scheme_cdu)
         {
             // I don't think that the URI object can return a "to" only range
             //
@@ -368,7 +369,7 @@ void communicator::process_communicatord_options()
             conn->simulate_connected();
             f_communicator_connection = conn;
         }
-        else if(scheme == "cdb")
+        else if(scheme == g_name_communicatord_scheme_cdb)
         {
             // TBD: I don't think I'll implement that one since broadcasting
             //      happens in the communicator daemon itself.

@@ -23,6 +23,26 @@ then
     # Create a default user editable communicatord.conf file if it does not
     # exist yet
     #
+    COMMUNICATORD_SECURE_CONFIGURATION_FILE=/etc/${ENVIRONMENT_NAME}/${ENVIRONMENT_NAME}.d/35-${PACKAGE_NAME}.conf
+    if test ! -f ${COMMUNICATORD_SECURE_CONFIGURATION_FILE}
+    then
+        # When first installing, we do not have the public IP address
+        # (okay, we do, but we cannot be sure which one is right because
+        # the user may have a weird network setup...) so instead we create
+        # a default file if it does not already exist and put some info
+        # to make it a bit easier to deal with the matter
+        #
+        echo "# Secure variables to define in a secure configuration file" >${COMMUNICATORD_SECURE_CONFIGURATION_FILE}
+        echo "#" >>${COMMUNICATORD_SECURE_CONFIGURATION_FILE}
+        echo "# See /etc/communicatord/communicatord.conf for documentation" >>${SNAPRFS_SECURE_CONFIGURATION_FILE}
+        echo "#" >>${COMMUNICATORD_SECURE_CONFIGURATION_FILE}
+        echo "#secure_listen=" >>${COMMUNICATORD_SECURE_CONFIGURATION_FILE}
+        echo "#signal_secret=" >>${COMMUNICATORD_SECURE_CONFIGURATION_FILE}
+
+        chmod 0700 ${COMMUNICATORD_SECURE_CONFIGURATION_FILE}
+        chown "${USER_NAME}":"${GROUP_NAME}" ${COMMUNICATORD_SECURE_CONFIGURATION_FILE}
+    fi
+
     COMMUNICATORD_USER_CONFIGURATION_FILE=/etc/${ENVIRONMENT_NAME}/${ENVIRONMENT_NAME}.d/50-${PACKAGE_NAME}.conf
     if test ! -f ${COMMUNICATORD_USER_CONFIGURATION_FILE}
     then
