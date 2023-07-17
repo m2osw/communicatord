@@ -20,10 +20,11 @@ then
     #
     adduser ${USER_NAME} ${SOCKET_GROUP}
 
+    COMMUNICATORD_SECURE_CONFIGURATION_DIR=/etc/${ENVIRONMENT_NAME}/${ENVIRONMENT_NAME}.d
+
     # Create a default user editable communicatord.conf file if it does not
     # exist yet
     #
-    COMMUNICATORD_SECURE_CONFIGURATION_DIR=/etc/${ENVIRONMENT_NAME}/${ENVIRONMENT_NAME}.d
     COMMUNICATORD_SECURE_CONFIGURATION_FILE=${COMMUNICATORD_SECURE_CONFIGURATION_DIR}/35-${PACKAGE_NAME}.conf
     if test ! -f ${COMMUNICATORD_SECURE_CONFIGURATION_FILE}
     then
@@ -33,10 +34,9 @@ then
         # a default file if it does not already exist and put some info
         # to make it a bit easier to deal with the matter
         #
-        mkdir -p ${COMMUNICATORD_SECURE_CONFIGURATION_DIR}
         echo "# Secure variables to define in a secure configuration file" >${COMMUNICATORD_SECURE_CONFIGURATION_FILE}
         echo "#" >>${COMMUNICATORD_SECURE_CONFIGURATION_FILE}
-        echo "# See /etc/communicatord/communicatord.conf for documentation" >>${SNAPRFS_SECURE_CONFIGURATION_FILE}
+        echo "# See /etc/communicatord/communicatord.conf for documentation" >>${COMMUNICATORD_SECURE_CONFIGURATION_FILE}
         echo "#" >>${COMMUNICATORD_SECURE_CONFIGURATION_FILE}
         echo "#secure_listen=" >>${COMMUNICATORD_SECURE_CONFIGURATION_FILE}
         echo "#signal_secret=" >>${COMMUNICATORD_SECURE_CONFIGURATION_FILE}
@@ -54,7 +54,6 @@ then
         # a default file if it does not already exist and put some info
         # to make it a bit easier to deal with the matter
         #
-        mkdir -p ${COMMUNICATORD_SECURE_CONFIGURATION_DIR}
         echo "# Various variables that you are likely to need to edit for communicatord" >${COMMUNICATORD_USER_CONFIGURATION_FILE}
         echo "# to communicate remotely for more info and details about the variables" >>${COMMUNICATORD_USER_CONFIGURATION_FILE}
         echo "# defined here, check the file of the same name one directory up" >>${COMMUNICATORD_USER_CONFIGURATION_FILE}
