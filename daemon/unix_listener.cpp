@@ -103,7 +103,7 @@ void unix_listener::process_accept()
     // a new client just connected, create a new service_connection
     // object and add it to the ed::communicator object.
     //
-    snapdev::raii_fd_t new_client(std::move(accept()));
+    snapdev::raii_fd_t new_client(accept());
     if(new_client == nullptr)
     {
         // an error occurred, report in the logs
