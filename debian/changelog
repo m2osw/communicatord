@@ -1,6 +1,27 @@
 communicatord (2.0.9.0~jammy) jammy; urgency=high
 
   * Removed the "w" permission from the /usr/bin/raise-flag (security issue).
+  * Changed the debian/compat to 15.
+  * Removed the std::move(), it may never have been needed.
+  * Added a validator for "connection_address" parameter in the READY message.
+  * Fixed configuration filename.
+  * Fixed ports in the configuration file.
+  * Make use of names.an for messages, etc.
+  * Removed the boost library as a dependency.
+  * Updated installation scripts to use the snaplogger helper scripts.
+  * Fixed many other installation bugs.
+  * Prevent loopback as a neightbor IP address (would be useless).
+  * Allow broadcasting to other communicator daemons.
+  * Fixed the reconnection latency after a GOSSIP and made it more resilient.
+  * Enhanced the flag implementation (files that are used to raise issues).
+  * Fixed next_wait() which needed to use std::min().
+  * Use the REMOTE_PORT parameter as the default port for remote communicators.
+  * Make use of edhttp::uri to parse URLs to connect to (cds://...).
+  * Do a hostname cannonicalization (no period, replace '-' with '_').
+  * Added the CLOCK_STABLE and CLOCK_UNSTABLE messages so a service that needs
+    a valid clock can wait on those messages before starting.
+  * Updated copyright notice to 2023.
+  * Many other clean ups.
 
  -- Alexis Wilke <alexis@m2osw.com>  Fri, 14 Apr 2023 18:43:12 -0700
 
