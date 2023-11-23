@@ -2,7 +2,7 @@
 /var/log/communicatord/communicatord.log {
     weekly
     maxsize 10M
-    su commmunicatord commmunicatord
+    su communicatord communicatord
     missingok
     rotate 10
     postrotate
