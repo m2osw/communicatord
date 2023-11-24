@@ -29,7 +29,7 @@
        call that a _valid_ message... it would be great to have message
        definitions which we can turn on in debug mode so that way the
        parameters of a message can be validated (two checks: (1) whether
-       that paramter name is accepted for that command and (2) whether the
+       that parameter name is accepted for that command and (2) whether the
        parameter value is valid--using advgetopt::validator objects)
 
   This second one should probably be implemented in the eventdispatcher.
