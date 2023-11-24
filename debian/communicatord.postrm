@@ -3,7 +3,7 @@
 # Source debconf library.
 . /usr/share/debconf/confmodule
 . /usr/lib/snaplogger/inst/manage-log-dirs
-. /usr/lib/eventdispathcer/inst/manage-tls-keys
+. /usr/lib/eventdispatcher/inst/manage-tls-keys
 
 if [ "$1" = "purge" ]
 then
