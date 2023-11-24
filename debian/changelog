@@ -1,3 +1,9 @@
+communicatord (2.0.11.1~bionic) bionic; urgency=high
+
+  * Bumped build version to rebuild on Launchpad.
+
+ -- Alexis Wilke <alexis@m2osw.com>  Fri, 24 Nov 2023 10:27:07 -0800
+
 communicatord (2.0.11.0~jammy) jammy; urgency=high
 
   * Fixed spelling of eventdispatcher in the communicatod.postrm script.
