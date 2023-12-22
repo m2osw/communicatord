@@ -1,3 +1,9 @@
+communicatord (2.0.11.3~bionic) bionic; urgency=high
+
+  * Bumped build version to rebuild on Launchpad.
+
+ -- Alexis Wilke <alexis@m2osw.com>  Thu, 21 Dec 2023 21:28:44 -0800
+
 communicatord (2.0.11.2~bionic) bionic; urgency=high
 
   * Fixed "Parameter" spelling in TODO.md.
