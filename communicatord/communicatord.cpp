@@ -100,8 +100,18 @@ advgetopt::option const g_options[] =
 
 
 
+class communicatord_connection
+{
+public:
+    virtual             ~communicatord_connection() {}
+
+    virtual bool        is_connected() const = 0;
+};
+
+
 class local_stream
     : public ed::local_stream_client_permanent_message_connection
+    , public communicatord_connection
 {
 public:
     local_stream(
@@ -123,11 +133,17 @@ public:
         local_stream_client_permanent_message_connection::process_connected();
         register_service();
     }
+
+    virtual bool is_connected() const override
+    {
+        return local_stream_client_permanent_message_connection::is_connected();
+    }
 };
 
 
 class tcp_stream
     : public ed::tcp_client_permanent_message_connection
+    , public communicatord_connection
 {
 public:
     tcp_stream(
@@ -149,11 +165,17 @@ public:
         tcp_client_permanent_message_connection::process_connected();
         register_service();
     }
+
+    virtual bool is_connected() const override
+    {
+        return tcp_client_permanent_message_connection::is_connected();
+    }
 };
 
 
 class udp_dgram
     : public ed::udp_server_message_connection
+    , public communicatord_connection
 {
 public:
     typedef std::shared_ptr<udp_dgram>  pointer_t;
@@ -170,6 +192,12 @@ public:
     void simulate_connected()
     {
         register_service();
+    }
+
+    virtual bool is_connected() const override
+    {
+        // UDP is not really ever "connected"
+        return true;
     }
 };
 
@@ -453,6 +481,18 @@ bool communicator::send_message(ed::message & msg, bool cache)
 }
 
 
+void communicator::request_failure(ed::message & msg)
+{
+    // by adding the "transmission report" parameter with value "failure"
+    // we will get a TRANSMISSION_REPORT message back with the failure
+    // from the communicator daemon
+    //
+    msg.add_parameter(
+          communicatord::g_name_communicatord_param_transmission_report
+        , communicatord::g_name_communicatord_value_failure);
+}
+
+
 /** \brief When exiting your process, make sure to unregister.
  *
  * To cleanly unregister a service and thus send a message to the communicator
@@ -483,6 +523,14 @@ void communicator::unregister_communicator(bool quitting)
             messenger->unregister_service();
         }
     }
+}
+
+
+bool communicator::is_connected() const
+{
+    return f_communicator_connection != nullptr
+        ? std::dynamic_pointer_cast<communicatord_connection>(f_communicator_connection)->is_connected()
+        : false;
 }
 
 

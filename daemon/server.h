@@ -149,7 +149,7 @@ private:
     bool                        shutting_down(ed::message & msg);
     bool                        check_broadcast_message(ed::message const & msg);
     bool                        communicator_message(ed::message & msg);
-    void                        transmission_report(ed::message & msg);
+    void                        transmission_report(ed::message & msg, bool cached);
 
     advgetopt::getopt               f_opts;
     ed::dispatcher::pointer_t       f_dispatcher = ed::dispatcher::pointer_t();

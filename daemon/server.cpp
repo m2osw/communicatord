@@ -1467,7 +1467,8 @@ SNAP_LOG_VERBOSE
         // its a service that is expected on this computer, but it is not
         // running right now... so cache the message
         //
-        if(f_local_message_cache.cache_message(msg) == cache_message_t::CACHE_MESSAGE_REPLY)
+        cache_message_t const cached(f_local_message_cache.cache_message(msg));
+        if(cached == cache_message_t::CACHE_MESSAGE_REPLY)
         {
             // let the sender know that the message was not forwarded to
             // a client
@@ -1490,7 +1491,7 @@ SNAP_LOG_VERBOSE
                     << SNAP_LOG_SEND;
             }
         }
-        transmission_report(msg);
+        transmission_report(msg, cached == cache_message_t::CACHE_MESSAGE_CACHED);
         return true;
     }
 
@@ -1507,7 +1508,7 @@ SNAP_LOG_VERBOSE
                " communicatord. Dropping message."
             << SNAP_LOG_SEND;
 
-        transmission_report(msg);
+        transmission_report(msg, false);
         return false;
     }
 
@@ -1529,7 +1530,7 @@ SNAP_LOG_VERBOSE
 }
 
 
-void server::transmission_report(ed::message & msg)
+void server::transmission_report(ed::message & msg, bool cached)
 {
     base_connection::pointer_t conn(msg.user_data<base_connection>());
     if(conn == nullptr)
@@ -1543,14 +1544,19 @@ void server::transmission_report(ed::message & msg)
     }
 
     std::string const report(msg.get_parameter(communicatord::g_name_communicatord_param_transmission_report));
-    if(report != "failure")
+    if(report != communicatord::g_name_communicatord_value_failure)
     {
         return;
     }
 
     ed::message reply;
     reply.set_command(communicatord::g_name_communicatord_cmd_transmission_report);
-    reply.add_parameter(communicatord::g_name_communicatord_param_status, communicatord::g_name_communicatord_value_failed);
+    reply.add_parameter(communicatord::g_name_communicatord_param_command, msg.get_command());
+    reply.add_parameter(
+          communicatord::g_name_communicatord_param_status
+        , cached
+            ? communicatord::g_name_communicatord_value_cached
+            : communicatord::g_name_communicatord_value_failed);
     //verify_command(conn, reply);
     conn->send_message_to_connection(reply);
 }
@@ -2978,7 +2984,7 @@ void server::msg_unregister(ed::message & msg)
         send_status(c);
 
         // now remove the service name
-        // (send_status() needs the name to still be in place!)
+        // (send_status() above needs the name to still be in place!)
         //
         c->set_name(std::string());
 

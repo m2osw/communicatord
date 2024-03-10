@@ -110,18 +110,18 @@ public:
     int                         run();
 
     // ed::connection_with_send_message implementation
-    virtual bool                send_message(ed::message & message, bool cache = false) override;
-    virtual void                ready(ed::message & message) override; // no "msg_" because that's in connection_with_send_message
+    virtual bool                send_message(ed::message & msg, bool cache = false) override;
+    virtual void                ready(ed::message & msg) override; // no "msg_" because that's in connection_with_send_message
     virtual void                stop(bool quitting) override; // no "msg_" because that's in connection_with_send_message
 
 private:
-    void                        done(ed::message & message);
+    void                        done(ed::message & msg);
 
     // messages handled by the dispatcher
     // (see also ready() and stop() above)
     //
-    void                        msg_cluster_status(ed::message & message);
-    void                        msg_cluster_complete(ed::message & message);
+    void                        msg_cluster_status(ed::message & msg);
+    void                        msg_cluster_complete(ed::message & msg);
 
     advgetopt::getopt                   f_opts;
     advgetopt::conf_file::pointer_t     f_communicatord_config = advgetopt::conf_file::pointer_t();
@@ -249,15 +249,15 @@ int cluster::run()
 }
 
 
-bool cluster::send_message(ed::message & message, bool cache)
+bool cluster::send_message(ed::message & msg, bool cache)
 {
-    return f_messenger->send_message(message, cache);
+    return f_messenger->send_message(msg, cache);
 }
 
 
-void cluster::ready(ed::message & message)
+void cluster::ready(ed::message & msg)
 {
-    snapdev::NOT_USED(message);
+    snapdev::NOT_USED(msg);
 
     ed::message clusterstatus_message;
     clusterstatus_message.set_command(communicatord::g_name_communicatord_cmd_cluster_status);
@@ -278,21 +278,21 @@ void cluster::stop(bool quitting)
 }
 
 
-void cluster::msg_cluster_status(ed::message & message)
+void cluster::msg_cluster_status(ed::message & msg)
 {
-    f_cluster_status = message.get_command();
-    done(message);
+    f_cluster_status = msg.get_command();
+    done(msg);
 }
 
 
-void cluster::msg_cluster_complete(ed::message & message)
+void cluster::msg_cluster_complete(ed::message & msg)
 {
-    f_cluster_complete = message.get_command();
-    done(message);
+    f_cluster_complete = msg.get_command();
+    done(msg);
 }
 
 
-void cluster::done(ed::message & message)
+void cluster::done(ed::message & msg)
 {
     if(f_cluster_status.empty()
     || f_cluster_complete.empty())
@@ -301,7 +301,7 @@ void cluster::done(ed::message & message)
         return;
     }
 
-    f_neighbors_count = message.get_integer_parameter("neighbors_count");
+    f_neighbors_count = msg.get_integer_parameter("neighbors_count");
 
     // got our info!
     //

@@ -62,6 +62,7 @@ constexpr std::string_view      g_communicatord_any_ip_port = snapdev::join_stri
 
 
 
+
 class communicator
     : public ed::timer
     , public ed::dispatcher_support
@@ -78,18 +79,13 @@ public:
     void                        process_communicatord_options();
     std::string const &         service_name() const;
     void                        unregister_communicator(bool quitting);
+    bool                        is_connected() const;
 
     // connection_with_send_message implementation
     //
     virtual bool                send_message(ed::message & msg, bool cache = false) override;
 
-    // connection implementation
-    //
-    //virtual void                process_timeout() override;
-    //virtual void                process_error() override;
-    //virtual void                process_hup() override;
-    //virtual void                process_invalid() override;
-    //virtual void                connection_removed() override;
+    static void                 request_failure(ed::message & msg);
 
 private:
     advgetopt::getopt &         f_opts;
@@ -97,6 +93,7 @@ private:
     std::string                 f_service_name = std::string();
     ed::connection::pointer_t   f_communicator_connection = ed::connection::pointer_t();
 };
+
 
 
 } // namespace communicatord

@@ -28,11 +28,12 @@
   i.e. at this point, I "randomly" add parameters with "random" values and
        call that a _valid_ message... it would be great to have message
        definitions which we can turn on in debug mode so that way the
-       parameters of a message can be validated (two checks: (1) whether
-       that parameter name is accepted for that command and (2) whether the
-       parameter value is valid--using advgetopt::validator objects)
-
-  This second one should probably be implemented in the eventdispatcher.
+       parameters of a message can be validated:
+         (1) is that parameter name is accepted by this command?
+         (2) is the value valid for that parameter?
+         (3) are required parameter present?
+         (4) make sure message definitions do not reuse global parameters
+             (i.e. cache=no, transmission_status=failure, etc.)
 
 * Time Accuracy in your Cluster
 
@@ -52,7 +53,7 @@
   Note that the sitter is already setup to verify that some NTP system is
   up and running your your computer.
 
-* Address parsing
+* "Address" parsing (it uses a URI now)
 
   I just switched the `secure_listen=...` to accept a `cds://...` URI.
   I think all our IPs should be supported in a similar way. This allows
@@ -76,8 +77,13 @@
   cluster. To do so, we should be able to indicate "snaprfs" as the service
   name, only if we do that we'll have the message sent to one "snaprfs"
   (probably ourself). The idea here would be to look into a way to (1) do
-  a broadcast and (2) specific the service so we do not try to send it to
-  all registered services.
+  a broadcast and (2) specify the service so we do not try to send it to
+  all registered services instead limit the sending to remote services.
+
+  Note: Up until now, this was less of a concern because only "snaprfs"
+        should support message X, Y, Z and thus specifying the service was
+        not absolutely necessary. However, it's difficult to make sure that
+        all messages are unique to a daemon.
 
 
 // vim: ts=4 sw=4 et

@@ -162,7 +162,7 @@ cache_message_t cache::cache_message(ed::message & msg)
                     << ")."
                     << SNAP_LOG_SEND;
             }
-            else if(ttl < 10.0 || ttl > 86400.0)
+            else if(value < 10.0 || value > 86400.0)
             {
                 SNAP_LOG_UNIMPORTANT
                     << "cache TTL is out of range ("
@@ -172,17 +172,14 @@ cache_message_t cache::cache_message(ed::message & msg)
             }
             else
             {
-                ttl = static_cast<std::int64_t>(value);
+                ttl = static_cast<std::int64_t>(ceil(value));
             }
         }
     }
 
     // save the message
     //
-    message_cache cache_msg;
-    cache_msg.f_timeout_timestamp = time(nullptr) + ttl;
-    cache_msg.f_message = msg;
-    f_message_cache.push_back(cache_msg);
+    f_message_cache.emplace_back(time(nullptr) + ttl, msg);
 
 //#ifdef _DEBUG
 //    // to make sure we get messages cached as expected
