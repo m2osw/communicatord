@@ -389,7 +389,7 @@ void base_connection::get_services_heard_of(advgetopt::string_set_t & services)
  *
  * \param[in] commands  The list of understood commands.
  */
-void base_connection::set_commands(std::string const & commands)
+void base_connection::add_commands(std::string const & commands)
 {
     snapdev::tokenize_string(
           f_understood_commands

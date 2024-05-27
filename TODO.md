@@ -1,4 +1,11 @@
 
+* Write Unit Tests
+
+  Like cluckd, we want to create tests using the new eventdispathcer/reporter
+  scripting system. Right now, I think many features in the communicator
+  daemon are either redundant or incorrect. (i.e. many bugs even if it
+  generally works.)
+
 * Definition files should include the list of supported messages
 
   i.e. up until the time the service connects to the communicator we have no
@@ -69,6 +76,12 @@
   define any number of URIs with their proper scheme. However, I think I
   prefer to keep the separate variables since it makes it a lot easier to
   override the value between several .conf file.
+
+* Broadcast only if message supported
+
+  Make sure that we are broadcasting only to services that accept the given
+  message. It seems to me that is not the case (anymore). Sending a
+  non-supported message results in an UNKNOWN message otherwise.
 
 * Broadcast to a specific service
 

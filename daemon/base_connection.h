@@ -82,7 +82,7 @@ public:
     bool                        has_service(std::string const & name);
     void                        set_services_heard_of(std::string const & services);
     void                        get_services_heard_of(advgetopt::string_set_t & services);
-    void                        set_commands(std::string const & commands);
+    void                        add_commands(std::string const & commands);
     bool                        understand_command(std::string const & command);
     bool                        has_commands() const;
     void                        remove_command(std::string const & command);

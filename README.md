@@ -192,7 +192,7 @@ those messages too.
              you want to consider using `CLUSTER_UP`. The cluster is
              considered up once we reach a sufficient quorum. The
              `CLUSTER_COMPLETE`, on the other hand, is only sent once
-             all the computer in the cluster are up. This may never
+             all the computers in the cluster are up. This may never
              happen, especially on really large clusters.
 
 

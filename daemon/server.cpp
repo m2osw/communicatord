@@ -1319,6 +1319,7 @@ SNAP_LOG_VERBOSE
             if(base_conn->get_connection_type() == connection_type_t::CONNECTION_TYPE_DOWN)
             {
                 // not connected yet, forget about it
+                //
                 continue;
             }
 
@@ -1879,7 +1880,7 @@ void server::msg_commands(ed::message & msg)
             << SNAP_LOG_SEND;
         return;
     }
-    conn->set_commands(msg.get_parameter(communicatord::g_name_communicatord_param_list));
+    conn->add_commands(msg.get_parameter(communicatord::g_name_communicatord_param_list));
 
     // in normal circumstances, we're done
     //
@@ -1917,6 +1918,7 @@ void server::msg_commands(ed::message & msg)
         ok = false;
     }
     // on a remote we get ACCEPT instead of READY
+    //
     if(std::dynamic_pointer_cast<remote_connection>(conn) != nullptr
     || conn->is_remote())
     {
@@ -2266,16 +2268,16 @@ void server::msg_connect(ed::message & msg)
     }
 
     //verify_command(base, reply); -- we do not yet have a list of commands understood by the other communicator daemon
-
-    // also request the COMMANDS of this connection with a HELP
-    // if the connection was not refused
-    //
-    ed::message help;
-    help.set_command(ed::g_name_ed_cmd_help);
-    //verify_command(base, help); -- precisely
     conn->send_message_to_connection(reply);
+
     if(!refuse)
     {
+        // since the connection was not refused
+        // request the COMMANDS of this connection with a HELP
+        //
+        ed::message help;
+        help.set_command(ed::g_name_ed_cmd_help);
+        //verify_command(base, help); -- precisely
         conn->send_message_to_connection(help);
         broadcast_message(new_remote_connection);
     }
@@ -3329,7 +3331,7 @@ void server::broadcast_message(
             informed_neighbors_list.insert(originator);
         }
 
-        // message is 'const', so we need to create a copy
+        // message is considered 'const', so we need to create a copy
         //
         ed::message broadcast_msg(msg);
 
