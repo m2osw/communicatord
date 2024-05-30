@@ -129,4 +129,7 @@ target_link_libraries(${PROJECT_NAME}
 # NOT INSTALLED -- THIS IS JUST FOR OUR UNIT TESTS
 
 
+add_subdirectory(message-definitions)
+
+
 # vim: ts=4 sw=4 et

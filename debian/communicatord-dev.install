@@ -1,3 +1,4 @@
 usr/include/communicatord
 usr/lib/libcommunicatord.so
 usr/share/cmake/Communicatord/CommunicatordConfig.cmake
+usr/share/eventdispatcher/messages/*

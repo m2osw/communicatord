@@ -342,8 +342,8 @@ void remote_communicators::server_unreachable(addr::addr const & remote_addr)
     // we just broadcast the IP address of the non-responding computer
     //
     ed::message unreachable;
-    unreachable.set_service(communicatord::g_name_communicatord_service_local_broadcast);
     unreachable.set_command(communicatord::g_name_communicatord_cmd_unreachable);
+    unreachable.set_service(communicatord::g_name_communicatord_service_local_broadcast);
     unreachable.add_parameter(communicatord::g_name_communicatord_param_who, remote_addr.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
     f_server->broadcast_message(unreachable);
 }

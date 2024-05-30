@@ -430,7 +430,7 @@ server::server(int argc, char * argv[])
         // default in dispatcher: ALIVE
         DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_clock_status, &server::msg_clock_status),
         DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_cluster_status, &server::msg_cluster_status),
-        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_commands, &server::msg_commands),
+        DISPATCHER_MATCH(ed::g_name_ed_cmd_commands, &server::msg_commands),
         DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_connect, &server::msg_connect),
         DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_disconnect, &server::msg_disconnect),
         DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_forget, &server::msg_forget),
@@ -1873,7 +1873,7 @@ void server::msg_commands(ed::message & msg)
     if(!msg.has_parameter(communicatord::g_name_communicatord_param_list))
     {
         SNAP_LOG_ERROR
-            << communicatord::g_name_communicatord_cmd_commands
+            << ed::g_name_ed_cmd_commands
             << " was sent without a \""
             << communicatord::g_name_communicatord_param_list
             << "\" parameter."
@@ -2284,7 +2284,7 @@ void server::msg_connect(ed::message & msg)
 
     // if not refused, then we may have a QUORUM now, check
     // that; the function we call takes care of knowing
-    // whether we reach cluster status or not
+    // whether we reached a new cluster status or not
     //
     if(!refuse)
     {
@@ -2969,8 +2969,7 @@ void server::msg_unregister(ed::message & msg)
         return;
     }
 
-    // also remove all the connection types
-    // an empty string represents an unconnected item
+    // mark connection as being DOWN
     //
     conn->set_connection_type(connection_type_t::CONNECTION_TYPE_DOWN);
 
@@ -3528,6 +3527,12 @@ void server::send_status(
         {
             reply.add_parameter(communicatord::g_name_communicatord_param_down_since, down_since);
         }
+    }
+    else
+    {
+        reply.add_parameter(
+                  communicatord::g_name_communicatord_param_status
+                , communicatord::g_name_communicatord_value_unknown);
     }
 
     if(reply_connection != nullptr)

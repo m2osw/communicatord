@@ -371,7 +371,7 @@ void service_connection::block_ip()
     //
     if(r >= 3)
     {
-        // send a block to anyone listening (i.e. the iplock service anywhere)
+        // send a block to anyone listening (i.e. the ipwall service anywhere)
         //
         ed::message block;
         block.set_command(communicatord::g_name_communicatord_cmd_block);
