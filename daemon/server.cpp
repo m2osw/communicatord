@@ -3453,12 +3453,13 @@ void server::send_clock_status(ed::connection::pointer_t reply_connection)
 
 /** \brief Send the current status of a client to connections.
  *
- * Some connections (at this time only the sitter) may be interested
+ * Some connections (the sitter, the cluck, ...) may be interested
  * by the STATUS event. Any connection that understands the STATUS
  * event will be sent that event whenever the status of a connection
- * changes (specifically, on a REGISTER and on an UNREGISTER or equivalent.)
+ * changes (specifically, on a REGISTER, CONNECT and on an UNREGISTER,
+ * DISCONNECT or equivalent).
  *
- * \param[in] client  The client that just had its status changed.
+ * \param[in] connection  The connection that just had its status changed.
  * \param[in] reply_connection  If not nullptr, the connection where the
  *                              STATUS message gets sent.
  */

@@ -72,6 +72,7 @@ namespace communicator_daemon
  * \warning
  * At this time the \p max_connections parameter is ignored.
  *
+ * \param[in] cs  The communicator server pointer.
  * \param[in] address  The address:port to listen on. Most often it is
  * 0.0.0.0:4040 (plain connection) or 0.0.0.0:4041 (secure connection).
  * \param[in] certificate  The filename of a PEM file with a certificate.
@@ -81,8 +82,6 @@ namespace communicator_daemon
  *                             we are done with some existing connections.
  * \param[in] local  Whether this connection expects local services only.
  * \param[in] server_name  The name of the server running this instance.
- * \param[in] secure  Whether to create a secure (true) or non-secure (false)
- *                    connection.
  */
 listener::listener(
           server::pointer_t cs
@@ -105,6 +104,8 @@ listener::listener(
     , f_local(local)
     , f_server_name(server_name)
 {
+    //set_name(...) -- this is done in the server.cpp because the listener
+    //                 is used for many different type of listening
 }
 
 
@@ -204,13 +205,16 @@ void listener::process_accept()
 }
 
 
-/** \brief Set the username required to connect on this TCP connection.
+/** \brief Set the \p username required to connect on this TCP connection.
  *
  * When accepting connections from remote communicatord, it is best to
  * assign a user name and password to that connection. This protects
  * your connection from hackers without such credentials.
  *
  * \param[in] username  The name of the user that can connect to this listener.
+ *
+ * \sa set_password()
+ * \sa get_username()
  */
 void listener::set_username(std::string const & username)
 {
@@ -220,6 +224,13 @@ void listener::set_username(std::string const & username)
 
 /** \brief Retrieve the user name of this connection.
  *
+ * This function returns the user name as set by the set_username().
+ * Some connections may require a username and password to fully
+ * work.
+ *
+ * \return A copy of the username.
+ *
+ * \sa set_username()
  */
 std::string listener::get_username() const
 {
@@ -227,6 +238,19 @@ std::string listener::get_username() const
 }
 
 
+/** \brief Set the password to use to connect to a remote communicator daemon.
+ *
+ * Some remote connections require a login name and password to accept a
+ * connection. This function can be used to define the password.
+ *
+ * The password will be sent unencrypted. You want to use an SSL connection
+ * for such remote connections.
+ *
+ * \param[in] password  The passowrd to use to connect to a communicator daemon.
+ *
+ * \sa set_username()
+ * \sa get_password()
+ */
 void listener::set_password(std::string const & password)
 {
     f_password = password;
@@ -237,6 +261,10 @@ void listener::set_password(std::string const & password)
  *
  * Each listener may include a password to prevent unwanted connections
  * from hackers on public facing connections.
+ *
+ * \return A copy of the password.
+ *
+ * \sa set_password()
  */
 std::string listener::get_password() const
 {
