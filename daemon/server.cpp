@@ -1996,24 +1996,6 @@ void server::msg_connect(ed::message & msg)
         return;
     }
 
-    // the CONNECT message has three mandatory parameters
-    //
-    if(!msg.has_parameter(communicatord::g_name_communicatord_param_version)
-    || !msg.has_parameter(communicatord::g_name_communicatord_param_my_address)
-    || !msg.has_parameter(communicatord::g_name_communicatord_param_server_name))
-    {
-        SNAP_LOG_ERROR
-            << "CONNECT was sent without a \""
-            << communicatord::g_name_communicatord_param_version
-            << "\", \""
-            << communicatord::g_name_communicatord_param_my_address
-            << "\", or \""
-            << communicatord::g_name_communicatord_param_server_name
-            << "\" parameter, all are mandatory."
-            << SNAP_LOG_SEND;
-        return;
-    }
-
     // TODO: the username:password need to be encrypted so we actually want
     //       to change this scheme and use our password service which includes
     //       the necessary encryption and resides on a separate computer not
@@ -3481,8 +3463,8 @@ void server::send_clock_status(ed::connection::pointer_t reply_connection)
  *                              STATUS message gets sent.
  */
 void server::send_status(
-              ed::connection::pointer_t connection
-            , ed::connection::pointer_t * reply_connection)
+      ed::connection::pointer_t connection
+    , ed::connection::pointer_t * reply_connection)
 {
     ed::message reply;
     reply.set_command(communicatord::g_name_communicatord_cmd_status);
@@ -4547,26 +4529,26 @@ bool server::is_debug() const
 
 void server::process_connected(ed::connection::pointer_t conn)
 {
-    ed::message connect;
-    connect.set_command(communicatord::g_name_communicatord_cmd_connect);
-    connect.add_version_parameter();
-    connect.add_parameter(communicatord::g_name_communicatord_param_my_address, f_connection_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
-    connect.add_parameter(communicatord::g_name_communicatord_param_server_name, f_server_name);
-    if(!f_explicit_neighbors.empty())
-    {
-        connect.add_parameter(communicatord::g_name_communicatord_param_neighbors, f_explicit_neighbors);
-    }
-    if(!f_local_services.empty())
-    {
-        connect.add_parameter(communicatord::g_name_communicatord_param_services, f_local_services);
-    }
-    if(!f_services_heard_of.empty())
-    {
-        connect.add_parameter(communicatord::g_name_communicatord_param_heard_of, f_services_heard_of);
-    }
     base_connection::pointer_t base(std::dynamic_pointer_cast<base_connection>(conn));
     if(base != nullptr)
     {
+        ed::message connect;
+        connect.set_command(communicatord::g_name_communicatord_cmd_connect);
+        connect.add_version_parameter();
+        connect.add_parameter(communicatord::g_name_communicatord_param_my_address, f_connection_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
+        connect.add_parameter(communicatord::g_name_communicatord_param_server_name, f_server_name);
+        if(!f_explicit_neighbors.empty())
+        {
+            connect.add_parameter(communicatord::g_name_communicatord_param_neighbors, f_explicit_neighbors);
+        }
+        if(!f_local_services.empty())
+        {
+            connect.add_parameter(communicatord::g_name_communicatord_param_services, f_local_services);
+        }
+        if(!f_services_heard_of.empty())
+        {
+            connect.add_parameter(communicatord::g_name_communicatord_param_heard_of, f_services_heard_of);
+        }
         base->send_message_to_connection(connect);
     }
 

@@ -121,6 +121,7 @@ gossip_connection::gossip_connection(
     , f_address(address)
     , f_remote_communicators(rcs)
 {
+    set_name("gossip");
 }
 
 
@@ -165,7 +166,7 @@ void gossip_connection::process_timeout()
  *
  * We currently really only expect RECEIVED as a reply.
  *
- * \param[in] message  The message received from the remote communicatord.
+ * \param[in] msg  The message received from the remote communicatord.
  */
 void gossip_connection::process_message(ed::message & msg)
 {
