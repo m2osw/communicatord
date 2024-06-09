@@ -121,7 +121,8 @@ gossip_connection::gossip_connection(
     , f_address(address)
     , f_remote_communicators(rcs)
 {
-    set_name("gossip");
+    std::string const addr_str(address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
+    set_name("gossip: " + addr_str);
 }
 
 

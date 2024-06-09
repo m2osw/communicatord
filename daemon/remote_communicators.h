@@ -86,7 +86,7 @@ private:
     sorted_remote_connections_by_address_t  f_smaller_ips = sorted_remote_connections_by_address_t();   // we connect to smaller IPs
     sorted_gossip_connections_by_address_t  f_gossip_ips = sorted_gossip_connections_by_address_t();    // we gossip with larger IPs
 
-    // larger IPs connect so they end up in the list with the local connections
+    // larger IPs connect to us so they end up in the local-connection list
     //service_connection_list_t               f_larger_ips = service_connection_list_t();       // larger IPs connect to us
 };
 

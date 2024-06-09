@@ -125,10 +125,7 @@ void remote_communicators::add_remote_communicator(addr::addr const & remote_add
         return;
     }
 
-    // was this address already added
-    //
-    // TODO: use addr::addr objects in the map and the == operator
-    //       will then use the one from addr::addr (and not a string)
+    // was this address already added?
     //
     if(f_all_ips.find(remote_addr) != f_all_ips.end())
     {
@@ -159,7 +156,7 @@ void remote_communicators::add_remote_communicator(addr::addr const & remote_add
             }
             else
             {
-                SNAP_LOG_ERROR
+                SNAP_LOG_NOISY_ERROR
                     << "smaller remote address is defined in f_all_ips but not in f_smaller_ips?"
                     << SNAP_LOG_SEND;
             }
@@ -189,10 +186,11 @@ void remote_communicators::add_remote_communicator(addr::addr const & remote_add
         // which are permanent message connections
         //
         // TODO: how to choose whether to use TLS or not here?
+        //       (we could look at getting scheme+IPs instead of just IPs
+        //       across, then we could use ssl: or tcp: or such)
         //
         remote_connection::pointer_t remote_conn(std::make_shared<remote_connection>(f_server, remote_addr, false));
         f_smaller_ips[remote_addr] = remote_conn;
-        remote_conn->set_name("remote communicator connection: " + addr_str);
 
         // make sure not to try to connect to all remote communicators
         // all at once

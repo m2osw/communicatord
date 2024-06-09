@@ -238,13 +238,13 @@ void loadavg_file::add(loadavg_item const & new_item)
 bool loadavg_file::remove_old_entries(int how_old)
 {
     size_t const size(f_items.size());
-    time_t const now(time(nullptr) - how_old);
+    snapdev::timespec_ex const now(snapdev::now() - snapdev::timespec_ex(how_old, 0));
     f_items.erase(std::remove_if(
             f_items.begin(),
             f_items.end(),
             [now](auto const & item)
             {
-                return item.f_timestamp < now;
+                return snapdev::timespec_ex(item.f_timestamp) < now;
             }),
             f_items.end());
     return f_items.size() != size;
@@ -327,9 +327,9 @@ void set_loadavg_path(std::string const & path)
     if(!g_filename.empty())
     {
         throw path_already_set(
-              "loadavg path is already set to \""
+              "loadavg path & filename are already set to \""
             + g_filename
-            + "\"; it cannot be changed to \""
+            + "\"; they cannot be changed to \""
             + path
             + "\".");
     }
@@ -342,7 +342,7 @@ std::string get_loadavg_path()
 {
     if(g_filename.empty())
     {
-        g_filename = "/var/lib/communicatord/loadavg.lavg";
+        set_loadavg_path("/var/lib/communicatord");
     }
 
     return g_filename;

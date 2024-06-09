@@ -17,6 +17,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
+// snapdev
+//
+#include    <snapdev/timespec_ex.h>
+
+
 // C++
 //
 #include    <string>
@@ -39,7 +44,7 @@ struct loadavg_item
 {
     typedef std::vector<loadavg_item>       vector_t;
 
-    int64_t                     f_timestamp = 0;
+    timespec                    f_timestamp = {};
     struct sockaddr_in6         f_address = sockaddr_in6();
     float                       f_avg = 0.0f;
 };

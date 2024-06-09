@@ -2029,9 +2029,6 @@ void server::msg_connect(ed::message & msg)
                 << "; please verify your username and password information."
                 << SNAP_LOG_SEND;
 
-            // TODO: count and after 3 attempts blacklist the client's IP
-            //       address for a while...
-            //
             service_connection::pointer_t service_conn(std::dynamic_pointer_cast<service_connection>(conn));
             if(service_conn != nullptr)
             {
@@ -2075,7 +2072,7 @@ void server::msg_connect(ed::message & msg)
                     return false;
                 }
                 base_connection::pointer_t b(std::dynamic_pointer_cast<base_connection>(it));
-                if(!b)
+                if(b == nullptr)
                 {
                     return false;
                 }
@@ -2098,7 +2095,7 @@ void server::msg_connect(ed::message & msg)
 
         // we may also be shutting down
         //
-        // Note: we cannot get here if f_shutdown is true...
+        // Note: at this time, we cannot get here if f_shutdown is true...
         //
         if(f_shutdown)
         {
@@ -2143,7 +2140,7 @@ void server::msg_connect(ed::message & msg)
             if(refuse)
             {
                 // too many connections already, refuse this new
-                // one from a remove system
+                // one from a remote system
                 //
                 reply.set_command(communicatord::g_name_communicatord_cmd_refuse);
             }
@@ -2264,9 +2261,9 @@ void server::msg_connect(ed::message & msg)
         broadcast_message(new_remote_connection);
     }
 
-    // if not refused, then we may have a QUORUM now, check
-    // that; the function we call takes care of knowing
-    // whether we reached a new cluster status or not
+    // if not refused, then we may have a QUORUM now, check that;
+    // the function we call takes care of knowing whether
+    // we reached a new cluster status or not
     //
     if(!refuse)
     {
@@ -3813,7 +3810,7 @@ void server::msg_save_loadavg(ed::message & msg)
 {
     std::string const avg_str(msg.get_parameter(communicatord::g_name_communicatord_param_avg));
     std::string const my_address(msg.get_parameter(communicatord::g_name_communicatord_param_my_address));
-    std::string const timestamp_str(msg.get_parameter(communicatord::g_name_communicatord_param_timestamp));
+    snapdev::timespec_ex const timestamp_str(msg.get_timespec_parameter(communicatord::g_name_communicatord_param_timestamp));
 
     communicatord::loadavg_item item;
 
@@ -3832,8 +3829,8 @@ void server::msg_save_loadavg(ed::message & msg)
         return;
     }
 
-    item.f_timestamp = std::stoll(timestamp_str);
-    if(item.f_timestamp < SERVERPLUGINS_UNIX_TIMESTAMP(2016, 1, 1, 0, 0, 0))
+    item.f_timestamp = timestamp_str;
+    if(snapdev::timespec_ex(item.f_timestamp) < snapdev::timespec_ex(SERVERPLUGINS_UNIX_TIMESTAMP(UTC_BUILD_YEAR, 1, 1, 0, 0, 0), 0))
     {
         return;
     }
@@ -3899,7 +3896,7 @@ void server::process_load_balancing()
         load_avg.add_parameter(
                   communicatord::g_name_communicatord_param_my_address
                 , f_connection_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
-        load_avg.add_parameter(communicatord::g_name_communicatord_param_timestamp, time(nullptr));
+        load_avg.add_parameter(communicatord::g_name_communicatord_param_timestamp, snapdev::now());
 
         ed::connection::vector_t const & all_connections(f_communicator->get_connections());
         std::for_each(
