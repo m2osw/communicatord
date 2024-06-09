@@ -143,6 +143,12 @@ unix_connection::~unix_connection()
 }
 
 
+int unix_connection::get_socket() const
+{
+    return local_stream_server_client_message_connection::get_socket();
+}
+
+
 void unix_connection::process_message(ed::message & msg)
 {
     // make sure the destination knows who sent that message so it

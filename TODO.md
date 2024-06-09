@@ -6,6 +6,13 @@
   daemon are either redundant or incorrect. (i.e. many bugs even if it
   generally works.)
 
+* Added help in the flag implementation so it is easier to administer
+
+  This should be in the form of: (1) an `f_help` field allowing people
+  to just follow those instructions to get things through; and (2) an
+  `f_uri` field with a URL to a page on snapwebsites.org with complete
+  documentation of the situation.
+
 * Definition files should include the list of supported messages
 
   i.e. up until the time the service connects to the communicator we have no

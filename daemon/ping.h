@@ -54,6 +54,8 @@ public:
                               server::pointer_t cs
                             , addr::addr const & address);
 
+    virtual int         get_socket() const;
+
     // ed::udp_server_message_connection implementation
     virtual void        process_message(ed::message & msg) override;
 };

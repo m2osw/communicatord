@@ -123,6 +123,12 @@ remote_connection::~remote_connection()
 }
 
 
+int remote_connection::get_socket() const
+{
+    return tcp_client_permanent_message_connection::get_socket();
+}
+
+
 void remote_connection::process_message(ed::message & msg)
 {
     if(f_server_name.empty())
@@ -211,13 +217,13 @@ void remote_connection::process_connection_failed(std::string const & error_mess
            << " times in a row for "
            << std::setfill('0')
            << std::setw(2)
-           << ((time_elapsed / 1000000LL / 60 / 60) % 24)
+           << ((time_elapsed / 1'000'000LL / 60 / 60) % 24)
            << ":"
            << std::setw(2)
-           << ((time_elapsed / 1000000LL / 60) % 60)
+           << ((time_elapsed / 1'000'000LL / 60) % 60)
            << ":"
            << std::setw(2)
-           << ((time_elapsed / 1000000LL) % 60)
+           << ((time_elapsed / 1'000'000LL) % 60)
            << " (HH:MM:SS), please verify this IP address"
               " and that it is expected that the computer"
               " fails connecting. If not, please remove that IP address"

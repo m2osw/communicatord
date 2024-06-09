@@ -81,7 +81,8 @@ namespace communicator_daemon
 remote_communicators::remote_communicators(
               server::pointer_t server
             , addr::addr const & my_addr)
-    : f_server(server)
+    : f_communicator(ed::communicator::instance())
+    , f_server(server)
     , f_connection_address(my_addr)
 {
 }
@@ -163,7 +164,7 @@ void remote_communicators::add_remote_communicator(addr::addr const & remote_add
         }
         else
         {
-            // we may already be GOSSIP-ing about this one (see below)
+            // we are already GOSSIP-ing about this one (see below)
             //
             SNAP_LOG_DEBUG
                 << "new remote connection "
@@ -208,7 +209,7 @@ void remote_communicators::add_remote_communicator(addr::addr const & remote_add
         //
         f_last_start_date += 1LL;
 
-        if(!ed::communicator::instance()->add_connection(remote_conn))
+        if(!f_communicator->add_connection(remote_conn))
         {
             // this should never happens here since each new creates a
             // new pointer
@@ -254,15 +255,12 @@ void remote_communicators::add_remote_communicator(addr::addr const & remote_add
  *
  * In most cases this function is called whenever the communicatord
  * daemon receives a STOP or a SHUTDOWN.
- *
- * Also these connections do not support any other messages than the
- * GOSSIP and RECEIVED.
  */
 void remote_communicators::stop_gossiping()
 {
     while(!f_gossip_ips.empty())
     {
-        ed::communicator::instance()->remove_connection(f_gossip_ips.begin()->second);
+        f_communicator->remove_connection(f_gossip_ips.begin()->second);
         f_gossip_ips.erase(f_gossip_ips.begin());
     }
 }
@@ -294,6 +292,7 @@ void remote_communicators::too_busy(addr::addr const & remote_addr)
     if(it != f_smaller_ips.end())
     {
         // wait for 1 day and try again (is 1 day too long?)
+        //
         it->second->set_timeout_delay(remote_connection::REMOTE_CONNECTION_TOO_BUSY_TIMEOUT);
         it->second->set_enable(true);
         SNAP_LOG_INFO
@@ -364,7 +363,7 @@ void remote_communicators::gossip_received(addr::addr const & remote_addr)
     auto it(f_gossip_ips.find(remote_addr));
     if(it != f_gossip_ips.end())
     {
-        ed::communicator::instance()->remove_connection(it->second);
+        f_communicator->remove_connection(it->second);
         f_gossip_ips.erase(it);
     }
 }
@@ -400,9 +399,8 @@ void remote_communicators::connection_lost(addr::addr const & remote_addr)
     f_gossip_ips[remote_addr] = std::make_shared<gossip_connection>(
                                   shared_from_this()
                                 , remote_addr);
-    f_gossip_ips[remote_addr]->set_name("gossip to remote communicator: " + addr_str);
 
-    if(!ed::communicator::instance()->add_connection(f_gossip_ips[remote_addr]))
+    if(!f_communicator->add_connection(f_gossip_ips[remote_addr]))
     {
         // this should never happens here since each new creates a
         // new pointer
@@ -437,7 +435,7 @@ void remote_communicators::forget_remote_connection(addr::addr const & remote_ad
         auto it(f_smaller_ips.find(remote_addr));
         if(it != f_smaller_ips.end())
         {
-            ed::communicator::instance()->remove_connection(it->second);
+            f_communicator->remove_connection(it->second);
             f_smaller_ips.erase(it);
         }
     }
@@ -473,9 +471,9 @@ void remote_communicators::forget_remote_connection(addr::addr const & remote_ad
  *
  * \return The number of live connections.
  */
-size_t remote_communicators::count_live_connections() const
+std::size_t remote_communicators::count_live_connections() const
 {
-    size_t count(0);
+    std::size_t count(0);
 
     // smaller IPs, we connect to, they are always all there (all our
     // neighbors with smaller IPs are in this list) because we are
@@ -509,29 +507,32 @@ size_t remote_communicators::count_live_connections() const
     //    }
     //}
 
-    // unfortunately, the f_larger_ips is not actually used and the local
-    // connections are left in the complete list of connections in the
-    // ed::communicator::instance() all mixed up
+    // go through all the connections and add +1 each time we find a
+    // connection representing a remote connection (i.e. to another
+    // communicatord service)
     //
-    ed::connection::vector_t const & all_connections(ed::communicator::instance()->get_connections());
+    ed::connection::vector_t const & all_connections(f_communicator->get_connections());
     for(auto const & conn : all_connections)
     {
         remote_connection::pointer_t rc(std::dynamic_pointer_cast<remote_connection>(conn));
         if(rc != nullptr)
         {
-            // this is a remote connection by definition
+            // this is a remote connection by definition (same as f_smaller_ips)
             //
-            ++count;
+            if(rc->is_connected())
+            {
+                ++count;
+            }
         }
         else
         {
-            // this is either a local or a remote connection
-            //
-            // these are connections we receive from from our listeners
+            // this is either a local service or a remote communicator daemon
+            // (i.e. those that have a large IP address connect to us)
             //
             base_connection::pointer_t bc(std::dynamic_pointer_cast<base_connection>(conn));
             if(bc != nullptr
-            && bc->is_remote())
+            && bc->is_remote()
+            && bc->get_socket() != -1)
             {
                 ++count;
             }

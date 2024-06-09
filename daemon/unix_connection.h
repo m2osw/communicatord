@@ -53,6 +53,10 @@ public:
                                 , std::string const & server_name);
     virtual             ~unix_connection() override;
 
+    // base_connection &  local_stream_server_client_message_connection
+    //
+    virtual int         get_socket() const override;
+
     // local_stream_server_client_message_connection implementation
     //
     virtual void        process_message(ed::message & msg) override;

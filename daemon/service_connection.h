@@ -53,6 +53,8 @@ public:
                                 , std::string const & server_name);
     virtual             ~service_connection() override;
 
+    virtual int         get_socket() const;
+
     // ed::tcp_server_client_message_connection implementation
     virtual void        process_message(ed::message & msg) override;
     virtual bool        send_message(ed::message & msg, bool cache = false) override;

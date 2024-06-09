@@ -79,6 +79,7 @@ private:
     typedef std::map<addr::addr, std::shared_ptr<gossip_connection>>
                                             sorted_gossip_connections_by_address_t;
 
+    ed::communicator::pointer_t             f_communicator = ed::communicator::pointer_t();
     server::pointer_t                       f_server = server::pointer_t();
     addr::addr const &                      f_connection_address;
     std::int64_t                            f_last_start_date = 0;

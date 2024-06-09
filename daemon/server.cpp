@@ -974,8 +974,8 @@ int server::init()
         if(advgetopt::validator_duration::convert_string(
                       f_opts.get_string("max-gossip-timeout")
                     , advgetopt::validator_duration::VALIDATOR_DURATION_DEFAULT_FLAGS
-                    , timeout))
-        if(timeout > 0)
+                    , timeout)
+        && timeout > 0.0)
         {
             gossip_connection::set_max_gossip_timeout(timeout * 1'000'000LL);
         }
@@ -2700,7 +2700,7 @@ void server::msg_refuse(ed::message & msg)
     }
 
     // we are responsible to try again later, so we do not
-    // lose the connection (remove it from the ed::communicator),
+    // lose the connection (i.e. it stays in the ed::communicator list),
     // but we need to disconnect
     //
     remote_conn->disconnect();

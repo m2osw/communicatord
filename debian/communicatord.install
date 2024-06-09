@@ -8,6 +8,7 @@ debian/tmp/usr/bin/raise-flag                                         usr/bin/
 debian/tmp/usr/sbin/communicatord                                     usr/sbin/
 #debian/tmp/usr/lib/snapmanager/manager_plugins/libcommunicator.so         usr/lib/snapmanager/manager_plugins/
 debian/tmp/usr/lib/libcommunicatord.so.*                              usr/lib
+debian/tmp/usr/share/eventdispatcher/messages                         usr/share/eventdispatcher/messages/
 
 # Configuration Files
 #

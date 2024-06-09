@@ -42,6 +42,11 @@ public:
         : base_connection(s, false)
     {
     }
+
+    virtual int get_socket() const override
+    {
+        return -1;
+    }
 };
 
 

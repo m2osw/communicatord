@@ -60,6 +60,12 @@ ping::ping(server::pointer_t cs, addr::addr const & address)
 }
 
 
+int ping::get_socket() const
+{
+    return udp_server_message_connection::get_socket();
+}
+
+
 void ping::process_message(ed::message & msg)
 {
     //f_server->process_message(shared_from_this(), msg, true);

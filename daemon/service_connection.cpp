@@ -170,6 +170,12 @@ service_connection::~service_connection()
 }
 
 
+int service_connection::get_socket() const
+{
+    return tcp_server_client_message_connection::get_socket();
+}
+
+
 void service_connection::process_message(ed::message & msg)
 {
     // make sure the destination knows who sent that message so it

@@ -59,6 +59,8 @@ public:
                                             , bool secure);
     virtual                         ~remote_connection() override;
 
+    virtual int                     get_socket() const override;
+
     // tcp_client_permanent_message_connection implementation
     virtual void                    process_message(ed::message & msg) override;
     virtual void                    process_connection_failed(std::string const & error_message) override;
@@ -70,7 +72,7 @@ public:
 private:
     addr::addr                      f_address;
     int                             f_failures = -1;
-    int64_t                         f_failure_start_time = 0;
+    time_t                          f_failure_start_time = 0;
     bool                            f_flagged = false;
     bool                            f_connected = false;
     std::string                     f_server_name = std::string();

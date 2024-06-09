@@ -95,6 +95,8 @@ public:
     // allows us to send messages directly from the base_connection class
     bool                        send_message_to_connection(ed::message & msg, bool cache = false);
 
+    virtual int                 get_socket() const = 0;
+
 protected:
     server::pointer_t           f_server = server::pointer_t();
 
