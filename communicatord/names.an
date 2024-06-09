@@ -98,6 +98,21 @@ param_username=username
 param_version=version
 param_who=who
 
+value_cached=cached
+value_checking=checking
+value_down=down
+value_failed=failed
+value_failure=failure
+value_invalid=invalid
+value_name=name
+value_no=no
+value_no_ntp=no_ntp
+value_true=true
+value_unknown=unknown
+value_up=up
+value_verified=verified
+value_yes=yes
+
 scheme_cd=cd
 scheme_cds=cds
 scheme_cdu=cdu
@@ -113,19 +128,8 @@ service_local_broadcast=.
 service_private_broadcast=?
 service_public_broadcast=*
 
-value_cached=cached
-value_checking=checking
-value_down=down
-value_failed=failed
-value_failure=failure
-value_invalid=invalid
-value_name=name
-value_no=no
-value_no_ntp=no_ntp
-value_true=true
-value_unknown=unknown
-value_up=up
-value_verified=verified
-value_yes=yes
+connection_gossip=gossip
+connection_remote_communicator=remote communicator
+connection_remote_tcp_connection=remote tcp connection
 
 # vim: syntax=dosini

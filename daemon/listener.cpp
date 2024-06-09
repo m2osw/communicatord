@@ -30,6 +30,11 @@
 #include    "service_connection.h"
 
 
+// communicatord
+//
+#include    <communicatord/names.h>
+
+
 // snaplogger
 //
 #include    <snaplogger/message.h>
@@ -179,16 +184,17 @@ void listener::process_accept()
 
         // set a name for remote connections
         //
-        // the following name includes a space which prevents someone
-        // from send to such a connection, which is certainly a good
-        // thing since there can be duplicate and that name is not
-        // sensible as a destination
+        // the following name includes a colong and a space which prevents
+        // someone from specifically sending messages to that connection,
+        // which is a good thing since there can be multiple such connections
+        // and that name is not sensible as a destination for a local service
         //
-        // we will change the name once we receive the CONNECT message
-        // and as we send the ACCEPT message
+        // we set the server name from the CONNECT and ACCEPT messages
+        // (but that does not affect the service name)
         //
         service->set_name(
-                  std::string("remote tcp connection from: ")
+                  std::string(communicatord::g_name_communicatord_connection_remote_tcp_connection)
+                + ": "
                 + service->get_remote_address().to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
         service->mark_as_remote();
     }

@@ -104,7 +104,7 @@ remote_connection::remote_connection(
     , f_address(address)
 {
     std::string const addr_str(address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
-    set_name("remote communicator connection: " + addr_str);
+    set_name(communicatord::g_name_communicatord_connection_remote_communicator + (": " + addr_str));
 }
 
 
