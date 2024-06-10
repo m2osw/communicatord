@@ -129,7 +129,7 @@ service_private_broadcast=?
 service_public_broadcast=*
 
 connection_gossip=gossip
-connection_remote_communicator=remote communicator
-connection_remote_tcp_connection=remote tcp connection
+connection_remote_communicator_in=remote communicator (in)
+connection_remote_communicator_out=remote communicator (out)
 
 # vim: syntax=dosini

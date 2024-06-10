@@ -37,22 +37,22 @@ namespace communicatord
 
 DECLARE_LOGIC_ERROR(logic_error);
 
-DECLARE_MAIN_EXCEPTION(communicator_error);
+DECLARE_MAIN_EXCEPTION(communicatord_exception);
 
-DECLARE_EXCEPTION(communicator_error, address_missing);
-DECLARE_EXCEPTION(communicator_error, connection_unavailable);
-DECLARE_EXCEPTION(communicator_error, invalid_name);
-DECLARE_EXCEPTION(communicator_error, invalid_parameter);
-DECLARE_EXCEPTION(communicator_error, missing_message);
-DECLARE_EXCEPTION(communicator_error, missing_name);
-DECLARE_EXCEPTION(communicator_error, path_already_set);
-DECLARE_EXCEPTION(communicator_error, unexpected_message);
-DECLARE_EXCEPTION(communicator_error, unexpected_message_parameter);
-DECLARE_EXCEPTION(communicator_error, unknown_command);
-DECLARE_EXCEPTION(communicator_error, unknown_exception);
-DECLARE_EXCEPTION(communicator_error, security_issue);
-DECLARE_EXCEPTION(communicator_error, switching_to_user_failed);
-DECLARE_EXCEPTION(communicator_error, user_missing);
+DECLARE_EXCEPTION(communicatord_exception, address_missing);
+DECLARE_EXCEPTION(communicatord_exception, connection_unavailable);
+DECLARE_EXCEPTION(communicatord_exception, invalid_name);
+DECLARE_EXCEPTION(communicatord_exception, invalid_parameter);
+DECLARE_EXCEPTION(communicatord_exception, missing_message);
+DECLARE_EXCEPTION(communicatord_exception, missing_name);
+DECLARE_EXCEPTION(communicatord_exception, path_already_set);
+DECLARE_EXCEPTION(communicatord_exception, unexpected_message);
+DECLARE_EXCEPTION(communicatord_exception, unexpected_message_parameter);
+DECLARE_EXCEPTION(communicatord_exception, unknown_command);
+DECLARE_EXCEPTION(communicatord_exception, unknown_exception);
+DECLARE_EXCEPTION(communicatord_exception, security_issue);
+DECLARE_EXCEPTION(communicatord_exception, switching_to_user_failed);
+DECLARE_EXCEPTION(communicatord_exception, user_missing);
 
 
 

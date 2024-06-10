@@ -69,6 +69,8 @@ class communicator
     , public ed::connection_with_send_message
 {
 public:
+    typedef std::shared_ptr<communicator>   pointer_t;
+
                                 communicator(
                                       advgetopt::getopt & opts
                                     , std::string const & service_name);
@@ -85,14 +87,15 @@ public:
     //
     virtual bool                send_message(ed::message & msg, bool cache = false) override;
 
-    static void                 request_failure(ed::message & msg);
-
 private:
     advgetopt::getopt &         f_opts;
     ed::communicator::pointer_t f_communicator = ed::communicator::pointer_t();
     std::string                 f_service_name = std::string();
     ed::connection::pointer_t   f_communicator_connection = ed::connection::pointer_t();
 };
+
+
+void request_failure(ed::message & msg);
 
 
 

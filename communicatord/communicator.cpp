@@ -18,7 +18,7 @@
 
 // self
 //
-#include    "communicatord/communicatord.h"
+#include    "communicatord/communicator.h"
 
 #include    "communicatord/exception.h"
 #include    "communicatord/names.h"
@@ -224,7 +224,14 @@ public:
  * process_communicator_options(). You are responsible for that second call
  * (see an example in the fluid-settings server.cpp & messenger.cpp files).
  *
+ * \note
+ * This function calls set_name() with the default name "communicator_client".
+ * Although it is expected that your final connection calls that function to
+ * properly name the connection.
+ *
  * \param[in] opts  An reference to an advgetopt::getopt object.
+ * \param[in] service_name  Name of the service (daemon) using this communicator
+ * client.
  */
 communicator::communicator(
           advgetopt::getopt & opts
@@ -234,14 +241,14 @@ communicator::communicator(
     , f_communicator(ed::communicator::instance())
     , f_service_name(service_name)
 {
-    set_name("communicator_client");
-
     if(f_service_name.empty())
     {
         throw invalid_name("the service_name parameter of the communicator constructor cannot be an empty string.");
     }
 
+    set_name("communicator_client");
     f_opts.parse_options_info(g_options, true);
+    ed::add_message_definition_options(f_opts);
 }
 
 
@@ -273,6 +280,8 @@ void communicator::process_communicatord_options()
     {
         throw logic_error("process_communicatord_options() called twice.");
     }
+
+    ed::process_message_definition_options(f_opts);
 
     // extract the scheme and segments
     //
@@ -474,22 +483,14 @@ bool communicator::send_message(ed::message & msg, bool cache)
     ed::connection_with_send_message::pointer_t messenger(std::dynamic_pointer_cast<ed::connection_with_send_message>(f_communicator_connection));
     if(messenger != nullptr)
     {
+        if(msg.get_sent_from_service().empty())
+        {
+            msg.set_sent_from_service(f_service_name);
+        }
         return messenger->send_message(msg, cache);
     }
 
     return false;
-}
-
-
-void communicator::request_failure(ed::message & msg)
-{
-    // by adding the "transmission report" parameter with value "failure"
-    // we will get a TRANSMISSION_REPORT message back with the failure
-    // from the communicator daemon
-    //
-    msg.add_parameter(
-          communicatord::g_name_communicatord_param_transmission_report
-        , communicatord::g_name_communicatord_value_failure);
 }
 
 
@@ -531,6 +532,26 @@ bool communicator::is_connected() const
     return f_communicator_connection != nullptr
         ? std::dynamic_pointer_cast<communicatord_connection>(f_communicator_connection)->is_connected()
         : false;
+}
+
+
+/** \brief Request the communicator daemon to return a transmission report.
+ *
+ * By calling this function, you mark the message so that if an error
+ * occurs and the message cannot be forward to the actual destination
+ * service, then a `TRANSMISSION_REPORT` is sent back to your service.
+ *
+ * The function adds the "transmission_report" parameter to the \p msg
+ * with the value "failure".
+ *
+ * \param[in] msg  The message to which to add the `transmission_report`
+ * parameter.
+ */
+void request_failure(ed::message & msg)
+{
+    msg.add_parameter(
+          communicatord::g_name_communicatord_param_transmission_report
+        , communicatord::g_name_communicatord_value_failure);
 }
 
 

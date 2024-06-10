@@ -30,7 +30,7 @@ configure_file(
 )
 
 add_library(${PROJECT_NAME} SHARED
-    communicatord.cpp
+    communicator.cpp
     flags.cpp
     loadavg.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/names.cpp
@@ -83,7 +83,7 @@ install(
 
 install(
     FILES
-        communicatord.h
+        communicator.h
         exception.h
         flags.h
         loadavg.h

@@ -1,0 +1,64 @@
+// connect and then send a message
+
+run()
+listen(address: <127.0.0.1:20002>)
+
+label(name: wait_message)
+wait(timeout: 12, mode: wait)
+
+label(name: process_message)
+has_message()
+if(false: wait_message)
+
+show_message()
+
+has_message(command: REGISTER)
+if(false: not_register)
+verify_message(
+	command: REGISTER,
+	//service: test_communicator_client,
+	required_parameters: {
+		service: test_communicator_client,
+		version: 1
+	})
+send_message(
+	command: DATA,
+	sent_server: monster,
+	sent_service: test_communicator_client,
+	server: communicatord,
+	service: communicator_test,
+	parameters: {
+		filename: "/var/log/communicatord/communicatord.log"
+	})
+
+label(name: next_message)
+clear_message()
+goto(label: process_message)
+
+label(name: not_register)
+has_message(command: DONE)
+if(false: not_done)
+verify_message(
+	command: DONE,
+	server: monster,
+	service: test_communicator_client)
+send_message(
+	command: STOP,
+	sent_server: monster,
+	sent_service: test_communicator_client,
+	server: communicatord,
+	service: communicator_test)
+goto(label: next_message)
+
+label(name: not_done)
+has_message(command: UNREGISTER)
+if(false: unrecognized_command)
+verify_message(
+	command: UNREGISTER,
+	required_parameters: {
+		service: test_communicator_client
+	})
+exit()
+
+label(name: unrecognized_command)
+exit(error_message: "reached exit too soon")

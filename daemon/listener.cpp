@@ -193,7 +193,7 @@ void listener::process_accept()
         // (but that does not affect the service name)
         //
         service->set_name(
-                  std::string(communicatord::g_name_communicatord_connection_remote_tcp_connection)
+                  std::string(communicatord::g_name_communicatord_connection_remote_communicator_in)
                 + ": "
                 + service->get_remote_address().to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
         service->mark_as_remote();

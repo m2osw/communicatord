@@ -19,7 +19,7 @@
 
 // communicatord
 //
-#include    <communicatord/communicatord.h>
+#include    <communicatord/communicator.h>
 #include    <communicatord/names.h>
 #include    <communicatord/version.h>
 
