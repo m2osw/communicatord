@@ -1122,8 +1122,8 @@ int server::run()
  * The test is done only when communicatord is run in debug
  * mode to not waste time.
  *
- * \param[in,out] connection  The concerned connection that has to understand the command.
- * \param[in] message  The message about to be sent to \p connection.
+ * \param[in] connection  The concerned connection that has to understand the command.
+ * \param[in] msg  The message about to be sent to \p connection.
  */
 bool server::verify_command(
           base_connection::pointer_t connection
@@ -1133,7 +1133,6 @@ bool server::verify_command(
     //
     if(!f_debug_all_messages)
     {
-        // nope, do not waste any more time
         return true;
     }
 
@@ -1973,7 +1972,7 @@ void server::msg_commands(ed::message & msg)
     if(!ok)
     {
         // end the process so developers can fix their problems
-        // (this is only if --debug-all-messages was specified)
+        // (this is only if the logger's severity is DEBUG or less)
         //
         throw communicatord::missing_message(
                   "DEBUG: Connection \""

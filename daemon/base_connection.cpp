@@ -402,9 +402,28 @@ void base_connection::add_commands(std::string const & commands)
  *
  * This function checks whether this connection understands \p command.
  *
+ * Note that this works properly only after the connection received the
+ * COMMANDS message with the list of commands this connection accepts.
+ * Before that, the list is likely empty which can be detected with
+ * the has_commands() function.
+ *
+ * \code
+ *     if(!has_commands() || understand_command(command))
+ *     {
+ *         ... send message ...
+ *     }
+ * \endcode
+ *
+ * This means you may end up sending a message that is not understood
+ * by a service if sent before the COMMANDS reply is received. This
+ * is not very likely since the HELP is sent right after the REGISTER
+ * was received.
+ *
  * \param[in] command  The command to check for.
  *
  * \return true if the command is supported, false otherwise.
+ *
+ * \sa has_commands()
  */
 bool base_connection::understand_command(std::string const & command)
 {

@@ -6,7 +6,7 @@
   daemon are either redundant or incorrect. (i.e. many bugs even if it
   generally works.)
 
-* Added help in the flag implementation so it is easier to administer
+* Add help in the flag implementation so it is easier to administer
 
   This should be in the form of: (1) an `f_help` field allowing people
   to just follow those instructions to get things through; and (2) an
