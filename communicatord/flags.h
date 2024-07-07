@@ -26,6 +26,7 @@
 //
 #include    <memory>
 #include    <set>
+#include    <source_location>
 
 
 namespace communicatord
@@ -55,14 +56,19 @@ public:
         STATE_DOWN      // delete error file
     };
 
-                                flag(std::string const & unit, std::string const & section, std::string const & name);
+                                flag(
+                                      std::string const & unit
+                                    , std::string const & section
+                                    , std::string const & name
+                                    , std::source_location const & location = std::source_location::current());
                                 flag(std::string const & filename);
 
     flag &                      set_from_raise_flag(); // only raise-flag tool should call this
     flag &                      set_state(state_t state);
     flag &                      set_source_file(std::string const & source_file);
     flag &                      set_function(std::string const & function);
-    flag &                      set_line(int line);
+    flag &                      set_line(std::uint_least32_t line);
+    flag &                      set_column(std::uint_least32_t line);
     flag &                      set_message(std::string const & message);
     flag &                      set_priority(priority_t priority);
     flag &                      set_manual_down(bool manual);
@@ -76,7 +82,8 @@ public:
     std::string const &         get_name() const;
     std::string const &         get_source_file() const;
     std::string const &         get_function() const;
-    int                         get_line() const;
+    std::uint_least32_t         get_line() const;
+    std::uint_least32_t         get_column() const;
     std::string const &         get_message() const;
     priority_t                  get_priority() const;
     bool                        get_manual_down() const;
@@ -103,7 +110,8 @@ private:
     mutable std::string         f_filename          = std::string();
     std::string                 f_source_file       = std::string();
     std::string                 f_function          = std::string();
-    int                         f_line              = 0;
+    std::uint_least32_t         f_line              = 0;
+    std::uint_least32_t         f_column            = 0;
     std::string                 f_message           = std::string();
     priority_t                  f_priority          = DEFAULT_PRIORITY;
     bool                        f_manual_down       = false;
@@ -122,18 +130,12 @@ private:
 #define COMMUNICATORD_FLAG_UP(unit, section, name, message)   \
             std::make_shared<communicatord::flag>( \
                 communicatord::flag(unit, section, name) \
-                    .set_message(message) \
-                    .set_source_file(__FILE__) \
-                    .set_function(__func__) \
-                    .set_line(__LINE__))
+                    .set_message(message))
 
 #define COMMUNICATORD_FLAG_DOWN(unit, section, name) \
             std::make_shared<communicatord::flag>( \
                 communicatord::flag(unit, section, name) \
-                    .set_state(communicatord::flag::state_t::STATE_DOWN) \
-                    .set_source_file(__FILE__) \
-                    .set_function(__func__) \
-                    .set_line(__LINE__))
+                    .set_state(communicatord::flag::state_t::STATE_DOWN))
 
 
 

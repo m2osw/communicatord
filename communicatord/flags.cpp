@@ -224,14 +224,22 @@ std::string get_path_to_flag_files()
  *            of the core plugin, this should be the name of the plugin.
  * \param[in] name  The actual name of the flag. This is expected to
  *            somewhat describe what the flag is being for.
+ * \param[in] location  The location of the flag creation so we can quickly
+ *            find that place and fix the issue if necessary/possible. The
+ *            default is fine 99.99% of the time.
  */
 flag::flag(
           std::string const & unit
         , std::string const & section
-        , std::string const & name)
+        , std::string const & name
+        , std::source_location const & location)
     : f_unit(unit)
     , f_section(section)
     , f_name(name)
+    , f_source_file(location.file_name())
+    , f_function(location.function_name())
+    , f_line(location.line())
+    , f_column(location.column())
 {
     valid_name(f_unit);
     valid_name(f_section);
@@ -444,9 +452,29 @@ flag & flag::set_function(std::string const & function)
  *
  * \return A reference to this.
  */
-flag & flag::set_line(int line)
+flag & flag::set_line(std::uint_least32_t line)
 {
     f_line = line;
+
+    return *this;
+}
+
+
+/** \brief Set the column number at which the event happened.
+ *
+ * This parameter is used to save the column at which the function
+ * used one of the flag macros.
+ *
+ * By default the value is set to zero. If never called, then this
+ * is a way to know that no column number was defined.
+ *
+ * \param[in] column  The new column number at which this flag is being raised.
+ *
+ * \return A reference to this.
+ */
+flag & flag::set_column(std::uint_least32_t column)
+{
+    f_column = column;
 
     return *this;
 }
@@ -698,9 +726,22 @@ std::string const & flag::get_function() const
  *
  * \return The line number where the flag object is created.
  */
-int flag::get_line() const
+std::uint_least32_t flag::get_line() const
 {
     return f_line;
+}
+
+
+/** \brief Retrieve the column number at which it was first called.
+ *
+ * This is for debug purposes so one can easily find exactly what code
+ * generated which flag.
+ *
+ * \return The column number where the flag object is created.
+ */
+std::uint_least32_t flag::get_column() const
+{
+    return f_column;
 }
 
 
