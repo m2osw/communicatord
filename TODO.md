@@ -1,7 +1,7 @@
 
 * Write Unit Tests
 
-  Like cluckd, we want to create tests using the new eventdispathcer/reporter
+  Like cluckd, we want to create tests using the new eventdispatcher/reporter
   scripting system. Right now, I think many features in the communicator
   daemon are either redundant or incorrect. (i.e. many bugs even if it
   generally works.)
@@ -10,7 +10,7 @@
 
   This should be in the form of: (1) an `f_help` field allowing people
   to just follow those instructions to get things through; and (2) an
-  `f_uri` field with a URL to a page on snapwebsites.org with complete
+  `f_help_uri` field with a URL to a page on snapwebsites.org with complete
   documentation of the situation.
 
 * Definition files should include the list of supported messages
@@ -19,6 +19,14 @@
        clue whether a message can make it to that service; by having the list
        of messages in the .service file, we could load that ahead of time and
        handle that check even before the service registers
+
+  Note 1: we can actually look into the COMMANDS=... and save that in the
+          file (we could do that each time we get a COMMANDS=... message
+          so that way it stays up to date and does not require us to know
+          the list of messages and install a file).
+
+  Note 2: we already have an implementation to test a list of messages,
+          see how this TODO can benefit from that
 
   The list of messages could be message definitions (see below). Probably a
   C-like block definition:
@@ -43,11 +51,16 @@
        call that a _valid_ message... it would be great to have message
        definitions which we can turn on in debug mode so that way the
        parameters of a message can be validated:
-         (1) is that parameter name is accepted by this command?
-         (2) is the value valid for that parameter?
-         (3) are required parameter present?
-         (4) make sure message definitions do not reuse global parameters
+         (1) is that parameter name accepted by this command? [DONE]
+         (2) is the value valid for that parameter? [PARTIAL]
+         (3) are required parameter present? [DONE]
+         (4) make sure message definitions do not reuse "global" parameters
              (i.e. cache=no, transmission_status=failure, etc.)
+         (5) support a way to define "global" parameters
+         (6) whether the message supports broadcasting or not
+
+  For (2) we only support a generic test at the moment (i.e. is it an
+  integer? but not a more detailed test i.e. is it between 0 and 100).
 
 * Time Accuracy in your Cluster
 
@@ -66,23 +79,6 @@
 
   Note that the sitter is already setup to verify that some NTP system is
   up and running your your computer.
-
-* "Address" parsing (it uses a URI now)
-
-  I just switched the `secure_listen=...` to accept a `cds://...` URI.
-  I think all our IPs should be supported in a similar way. This allows
-  me to include the login name and password in the URI and not have
-  additional command line parameters.
-
-  It does look somewhat strange to include the scheme in such an IP address,
-  but at the same time to connect to it you need that scheme. So it is not
-  really that bad, I think.
-
-  Note that in this case we could also consider having just one `listen=...`
-  parameter and use spaces or commas to separate each URI. Then you could
-  define any number of URIs with their proper scheme. However, I think I
-  prefer to keep the separate variables since it makes it a lot easier to
-  override the value between several .conf file.
 
 * Broadcast only if message supported
 
@@ -105,5 +101,45 @@
         not absolutely necessary. However, it's difficult to make sure that
         all messages are unique to a daemon.
 
+* Service Version & Failures ("Canary" or "Shadow" system)
+
+  Look into a system where we record the version of a service (whenever the
+  service registers it sends its version to communicatord) and if that version
+  always fails, mark it as invalid and stop trying to connect to it on
+  that server.
+
+  i.e. that means we can create a canary of sort as a separate VPN machine
+  on which we install all of our new services and detect whether they fail
+  or not before starting to use them in production. This his hardly perfect,
+  but could be really useful.
+
+  Potential problems:
+  1.  for cluckd, if setup as a forwarder (proxy), then it's not testing
+      much of anything; for it to be a leader, we need that machine to
+      be a fast machine (and if we install all of our systems, then it's
+      also a pretty fat machine)
+  2.  it could be sent "ghost" traffic to shadow the existing system in
+      which case it does not need to be super fast (i.e. could be on my
+      system at home) [this is client's traffic that we do not reply to,
+      we just handle everything as a real production system and verify
+      the reply in some way but do not do anything with the reply otherwise,
+      to avoid slowness, we can drop traffic while a service is already
+      considered too busy]
+
+  Types of deployments:
+  1.  canary--one machine runs new version, others not upgraded
+      no need for any additional hardware/maintenance
+  2.  blue-green--duplicate system with new version everywhere, once proven
+      that it works, switch to this new system
+      this is easy with a system like kubernetes, not as easy on a bare bone
+      system
+  3.  shadow--duplicate system with new version receiving real traffic but
+      no reply to client; this can be setup to test the load by having a
+      similar installation for the shadow as the main system
+  4.  feature flags--hide new features behind flags; test by setting the
+      flag to true, quickly stop the test by setting the flag back to false;
+      like the canary, no additional hardware is required, but maintaining
+      the flags can be really hard if not removed as soon as the new feature
+      is proven to work
 
 // vim: ts=4 sw=4 et
