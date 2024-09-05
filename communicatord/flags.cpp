@@ -240,6 +240,7 @@ flag::flag(
     , f_function(location.function_name())
     , f_line(location.line())
     , f_column(location.column())
+    , f_date(time(nullptr))
 {
     valid_name(f_unit);
     valid_name(f_section);
