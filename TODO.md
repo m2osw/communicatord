@@ -1,4 +1,10 @@
 
+* Properly test password usage and requirements
+
+  Any publicly accessible connection (port) must be "password" protected.
+  The REGISTER and CONNECT messages both support a password field. This
+  is an optional field only for local connections.
+
 * Write Unit Tests
 
   Like cluckd, we want to create tests using the new eventdispatcher/reporter
