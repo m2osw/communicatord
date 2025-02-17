@@ -202,14 +202,7 @@ cluster::cluster(int argc, char * argv[])
         DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_cluster_incomplete, &cluster::msg_cluster_complete),
     });
 
-    // we do not log, this is a command line tool?
-    //snaplogger::add_logger_options(f_opts);
     f_opts.finish_parsing(argc, argv);
-    //if(!snaplogger::process_logger_options(f_opt, "/etc/eventdispatcher/logger"))
-    //{
-    //    // exit on any error
-    //    throw advgetopt::getopt_exit("logger options generated an error.", 1);
-    //}
 
     advgetopt::conf_file_setup setup(f_opts.get_string("communicatord-config"));
     f_communicatord_config = advgetopt::conf_file::get_conf_file(setup);

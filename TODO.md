@@ -5,6 +5,18 @@
   The REGISTER and CONNECT messages both support a password field. This
   is an optional field only for local connections.
 
+* Change the cluster status messages
+
+  Right now, we send a `CLUSTER_STATUS` message and expect one of two replies:
+  one of `CLUSTER_UP` or `CLUSTER_DOWN` and one of `CLUSTER_COMPLETE` or
+  `CLUSTER_INCOMPLETE`.
+
+  To conform to other services, I think I should change that to (1) send a
+  `CLUSTER_GET_STATUS` and a reply with `CLUSTER_CURRENT_STATUS`. That way,
+  the people handling the messages can handle one single message with all the
+  info. The library should have the necessary to catch those messages and
+  record the current status for client applications.
+
 * Write Unit Tests
 
   Like cluckd, we want to create tests using the new eventdispatcher/reporter
