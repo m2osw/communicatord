@@ -184,7 +184,7 @@ void listener::process_accept()
 
         // set a name for remote connections
         //
-        // the following name includes a colong and a space which prevents
+        // the following name includes a colon and a space which prevents
         // someone from specifically sending messages to that connection,
         // which is a good thing since there can be multiple such connections
         // and that name is not sensible as a destination for a local service

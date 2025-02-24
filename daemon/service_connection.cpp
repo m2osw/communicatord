@@ -111,7 +111,7 @@ service_connection::service_connection(
     : tcp_server_client_message_connection(client)
     , base_connection(cs, false)
     , f_server_name(server_name)
-    , f_address(client->get_client_address())  // peer address:port (IP of computer on the other side)
+    , f_address(client->get_remote_address())  // peer address:port (IP of computer on the other side)
 {
     // the f_address now has the client address & ephemeral port, try to
     // get the correct port from our address
@@ -120,7 +120,7 @@ service_connection::service_connection(
     //       connections (i.e. connections to other communicatord instances)
     //       would not get the correct IP address
     //
-    addr::addr our_address(client->get_address());
+    addr::addr const & our_address(client->get_client_address());
     if(our_address.get_port() != 0)
     {
         f_address.set_port(our_address.get_port());
