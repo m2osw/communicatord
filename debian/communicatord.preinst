@@ -13,7 +13,7 @@ then
     #
     if ! getent group ${SOCKET_GROUP} >/dev/null
     then
-        addgroup --system ${SOCKET_GROUP}
+        groupadd --system ${SOCKET_GROUP}
     fi
 fi
 
