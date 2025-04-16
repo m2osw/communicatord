@@ -18,7 +18,7 @@ then
 
     # Add communicatord user to communicator-user group
     #
-    adduser ${USER_NAME} ${SOCKET_GROUP}
+    usermod --append --groups ${SOCKET_GROUP} ${USER_NAME}
 
     COMMUNICATORD_SECURE_CONFIGURATION_DIR=/etc/${ENVIRONMENT_NAME}/${ENVIRONMENT_NAME}.d
 
