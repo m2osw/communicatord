@@ -1,8 +1,18 @@
 communicatord (2.0.12.0~noble) noble; urgency=high
 
   * Removed execute permission from configuration file.
+  * Use usermod instead of adduser because it's available on minimal systems.
+    - and also addgroup was replaced with groupadd.
+  * Added the IPWALL status message.
+  * Added creation date to flags (when raising (flagging) a general error).
+  * Enhanced the communicator client a bunch.
+  * Moved debian/compat version to debian/control dependencies.
+  * Added support for message definitions for runtime verification
+    - missing required parameters
+    - incorrect value type to a parameter
+  * Many clean ups and documentation improvements.
 
- -- Alexis Wilke <alexis@m2osw.com>  Sun, 25 Feb 2024 11:15:47 -0800
+ -- Alexis Wilke <alexis@m2osw.com>  Mon, 21 Jul 2025 21:44:03 -0700
 
 communicatord (2.0.11.3~bionic) bionic; urgency=high
 
