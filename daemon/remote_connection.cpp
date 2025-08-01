@@ -88,7 +88,8 @@ namespace communicator_daemon
  * CONNECT message, and other similar errors.
  *
  * \param[in] cs  The communicator server shared pointer.
- * \param[in] addr  The address to connect to.
+ * \param[in] address  The address to connect to.
+ * \param[in] secure  Whether to create a secure connection (true) or not.
  */
 remote_connection::remote_connection(
               server::pointer_t cs

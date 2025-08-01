@@ -107,7 +107,7 @@ public:
     void                        save_neighbors();
     bool                        verify_command(
                                           std::shared_ptr<base_connection> connection
-                                        , ed::message const & message);
+                                        , ed::message const & msg);
     void                        process_connected(ed::connection::pointer_t connection);
     void                        connection_lost(addr::addr const & remote_addr);
     bool                        forward_message(ed::message & msg);

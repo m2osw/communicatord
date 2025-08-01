@@ -82,6 +82,9 @@ namespace communicator_daemon
  *
  * The constructor saves the communicator server pointer
  * so one can access it from any derived version.
+ *
+ * \param[in] cs  The address to the communicator server.
+ * \param[in] is_udp  The connection is over UDP (opposed to TCP).
  */
 base_connection::base_connection(
           server::pointer_t cs
@@ -199,8 +202,8 @@ std::string base_connection::get_server_name() const
  * This is only used for remote connections on either the CONNECT
  * or ACCEPT message.
  *
- * \param[in] my_address  The address of the server that is on the
- *                        other side of this connection.
+ * \param[in] connection_address  The address of the server that is on the
+ *                                other side of this connection.
  */
 void base_connection::set_connection_address(addr::addr const & connection_address)
 {

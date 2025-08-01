@@ -1124,6 +1124,8 @@ int server::run()
  *
  * \param[in] connection  The concerned connection that has to understand the command.
  * \param[in] msg  The message about to be sent to \p connection.
+ *
+ * return true if the message is considered valid.
  */
 bool server::verify_command(
           base_connection::pointer_t connection

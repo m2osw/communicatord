@@ -74,17 +74,13 @@ namespace communicator_daemon
  * \warning
  * At this time the \p max_connections parameter is ignored.
  *
+ * \param[in] cs  The address to the communicator server.
  * \param[in] address  The address:port to listen on. Most often it is
  * 0.0.0.0:4040 (plain connection) or 0.0.0.0:4041 (secure connection).
- * \param[in] certificate  The filename of a PEM file with a certificate.
- * \param[in] private_key  The filename of a PEM file with a private key.
  * \param[in] max_connections  The maximum number of connections to keep
  *                             waiting; if more arrive, refuse them until
  *                             we are done with some existing connections.
- * \param[in] local  Whether this connection expects local services only.
  * \param[in] server_name  The name of the server running this instance.
- * \param[in] secure  Whether to create a secure (true) or non-secure (false)
- *                    connection.
  */
 unix_listener::unix_listener(
           server::pointer_t cs
