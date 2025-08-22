@@ -134,4 +134,18 @@ install(
 )
 
 
+#################################################################################
+## A script used to wait for NTP to be up using timedatectl
+##
+project(timedate-wait)
+
+install(
+    PROGRAMS
+        ${PROJECT_NAME}
+
+    DESTINATION
+        bin
+)
+
+
 # vim: ts=4 sw=4 et

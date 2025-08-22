@@ -60,7 +60,7 @@ class remote_communicators;
 
 enum clock_status_t
 {
-    CLOCK_STATUS_UNKNOWN,       // i.e. we did not yet receive an answer from ntp-wait
+    CLOCK_STATUS_UNKNOWN,       // i.e. we did not yet receive an answer from ntp-wait or timedate-wait
 
     CLOCK_STATUS_NO_NTP,
     CLOCK_STATUS_STABLE,
@@ -162,6 +162,7 @@ private:
     std::string                     f_secure_ip = std::string();        // f_listener IP address with TLS
     ed::communicator::pointer_t     f_communicator = ed::communicator::pointer_t();
     ed::connection::weak_pointer_t  f_interrupt = ed::connection::pointer_t();        // signalfd
+    ed::connection::pointer_t       f_stable_clock = ed::connection::pointer_t();     // timer (also generates cppprocess objects)
     ed::connection::pointer_t       f_local_listener = ed::connection::pointer_t();   // TCP/IP
     ed::connection::pointer_t       f_remote_listener = ed::connection::pointer_t();  // TCP/IP
     ed::connection::pointer_t       f_secure_listener = ed::connection::pointer_t();  // TCP/IP

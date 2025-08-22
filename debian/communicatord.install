@@ -5,6 +5,7 @@
 debian/tmp/usr/bin/cluster-status                                     usr/bin/
 debian/tmp/usr/bin/message                                            usr/bin/
 debian/tmp/usr/bin/raise-flag                                         usr/bin/
+debian/tmp/usr/bin/timedate-wait                                      usr/bin/
 debian/tmp/usr/sbin/communicatord                                     usr/sbin/
 #debian/tmp/usr/lib/snapmanager/manager_plugins/libcommunicator.so         usr/lib/snapmanager/manager_plugins/
 debian/tmp/usr/lib/libcommunicatord.so.*                              usr/lib

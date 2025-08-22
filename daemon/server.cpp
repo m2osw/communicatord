@@ -585,6 +585,7 @@ int server::init()
 
     ed::connection::pointer_t check_clock_status(std::make_shared<stable_clock>(shared_from_this()));
     f_communicator->add_connection(check_clock_status);
+    f_stable_clock = check_clock_status;
 
     int const max_pending_connections(f_opts.get_long("max-pending-connections"));
     if(max_pending_connections < 5
@@ -1196,7 +1197,7 @@ bool server::verify_command(
  * not have sent an ACCEPT as a response to a CONNECT over a UDP
  * connection.)
  *
- * \param[in] msg  The message were were just sent.
+ * \param[in,out] msg  The message were were just sent.
  *
  * \return true if the forwarding went as planned.
  */
@@ -1477,6 +1478,8 @@ SNAP_LOG_VERBOSE
             //
             ed::message reply;
             reply.set_command(ed::g_name_ed_cmd_service_unavailable);
+            reply.set_sent_from_server(f_server_name);
+            reply.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
             base_connection::pointer_t sender(msg.user_data<base_connection>());
             if(verify_command(sender, reply))
             {
@@ -1553,6 +1556,8 @@ void server::transmission_report(ed::message & msg, bool cached)
 
     ed::message reply;
     reply.set_command(communicatord::g_name_communicatord_cmd_transmission_report);
+    reply.set_sent_from_server(f_server_name);
+    reply.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
     reply.add_parameter(communicatord::g_name_communicatord_param_command, msg.get_command());
     reply.add_parameter(
           communicatord::g_name_communicatord_param_status
@@ -1657,13 +1662,15 @@ bool server::shutting_down(ed::message & msg)
     //
     if(msg.get_command() != communicatord::g_name_communicatord_cmd_unregister)
     {
-        // we are shutting down so just send a quick QUTTING reply
+        // we are shutting down so just send a quick QUITTING reply
         // letting the other process know about it
         //
         ed::message reply;
         reply.set_command(ed::g_name_ed_cmd_quitting);
         if(verify_command(conn, reply))
         {
+            reply.set_sent_from_server(f_server_name);
+            reply.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
             conn->send_message_to_connection(reply);
         }
     }
@@ -1681,8 +1688,12 @@ bool server::shutting_down(ed::message & msg)
  *
  * The default implementation of dispatch_message() works for all our
  * services except the communicatord which wants to know whether a message
- * was being broadcasted, whether it is actively shutting down, or whether
+ * was being broadcast, whether it is actively shutting down, or whether
  * the message is for the communicatord service itself or another service.
+ *
+ * \param[in,out] msg  Message being processed.
+ *
+ * \return true if the message was processed.
  */
 bool server::dispatch_message(ed::message & msg)
 {
@@ -1706,14 +1717,14 @@ bool server::dispatch_message(ed::message & msg)
     }
 
     // if this message is directed to the communicator daemon itself
-    // then dispatcher it through our own dispatcher
+    // then dispatch it through our own dispatcher
     //
     if(communicator_message(msg))
     {
         return dispatcher_support::dispatch_message(msg);
     }
 
-    // otherwise call `forward_message()`
+    // otherwise forward the message
     //
     return forward_message(msg);
 }
@@ -1803,6 +1814,8 @@ void server::msg_accept(ed::message & msg)
     //
     ed::message help;
     help.set_command(ed::g_name_ed_cmd_help);
+    help.set_sent_from_server(f_server_name);
+    help.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
     //verify_command(base, help); -- precisely
     conn->send_message_to_connection(help);
 
@@ -1822,6 +1835,8 @@ void server::msg_accept(ed::message & msg)
     //
     ed::message new_remote_connection;
     new_remote_connection.set_command(communicatord::g_name_communicatord_cmd_new_remote_connection);
+    new_remote_connection.set_sent_from_server(f_server_name);
+    new_remote_connection.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
     new_remote_connection.set_service(communicatord::g_name_communicatord_service_local_broadcast);
     new_remote_connection.add_parameter(communicatord::g_name_communicatord_param_server_name, remote_server_name);
     broadcast_message(new_remote_connection);
@@ -2056,7 +2071,12 @@ void server::msg_connect(ed::message & msg)
     }
 
     ed::message reply;
+    reply.set_sent_from_server(f_server_name);
+    reply.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
+
     ed::message new_remote_connection;
+    new_remote_connection.set_sent_from_server(f_server_name);
+    new_remote_connection.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
 
     std::string const remote_server_name(msg.get_parameter(communicatord::g_name_communicatord_param_server_name));
     ed::connection::vector_t const all_connections(f_communicator->get_connections());
@@ -2234,7 +2254,7 @@ void server::msg_connect(ed::message & msg)
 
                 // now let local services know that we have a new
                 // remote connections (which may be of interest
-                // for that service--see managerdaemon)
+                // for that service--see snapmanagerdaemon)
                 //
                 // TODO: to be symmetrical, we should also have
                 //       a message telling us when a remote
@@ -2257,8 +2277,11 @@ void server::msg_connect(ed::message & msg)
         //
         ed::message help;
         help.set_command(ed::g_name_ed_cmd_help);
+        help.set_sent_from_server(f_server_name);
+        help.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
         //verify_command(base, help); -- precisely
         conn->send_message_to_connection(help);
+
         broadcast_message(new_remote_connection);
     }
 
@@ -2346,6 +2369,8 @@ SNAP_LOG_TODO
         {
             ed::message disconnected;
             disconnected.set_command(communicatord::g_name_communicatord_cmd_disconnected);
+            disconnected.set_sent_from_server(f_server_name);
+            disconnected.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
             disconnected.set_service(communicatord::g_name_communicatord_service_local_broadcast);
             disconnected.add_parameter(communicatord::g_name_communicatord_param_server_name, conn->get_server_name());
             broadcast_message(disconnected);
@@ -2410,6 +2435,8 @@ void server::msg_forget(ed::message & msg)
     //
     ed::message forget;
     forget.set_command(communicatord::g_name_communicatord_cmd_forget);
+    forget.set_sent_from_server(f_server_name);
+    forget.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
     forget.set_server(communicatord::g_name_communicatord_server_any);
     forget.set_service(communicatord::g_name_communicatord_service_communicatord);
     forget.add_parameter(communicatord::g_name_communicatord_param_ip, forget_ip);
@@ -2513,6 +2540,8 @@ void server::msg_gossip(ed::message & msg)
 
         ed::message reply;
         reply.set_command(communicatord::g_name_communicatord_cmd_received);
+        reply.set_sent_from_server(f_server_name);
+        reply.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
         //verify_command(base, reply); -- in this case the remote
         //                                communicatord is not connected,
         //                                so no HELP+COMMANDS and thus no
@@ -2630,16 +2659,18 @@ void server::msg_public_ip(ed::message & msg)
 
     ed::message reply;
     reply.set_command(communicatord::g_name_communicatord_cmd_server_public_ip);
-    if(!f_public_ip.empty())
-    {
-        reply.add_parameter(communicatord::g_name_communicatord_param_public_ip, f_public_ip);
-    }
-    if(!f_secure_ip.empty())
-    {
-        reply.add_parameter(communicatord::g_name_communicatord_param_secure_ip, f_secure_ip);
-    }
     if(verify_command(conn, reply))
     {
+        reply.set_sent_from_server(f_server_name);
+        reply.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
+        if(!f_public_ip.empty())
+        {
+            reply.add_parameter(communicatord::g_name_communicatord_param_public_ip, f_public_ip);
+        }
+        if(!f_secure_ip.empty())
+        {
+            reply.add_parameter(communicatord::g_name_communicatord_param_secure_ip, f_secure_ip);
+        }
         conn->send_message_to_connection(reply);
     }
 }
@@ -2809,6 +2840,8 @@ void server::msg_register(ed::message & msg)
     //
     ed::message help;
     help.set_command(ed::g_name_ed_cmd_help);
+    help.set_sent_from_server(f_server_name);
+    help.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
     //verify_command(base, help); -- we cannot do that here since we did not yet get the COMMANDS reply
     conn->send_message_to_connection(help);
 
@@ -2817,6 +2850,8 @@ void server::msg_register(ed::message & msg)
     //
     ed::message reply;
     reply.set_command(ed::g_name_ed_cmd_ready);
+    reply.set_sent_from_server(f_server_name);
+    reply.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
     reply.add_parameter(communicatord::g_name_communicatord_param_my_address, f_connection_address);
     //verify_command(base, reply); -- we cannot do that here since we did not yet get the COMMANDS reply
     conn->send_message_to_connection(reply);
@@ -3058,7 +3093,7 @@ void server::broadcast_message(
             // aware of certain nodes; for example, if A sends a
             // message to B and C, both B and C know of a node D
             // which is unknown to A, then both B and C will end
-            // up forward that same message to D, so D will discard
+            // up forwarding that same message to D, so D will discard
             // the second instance it receives.
             //
             return;
@@ -3123,7 +3158,7 @@ void server::broadcast_message(
         && service != communicatord::g_name_communicatord_service_private_broadcast
         && service != communicatord::g_name_communicatord_service_public_broadcast)
         {
-            // try with the server name instead (which may be "." or "*")
+            // try with the server name instead (which may be "." or "?" or "*")
             // TODO: clean this up; I think only "*" is valid here...
             //
             destination = msg.get_server();
@@ -3400,7 +3435,12 @@ void server::send_clock_status(ed::connection::pointer_t reply_connection)
 {
     ed::message clock_status_msg;
 
+    clock_status_msg.set_sent_from_server(f_server_name);
+    clock_status_msg.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
     clock_status_msg.set_command(communicatord::g_name_communicatord_cmd_clock_unstable);
+    clock_status_msg.add_parameter(
+              communicatord::g_name_communicatord_param_cache
+            , communicatord::g_name_communicatord_value_no);
     switch(f_clock_status)
     {
     case clock_status_t::CLOCK_STATUS_STABLE:
@@ -3466,7 +3506,10 @@ void server::send_status(
     , ed::connection::pointer_t * reply_connection)
 {
     ed::message reply;
+
     reply.set_command(communicatord::g_name_communicatord_cmd_status);
+    reply.set_sent_from_server(f_server_name);
+    reply.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
     reply.add_parameter(communicatord::g_name_communicatord_param_cache, communicatord::g_name_communicatord_value_no);
 
     // the name of the service is the name of the connection
@@ -3632,6 +3675,8 @@ void server::cluster_status(ed::connection::pointer_t reply_connection)
         ed::message cluster_status_msg;
         cluster_status_msg.set_command(new_status);
         cluster_status_msg.set_service(communicatord::g_name_communicatord_service_local_broadcast);
+        cluster_status_msg.set_sent_from_server(f_server_name);
+        cluster_status_msg.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
         cluster_status_msg.add_parameter(communicatord::g_name_communicatord_param_neighbors_count, total_count);
         if(reply_connection != nullptr)
         {
@@ -3668,6 +3713,8 @@ void server::cluster_status(ed::connection::pointer_t reply_connection)
         ed::message cluster_complete_msg;
         cluster_complete_msg.set_command(new_complete);
         cluster_complete_msg.set_service(communicatord::g_name_communicatord_service_local_broadcast);
+        cluster_complete_msg.set_sent_from_server(f_server_name);
+        cluster_complete_msg.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
         cluster_complete_msg.add_parameter(communicatord::g_name_communicatord_param_neighbors_count, total_count);
         if(reply_connection != nullptr)
         {
@@ -3734,7 +3781,7 @@ void server::msg_listen_loadavg(ed::message & msg)
 
     // we have to save those as IP addresses since the remote
     // communicators come and go and we have to make sure
-    // that all get our REGISER_FOR_LOADAVG message when they
+    // that all get our REGISTER_FOR_LOADAVG message when they
     // come back after a broken link
     //
     for(auto const & ip : ip_list)
@@ -3757,7 +3804,7 @@ void server::register_for_loadavg(std::string const & ip)
     addr::addr address(addr::string_to_addr(
               ip
             , "127.0.0.1"
-            , communicatord::LOCAL_PORT  // the port is ignore, use a safe default
+            , communicatord::LOCAL_PORT  // the port is ignored, use a safe default
             , "tcp"));
     ed::connection::vector_t const & all_connections(f_communicator->get_connections());
     auto const & it(std::find_if(
@@ -3789,6 +3836,8 @@ void server::register_for_loadavg(std::string const & ip)
         //
         ed::message register_message;
         register_message.set_command(communicatord::g_name_communicatord_cmd_register_for_loadavg);
+        register_message.set_sent_from_server(f_server_name);
+        register_message.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
 
         remote_connection::pointer_t remote_conn(std::dynamic_pointer_cast<remote_connection>(*it));
         if(remote_conn != nullptr)
@@ -3845,10 +3894,13 @@ void server::msg_save_loadavg(ed::message & msg)
 
 void server::process_load_balancing()
 {
+    static bool error_emitted = false;
     std::ifstream in;
     in.open("/proc/loadavg", std::ios::in | std::ios::binary);
     if(in.is_open())
     {
+        error_emitted = false;
+
         std::string avg_str;
         for(;;)
         {
@@ -3891,6 +3943,8 @@ void server::process_load_balancing()
 
         ed::message load_avg;
         load_avg.set_command(communicatord::g_name_communicatord_cmd_loadavg);
+        load_avg.set_sent_from_server(f_server_name);
+        load_avg.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
         std::stringstream ss;
         ss << avg;
         load_avg.add_parameter(communicatord::g_name_communicatord_param_avg, ss.str());
@@ -3925,8 +3979,9 @@ void server::process_load_balancing()
                     }
                 });
     }
-    else
+    else if(!error_emitted)
     {
+        error_emitted = false;
         SNAP_LOG_ERROR
             << "error opening file \"/proc/loadavg\"."
             << SNAP_LOG_SEND;
@@ -4369,6 +4424,9 @@ void server::stop(bool quitting)
                 reply.set_command(communicatord::g_name_communicatord_cmd_disconnect);
             }
 
+            reply.set_sent_from_server(f_server_name);
+            reply.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
+
             // we know this a remote communicatord, no need to verify, and
             // we may not yet have received the ACCEPT message
             //
@@ -4401,6 +4459,8 @@ void server::stop(bool quitting)
                 else
                 {
                     ed::message reply;
+                    reply.set_sent_from_server(f_server_name);
+                    reply.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
                     if(type == connection_type_t::CONNECTION_TYPE_REMOTE)
                     {
 
@@ -4488,6 +4548,7 @@ void server::stop(bool quitting)
     // requests anyway
     //
     f_communicator->remove_connection(f_interrupt.lock());  // TCP/IP
+    f_communicator->remove_connection(f_stable_clock);      // timer
     f_communicator->remove_connection(f_local_listener);    // TCP/IP
     f_communicator->remove_connection(f_remote_listener);   // TCP/IP
     f_communicator->remove_connection(f_secure_listener);   // TCP/IP
@@ -4533,6 +4594,8 @@ void server::process_connected(ed::connection::pointer_t conn)
     {
         ed::message connect;
         connect.set_command(communicatord::g_name_communicatord_cmd_connect);
+        connect.set_sent_from_server(f_server_name);
+        connect.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
         connect.add_version_parameter();
         connect.add_parameter(communicatord::g_name_communicatord_param_my_address, f_connection_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
         connect.add_parameter(communicatord::g_name_communicatord_param_server_name, f_server_name);

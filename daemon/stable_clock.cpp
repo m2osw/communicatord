@@ -30,11 +30,19 @@
 //
 #include    "stable_clock.h"
 
-
-// cppthread
+// communicatord
 //
-#include    <cppthread/guard.h>
-#include    <cppthread/mutex.h>
+#include    <communicatord/exception.h>
+
+
+// cppprocess
+//
+#include    <cppprocess/io_capture_pipe.h>
+
+
+// snapdev
+//
+#include    <snapdev/safe_object.h>
 
 
 // last include
@@ -45,100 +53,41 @@
 
 namespace communicator_daemon
 {
-namespace detail
+
+
+
+namespace
 {
 
 
 
-class ntp_wait
-    : public cppthread::runner
+constexpr char const * const    g_ntp_wait_command = "/usr/sbin/ntp-wait";
+constexpr char const * const    g_timedatectl_command = "/usr/bin/timedatectl";
+constexpr char const * const    g_timedate_wait_command = "/usr/bin/timedate-wait"; // this is our script (see under tools)
+
+
+void reset_state(process_state_t * state)
 {
-public:
-    typedef std::shared_ptr<ntp_wait>   pointer_t;
-
-                        ntp_wait(stable_clock * c);
-                        ntp_wait(ntp_wait const &) = delete;
-    ntp_wait &          operator = (ntp_wait const &) = delete;
-
-    clock_status_t      get_status() const;
-
-    // implementation of runner
-    //
-    virtual void        run() override;
-
-private:
-    stable_clock *                  f_clock = nullptr;
-    mutable cppthread::mutex        f_mutex = cppthread::mutex();
-    clock_status_t                  f_status = clock_status_t::CLOCK_STATUS_UNKNOWN;
-};
-
-
-ntp_wait::ntp_wait(stable_clock * c)
-    : runner("ntp-wait")
-    , f_clock(c)
-{
-}
-
-
-clock_status_t ntp_wait::get_status() const
-{
-    cppthread::guard lock(f_mutex);
-    return f_status;
-}
-
-
-void ntp_wait::run()
-{
-    int r(0);
-
-    struct stat s;
-    if(stat("/usr/sbin/ntp-wait", &s) != 0)
-    {
-        if(errno != ENOENT)
-        {
-            int const e(errno);
-            SNAP_LOG_ERROR
-                << "stat() of /usr/sbin/ntp-wait failed with error: "
-                << e
-                << ", "
-                << strerror(e)
-                << "."
-                << SNAP_LOG_SEND;
-            // continue -- pretend the clock is okay...
-        }
-    }
-    else
-    {
-        // TODO: use our cppprocess and save the output (if any) as logs
-        //
-        r = system("/usr/sbin/ntp-wait --tries=600 --sleep=1");
-    }
-
-    {
-        cppthread::guard lock(f_mutex);
-        f_status = r == 0
-                    ? clock_status_t::CLOCK_STATUS_STABLE
-                    : clock_status_t::CLOCK_STATUS_INVALID;
-    }
-
-    f_clock->thread_done();
+    *state = process_state_t::PROCESS_STATE_IDLE;
 }
 
 
 
-} // namespace detail
-
+}
+// no name namespace
 
 
 /** \class stable_clock
  * \brief Verify that the clock is ready.
  *
- * This class starts a background thread to run the ntp-wait command.
- * This command is used to know whether the clock is up to date.
+ * This class starts a background process to run one of the ntp-wait or
+ * timedate-wait commands. These commands are used to know whether the
+ * clock is up to date ("stable").
  *
- * If NTP package is not installed or everything is in good shape (the
- * ntp-wait exits with 0), then the server is told to send a CLOCK_STATUS
- * message with a "clock_stable" status.
+ * If the NTP package is not installed, the system tries with the
+ * timedatectl instead. If everything is in good shape (the command exits
+ * with 0), then the server is told to send a CLOCK_STATUS message with a
+ * "clock_stable" status.
  *
  * If there is a problem with the clock, then the server is asked to
  * send the CLOCK_NOT_READY message instead. The server has a third
@@ -158,18 +107,242 @@ void ntp_wait::run()
  * \param[in] cs  The communicator server we are listening for.
  */
 stable_clock::stable_clock(server::pointer_t cs)
-    : f_server(cs)
-    , f_runner(std::make_shared<detail::ntp_wait>(this))
-    , f_thread(std::make_shared<cppthread::thread>("stable-clock", f_runner))
+    : timer(60LL * 60LL * 1'000'000LL)  // wake up every hour, in microseconds
+    , f_server(cs)
 {
-    f_thread->start();
+    // get a first tick immediately (once the run() loop starts)
+    //
+    set_timeout_date(snapdev::now());
 }
 
 
-void stable_clock::process_read()
+bool stable_clock::has_ntp_wait() const
 {
-    f_server->set_clock_status(f_runner->get_status());
-    remove_from_communicator();
+    struct stat s;
+    if(stat(g_ntp_wait_command, &s) == 0)
+    {
+        return true;
+    }
+
+    if(errno != ENOENT)
+    {
+        int const e(errno);
+        SNAP_LOG_ERROR
+            << "stat() of \""
+            << g_ntp_wait_command
+            << "\" failed with error: "
+            << e
+            << ", "
+            << strerror(e)
+            << "."
+            << SNAP_LOG_SEND;
+    }
+
+    return false;
+}
+
+
+void stable_clock::start_ntp_wait()
+{
+    // make sure that on any error the state gets reset to IDLE
+    //
+    snapdev::safe_object<process_state_t *, reset_state> safe_state;
+    safe_state.make_safe(&f_process_state);
+    f_process_state = process_state_t::PROCESS_STATE_NTP_WAIT;
+
+    // run ntp-wait until NTP is started and the time was adjusted
+    // here we wait for up to 600 seconds (10 min.) and check the
+    // status once per second
+    //
+    cppprocess::process::pointer_t p(
+            std::make_shared<cppprocess::process>("check ntp service status"));
+    p->set_command(g_ntp_wait_command);
+    p->add_argument("--tries=600");
+    p->add_argument("--sleep=1");
+
+    cppprocess::io_capture_pipe::pointer_t output_pipe(std::make_shared<cppprocess::io_capture_pipe>());
+    p->set_output_io(output_pipe);
+
+    cppprocess::io_capture_pipe::pointer_t error_pipe(std::make_shared<cppprocess::io_capture_pipe>());
+    p->set_error_io(error_pipe);
+
+    int const r(p->start());
+    if(r != 0)
+    {
+        SNAP_LOG_ERROR
+            << "process \""
+            << p->get_command_line()
+            << "\" failed to start."
+            << SNAP_LOG_SEND;
+        return;
+    }
+
+    ed::connection * c(dynamic_cast<ed::connection *>(this));
+    if(c == nullptr)
+    {
+        throw communicatord::logic_error("the stable_clock class must be used with a connection class."); // LCOV_EXCL_LINE
+    }
+
+    ed::signal_child::pointer_t child_signal(ed::signal_child::get_instance());
+    child_signal->add_listener(
+              p->process_pid()
+            , std::bind(
+                      &stable_clock::ntp_wait_exited
+                    //, std::dynamic_pointer_cast<stable_clock>(c->shared_from_this())
+                    , std::dynamic_pointer_cast<stable_clock>(shared_from_this())
+                    , std::placeholders::_1
+                    , p));
+
+    // it worked, keep the state as it was on entry
+    //
+    safe_state.release();
+}
+
+
+bool stable_clock::ntp_wait_exited(
+      ed::child_status const & status
+    , cppprocess::process::pointer_t p)
+{
+    f_process_state = process_state_t::PROCESS_STATE_IDLE;
+
+    int const r(p->get_result(status));
+
+    clock_status_t s(r == 0
+                ? clock_status_t::CLOCK_STATUS_STABLE
+                : clock_status_t::CLOCK_STATUS_INVALID);
+    f_server->set_clock_status(s);
+
+    return true;
+}
+
+
+bool stable_clock::has_timedatectl() const
+{
+    struct stat s;
+    if(stat(g_timedatectl_command, &s) == 0)
+    {
+        return true;
+    }
+
+    if(errno != ENOENT)
+    {
+        int const e(errno);
+        SNAP_LOG_ERROR
+            << "stat() of \""
+            << g_timedatectl_command
+            << "\" failed with error: "
+            << e
+            << ", "
+            << strerror(e)
+            << "."
+            << SNAP_LOG_SEND;
+    }
+
+    return false;
+}
+
+
+void stable_clock::start_timedate_wait()
+{
+    // make sure that on any error the state gets reset to IDLE
+    //
+    snapdev::safe_object<process_state_t *, reset_state> safe_state;
+    safe_state.make_safe(&f_process_state);
+    f_process_state = process_state_t::PROCESS_STATE_TIMEDATE_WAIT;
+
+    // run timedate-wait until NTP is started and the time was adjusted
+    // here we wait for up to 600 seconds (10 min.) and check the
+    // status once per second
+    //
+    cppprocess::process::pointer_t systemctl_process(
+            std::make_shared<cppprocess::process>("check systemd time service status"));
+    systemctl_process->set_command(g_timedate_wait_command);
+    systemctl_process->add_argument("--tries=600");
+    systemctl_process->add_argument("--sleep=1");
+
+    cppprocess::io_capture_pipe::pointer_t output_pipe(std::make_shared<cppprocess::io_capture_pipe>());
+    systemctl_process->set_output_io(output_pipe);
+
+    cppprocess::io_capture_pipe::pointer_t error_pipe(std::make_shared<cppprocess::io_capture_pipe>());
+    systemctl_process->set_error_io(error_pipe);
+
+    int const r(systemctl_process->start());
+    if(r != 0)
+    {
+        SNAP_LOG_ERROR
+            << "process \""
+            << systemctl_process->get_command_line()
+            << "\" failed to start."
+            << SNAP_LOG_SEND;
+        return;
+    }
+
+    ed::connection * c(dynamic_cast<ed::connection *>(this));
+    if(c == nullptr)
+    {
+        throw communicatord::logic_error("the stable_clock class must be used with a connection class."); // LCOV_EXCL_LINE
+    }
+
+    ed::signal_child::pointer_t child_signal(ed::signal_child::get_instance());
+    child_signal->add_listener(
+              systemctl_process->process_pid()
+            , std::bind(
+                      &stable_clock::timedate_wait_exited
+                    //, std::dynamic_pointer_cast<stable_clock>(c->shared_from_this())
+                    , std::dynamic_pointer_cast<stable_clock>(shared_from_this())
+                    , std::placeholders::_1
+                    , systemctl_process));
+
+    // it worked, keep the state as it was on entry
+    //
+    safe_state.release();
+}
+
+
+bool stable_clock::timedate_wait_exited(
+      ed::child_status const & status
+    , cppprocess::process::pointer_t p)
+{
+    f_process_state = process_state_t::PROCESS_STATE_IDLE;
+
+    int const r(p->get_result(status));
+
+    clock_status_t s(r == 0
+                ? clock_status_t::CLOCK_STATUS_STABLE
+                : clock_status_t::CLOCK_STATUS_INVALID);
+    f_server->set_clock_status(s);
+
+    return true;
+}
+
+
+void stable_clock::process_timeout()
+{
+    // our timer is 1h and the process should take under 10 minutes, so here
+    // the process state should really always be IDLE
+    //
+    if(f_process_state != process_state_t::PROCESS_STATE_IDLE)
+    {
+        // still running
+        //
+        return;
+    }
+
+    if(has_ntp_wait())
+    {
+        start_ntp_wait();
+    }
+    else if(has_timedatectl())
+    {
+        start_timedate_wait();
+    }
+    else
+    {
+        // we did not find a way to check the clock,
+        // tell the user we do not have an NTP service
+        //
+        f_server->set_clock_status(clock_status_t::CLOCK_STATUS_NO_NTP);
+    }
 }
 
 

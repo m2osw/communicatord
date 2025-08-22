@@ -18,17 +18,47 @@
 #pragma once
 
 /** \file
- * \brief Definition of the clock verification on startup.
+ * \brief Check the clock.
  *
- * Your clock may not be up to date on a reboot. This class starts a
- * background process to run ntp-wait and create a file under
- * /run/communicatord and send a message once the clock is known to
- * be adjusted.
+ * A computer clock may not be up to date on a reboot. This class starts
+ * a background process to either run ntp-wait or timedatectl and as a
+ * result change the clock status from UNKNOWN to (hopefully) STABLE.
+ *
+ * On newer system, the timedatectl works as expected. Although less
+ * precise than the old ntp system, it uses very little resources and
+ * you normally have no setup to do. If you install ntp, then we expect
+ * you also want to install ntp-wait to verify the ntp service instead.
+ *
+ * The class determines one of the following statuses:
+ *
+ * \li CLOCK_STATUS_UNKNOWN -- the state has not yet been determined
+ * \li CLOCK_STATUS_NO_NTP -- we could not find ntp-wait nor timedatectl
+ * \li CLOCK_STATUS_STABLE -- we ran one of the NTP tools and determine
+ *                            that the clock was properly synchronized
+ * \li CLOCK_STATUS_INVALID -- the tool could not see the clock as being
+ *                             synchronized; at the moment the clock should
+ *                             be considered invalid (it could be completely
+ *                             out of date)
+ *
+ * Note that in most cases the CLOCK_STATUS_NO_NTP should be viewed as
+ * "the clock is probably okay." It certainly depends on the project using
+ * the stable clock signal:
+ *
+ * \li CLOCK_STABLE -- the clock is considered stable, however, it may be
+ *                     in the "no NTP" state, check the clock_resolution
+ *                     parameter
+ * \li CLOCK_UNSTABLE -- the clock was not yet checked or it the tool timed
+ *                       out, the clock_error parameter is set to "checking"
+ *                       or "invalid"
  *
  * \note
- * On a VPN, this is likely not useful (i.e. VPNs time is generally
- * set to their host time and the hosts are already synchronized as
- * expected).
+ * On a VPN, the ntp service is likely not useful (i.e. VPNs time is
+ * generally set to their host time and the hosts are already synchronized
+ * as expected).
+ *
+ * \todo
+ * If it looks like ntp-wait is installed, we should also check whether
+ * the ntp service is enabled. If not, then fallback to timedatectl.
  */
 
 // self
@@ -38,13 +68,13 @@
 
 // eventdispatcher
 //
-#include    <eventdispatcher/thread_done_signal.h>
+#include    <eventdispatcher/signal_child.h>
+#include    <eventdispatcher/timer.h>
 
 
-// cppthread
+// cppprocess
 //
-#include    <cppthread/runner.h>
-#include    <cppthread/thread.h>
+#include    <cppprocess/process.h>
 
 
 
@@ -53,15 +83,16 @@ namespace communicator_daemon
 
 
 
-namespace detail
+enum process_state_t
 {
-class ntp_wait;
-typedef std::shared_ptr<ntp_wait>   ntp_wait_pointer_t;
-}
+    PROCESS_STATE_IDLE,
+    PROCESS_STATE_NTP_WAIT,
+    PROCESS_STATE_TIMEDATE_WAIT,
+};
 
 
 class stable_clock
-    : public ed::thread_done_signal
+    : public ed::timer
 {
 public:
     typedef std::shared_ptr<stable_clock>   pointer_t;
@@ -69,12 +100,24 @@ public:
 
                             stable_clock(server::pointer_t cs);
 
-    virtual void            process_read() override;
+    // implement ed::timer
+    virtual void            process_timeout() override;
 
 private:
-    server::pointer_t               f_server = server::pointer_t();
-    detail::ntp_wait_pointer_t      f_runner = detail::ntp_wait_pointer_t();
-    cppthread::thread::pointer_t    f_thread = cppthread::thread::pointer_t();
+    bool                    has_ntp_wait() const;
+    void                    start_ntp_wait();
+    bool                    ntp_wait_exited(
+                                  ed::child_status const & status
+                                , cppprocess::process::pointer_t p);
+
+    bool                    has_timedatectl() const;
+    void                    start_timedate_wait();
+    bool                    timedate_wait_exited(
+                                  ed::child_status const & status
+                                , cppprocess::process::pointer_t p);
+
+    server::pointer_t       f_server = server::pointer_t();
+    process_state_t         f_process_state = process_state_t::PROCESS_STATE_IDLE;
 };
 
 

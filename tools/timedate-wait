@@ -1,0 +1,108 @@
+#!/bin/sh -e
+#
+# Script used to wait on the timedatectl to return "yes" to being synchronized
+# On a reboot, this may not be instant. We support the --tries and --sleep
+# command line option to repeat the check any number of times
+
+TRIES=1000
+SLEEP=6
+while test -n "$1"
+do
+    case "$1" in
+    "-h"|"--help")
+        echo "Usage: $0 [-h|--help] [-n|--tries <count>] [-s|--sleep <seconds>]"
+        echo "where options are:"
+        echo "  -h | --help           print this help screen"
+        echo "  -n | --tries=<count>  defines the number of times to check"
+        echo "  -s | --sleep=<count>  defines the number of seconds to sleep between attempts"
+        exit 1
+        ;;
+
+    "--tries="*)
+        TRIES=`echo "$1" | sed -e 's/--tries=//'`
+        shift
+        ;;
+
+    "-n"|"--tries")
+        shift
+        if test -z "$1"
+        then
+            echo "error: --tries is expected to be followed by one value." >&2
+            exit 1
+        fi
+        TRIES="$1"
+        shift
+        ;;
+
+    "--sleep="*)
+        SLEEP=`echo "$1" | sed -e 's/--sleep=//'`
+        shift
+        ;;
+
+    "-s"|"--sleep")
+        shift
+        if test -z "$1"
+        then
+            echo "error: --sleep is expected to be followed by one value." >&2
+            exit 1
+        fi
+        SLEEP="$1"
+        shift
+        ;;
+
+    *)
+        echo "error: unknown command line option \"$1\"." >&2
+        exit 1
+
+    esac
+done
+
+case "$TRIES" in
+0)
+    echo "error: --tries cannot be 0" >&2
+    exit 1
+    ;;
+
+*[!0-9]*)
+    echo "error: --tries must be followed by a positive integer" >&2
+    exit 1
+    ;;
+
+esac
+
+case "$SLEEP" in
+0)
+    echo "error: --sleep cannot be 0" >&2
+    exit 1
+    ;;
+
+*[!0-9]*)
+    echo "error: --sleep must be followed by a positive integer" >&2
+    exit 1
+    ;;
+
+esac
+
+while true
+do
+    # check status, if "yes", just exit with 0
+    #
+    if test "`timedatectl show --property=NTPSynchronized --value`" = "yes"
+    then
+        break
+    fi
+
+    # status is still "no", did we wait allotted time?
+    #
+    TRIES=`expr $TRIES - 1`
+    if test $TRIES = 0
+    then
+        # timed out
+        #
+        exit 1
+    fi
+
+    sleep $SLEEP
+done
+
+# vim: ts=4 sw=4 et
