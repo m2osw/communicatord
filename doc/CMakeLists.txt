@@ -20,8 +20,11 @@
 ##
 ## Documentation
 ##
+project(communicatord-documentation)
+
 find_package(SnapDoxygen)
-AddDoxygenTarget(communicatord
+AddDoxygenTarget(
+    communicatord
     ${COMMUNICATORD_VERSION_MAJOR}
     ${COMMUNICATORD_VERSION_MINOR}
     ${COMMUNICATORD_VERSION_PATCH}
