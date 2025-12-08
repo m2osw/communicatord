@@ -1334,8 +1334,15 @@ int main(int argc, char *argv[])
         // clean error on exception
         //
         std::cerr << "message: exception: " << e.what() << std::endl;
-        return 1;
     }
+    catch(...)
+    {
+        // unknown/non-standard error type occurred
+        //
+        std::cerr << "message: an unknown exception occurred." << std::endl;
+    }
+
+    return 1;
 }
 
 // vim: ts=4 sw=4 et
