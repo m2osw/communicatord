@@ -280,7 +280,7 @@ advgetopt::options_environment const g_command_line_options_environment =
 
 
 }
-//namespace
+// no name namespace
 
 
 class connection_lost
@@ -1129,8 +1129,8 @@ public:
             return false;
         }
 
-        // by default, if not an internal command, we consider the command
-        // to be the content a message and therefore we just send it
+        // by default, if not an internal command, we consider `command`
+        // to be a message and therefore we just send it
         //
         c->send_message(command);
         return false;
