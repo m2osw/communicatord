@@ -1167,7 +1167,7 @@ private:
             "    add more messages as required for your test\n"
             "  <server_name:message server_name:other_service/...\n"
             "    server_name is set to `hostname` by default: " + snapdev::gethostname() + "\n"
-            "  <server_name:message server_name:other_service/STOP"\n"
+            "  <server_name:message server_name:other_service/STOP\n"
             "    ends other_service");
     }
 
