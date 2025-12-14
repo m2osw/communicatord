@@ -1011,7 +1011,7 @@ public:
     {
         if(rl_bind_keyseq("\\eOQ" /* F2 */, &create_message) != 0)
         {
-            std::cerr << "invalid key (^[OQ a.k.a. F2) sequence passed to rl_bind_keyseq";
+            std::cerr << "invalid key (^[OQ a.k.a. F2) sequence passed to rl_bind_keyseq.\n";
         }
     }
 
@@ -1139,34 +1139,36 @@ public:
 private:
     void help()
     {
-        output("Help:");
-        output("Internal commands start with a  slash (/). Supported commands:");
-        output("  /connect <scheme>://<ip>:<port> | <scheme>:///<path> -- connect to specified URI");
-        output("    i.e. /connect cd://192.168.2.1:4004");
-        output("  /disconnect -- explicitly disconnect any existing connection");
-        output("  /help or /? or ? or <F1> key -- print this help screen");
-        output("  /quit -- leave tool");
-        output("  <F2> key -- create a message in a popup window");
-        output("  ... -- message to send to current connection (/msg_help for more)");
-        output("    a message is composed of:");
-        output("      ['<'<server>:<service>' '][<server>:<service>'/']command[' '<name>=<value>';'...]");
-        output("    where the first <server>:<service> is the origin (\"sent from\")");
-        output("    where the second <server>:<service> is the destination");
-        output("    where <name>=<value> pairs are parameters (can be repeated)");
+        output(
+            "Help:\n"
+            "Internal commands start with a  slash (/). Supported commands:\n"
+            "  /connect <scheme>://<ip>:<port> | <scheme>:///<path> -- connect to specified URI\n"
+            "    i.e. /connect cd://192.168.2.1:4004\n"
+            "  /disconnect -- explicitly disconnect any existing connection\n"
+            "  /help or /? or ? or <F1> key -- print this help screen\n"
+            "  /quit -- leave tool\n"
+            "  <F2> key -- create a message in a popup window\n"
+            "  ... -- message to send to current connection (/msg_help for more)\n"
+            "    a message is composed of:\n"
+            "      ['<'<server>:<service>' '][<server>:<service>'/']command[' '<name>=<value>';'...]\n"
+            "    where the first <server>:<service> is the origin (\"sent from\")\n"
+            "    where the second <server>:<service> is the destination\n"
+            "    where <name>=<value> pairs are parameters (can be repeated)\n");
     }
 
     void help_message()
     {
-        output("Help:");
-        output("Commands/messags to work with the communicator daemon:");
-        output("  /connect cd://192.168.2.1:4004");
-        output("  REGISTER service=message;version=1");
-        output("  COMMANDS list=ACCEPT,HELP,QUITTING,READY,STOP,UNKNOWN,COMMANDS");
-        output("    add more messages as required for your test");
-        output("  <server_name:message server_name:other_service/...");
-        output("    server_name is set to `hostname` by default: " + snapdev::gethostname());
-        output("  <server_name:message server_name:other_service/STOP");
-        output("    ends other_service");
+        output(
+            "Help:\n"
+            "Commands/messages to work with the communicator daemon:\n"
+            "  /connect cd://192.168.2.1:4004\n"
+            "  REGISTER service=message;version=1\n"
+            "  COMMANDS list=ACCEPT,HELP,QUITTING,READY,STOP,UNKNOWN,COMMANDS\n"
+            "    add more messages as required for your test\n"
+            "  <server_name:message server_name:other_service/...\n"
+            "    server_name is set to `hostname` by default: " + snapdev::gethostname() + "\n"
+            "  <server_name:message server_name:other_service/STOP"\n"
+            "    ends other_service");
     }
 
     static console_connection *     g_console /* = nullptr; done below because it's static */;
@@ -1286,6 +1288,7 @@ public:
         //
         {
             console_connection::pointer_t cui(std::make_shared<console_connection>(f_connection));
+            cui->ready();
             cui->reset_prompt();
             cui->set_message_dialog_key_binding();
             if(!ed::communicator::instance()->add_connection(cui))
