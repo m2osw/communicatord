@@ -1,4 +1,18 @@
 
+* Use bare pointers for child connections
+
+  Look into the daemon to replace the shared pointers within children with
+  bare pointers. At the moment, some destructors do not get called properly
+  on exit because the server reference counter is not 0. It also means all
+  the children and possibly other items do not get deleted (I do a reset()
+  for now, but that should be removed and all the children should properly
+  be deleted--we can know by seeing whether the communicatord.sock file
+  gets deleted or not when we do not reset the pointer:
+  `f_unix_listener.reset();`).
+
+  i.e. right now, if we quit because of an exception, we do not do a good
+  job at cleaning up the server.
+
 * Properly test password usage and requirements
 
   Any publicly accessible connection (port) must be "password" protected.
