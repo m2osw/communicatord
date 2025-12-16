@@ -4546,17 +4546,30 @@ void server::stop(bool quitting)
         }
     }
 
-    // remove the two main servers; we will not respond to any more
-    // requests anyway
+    // remove all the other connections; we're done
     //
     f_communicator->remove_connection(f_interrupt.lock());  // TCP/IP
+
     f_communicator->remove_connection(f_stable_clock);      // timer
+    f_stable_clock.reset();
+
     f_communicator->remove_connection(f_local_listener);    // TCP/IP
+    f_local_listener.reset();
+
     f_communicator->remove_connection(f_remote_listener);   // TCP/IP
+    f_remote_listener.reset();
+
     f_communicator->remove_connection(f_secure_listener);   // TCP/IP
+    f_secure_listener.reset();
+
     f_communicator->remove_connection(f_unix_listener);     // Unix Stream
+    f_unix_listener.reset();
+
     f_communicator->remove_connection(f_ping);              // UDP/IP
+    f_ping.reset();
+
     f_communicator->remove_connection(f_loadavg_timer);     // load balancer timer
+    f_loadavg_timer.reset();
 
 //#ifdef _DEBUG
     {
