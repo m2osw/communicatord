@@ -408,6 +408,7 @@ server::server(int argc, char * argv[])
     , f_dispatcher(std::make_shared<ed::dispatcher>(this))
 {
     snaplogger::add_logger_options(f_opts);
+    ed::add_message_definition_options(f_opts);
     f_opts.finish_parsing(argc, argv);
     if(!snaplogger::process_logger_options(f_opts, "/etc/communicatord/logger"))
     {
@@ -415,6 +416,7 @@ server::server(int argc, char * argv[])
         //
         throw advgetopt::getopt_exit("logger options generated an error.", 1);
     }
+    ed::process_message_definition_options(f_opts);
 
     f_debug_all_messages = f_opts.is_defined("debug_all_messages");
 #ifdef _DEBUG
