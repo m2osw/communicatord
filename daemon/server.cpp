@@ -297,6 +297,13 @@ const advgetopt::option g_options[] =
         , advgetopt::Help("a secret key used to verify that UDP packets are acceptable.")
     ),
     advgetopt::define_option(
+          advgetopt::Name("timedate-wait-command")
+        , advgetopt::Flags(advgetopt::all_flags<
+              advgetopt::GETOPT_FLAG_REQUIRED
+            , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
+        , advgetopt::Help("the path and filename to the timedate-wait command used to check the timedatectl service.")
+    ),
+    advgetopt::define_option(
           advgetopt::Name("unix-group")
         , advgetopt::Flags(advgetopt::all_flags<
               advgetopt::GETOPT_FLAG_REQUIRED
@@ -585,7 +592,11 @@ int server::init()
     f_communicator->add_connection(ctrl_c);
     f_interrupt = ctrl_c;
 
-    ed::connection::pointer_t check_clock_status(std::make_shared<stable_clock>(shared_from_this()));
+    stable_clock::pointer_t check_clock_status(std::make_shared<stable_clock>(this));
+    if(f_opts.is_defined("timedate_wait_command"))
+    {
+        check_clock_status->set_timedate_wait_command(f_opts.get_string("timedate_wait_command"));
+    }
     f_communicator->add_connection(check_clock_status);
     f_stable_clock = check_clock_status;
 

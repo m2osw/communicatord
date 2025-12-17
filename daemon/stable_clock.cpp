@@ -106,13 +106,20 @@ void reset_state(process_state_t * state)
  *
  * \param[in] cs  The communicator server we are listening for.
  */
-stable_clock::stable_clock(server::pointer_t cs)
+stable_clock::stable_clock(server * cs)
     : timer(60LL * 60LL * 1'000'000LL)  // wake up every hour, in microseconds
     , f_server(cs)
 {
     // get a first tick immediately (once the run() loop starts)
     //
     set_timeout_date(snapdev::now());
+    set_name("stable_clock");
+}
+
+
+void stable_clock::set_timedate_wait_command(std::string const & command)
+{
+    f_timedate_wait_command = command;
 }
 
 
@@ -161,9 +168,11 @@ void stable_clock::start_ntp_wait()
     p->add_argument("--sleep=1");
 
     cppprocess::io_capture_pipe::pointer_t output_pipe(std::make_shared<cppprocess::io_capture_pipe>());
+    output_pipe->set_name("output_pipe_ntp");
     p->set_output_io(output_pipe);
 
     cppprocess::io_capture_pipe::pointer_t error_pipe(std::make_shared<cppprocess::io_capture_pipe>());
+    error_pipe->set_name("error_pipe_ntp");
     p->set_error_io(error_pipe);
 
     int const r(p->start());
@@ -256,14 +265,23 @@ void stable_clock::start_timedate_wait()
     //
     cppprocess::process::pointer_t systemctl_process(
             std::make_shared<cppprocess::process>("check systemd time service status"));
-    systemctl_process->set_command(g_timedate_wait_command);
+    if(f_timedate_wait_command.empty())
+    {
+        systemctl_process->set_command(g_timedate_wait_command);
+    }
+    else
+    {
+        systemctl_process->set_command(f_timedate_wait_command);
+    }
     systemctl_process->add_argument("--tries=600");
     systemctl_process->add_argument("--sleep=1");
 
     cppprocess::io_capture_pipe::pointer_t output_pipe(std::make_shared<cppprocess::io_capture_pipe>());
+    output_pipe->set_name("output_pipe_timedate");
     systemctl_process->set_output_io(output_pipe);
 
     cppprocess::io_capture_pipe::pointer_t error_pipe(std::make_shared<cppprocess::io_capture_pipe>());
+    error_pipe->set_name("error_pipe_timedate");
     systemctl_process->set_error_io(error_pipe);
 
     int const r(systemctl_process->start());
