@@ -1774,13 +1774,13 @@ void server::msg_accept(ed::message & msg)
     // the following are mandatory in an ACCEPT message
     //
     if(!msg.has_parameter(communicatord::g_name_communicatord_param_server_name)
-    || !msg.has_parameter(communicatord::g_name_communicatord_param_my_address))
+    || !msg.has_parameter(ed::g_name_ed_param_my_address))
     {
         SNAP_LOG_ERROR
             << "ACCEPT was received without the \""
             << communicatord::g_name_communicatord_param_server_name
             << "\" and \""
-            << communicatord::g_name_communicatord_param_my_address
+            << ed::g_name_ed_param_my_address
             << "\" parameters, which are mandatory."
             << SNAP_LOG_SEND;
         return;
@@ -1797,7 +1797,7 @@ void server::msg_accept(ed::message & msg)
     // data from that remote computer
     //
     conn->connection_started();
-    std::string const his_address_str(msg.get_parameter(communicatord::g_name_communicatord_param_my_address));
+    std::string const his_address_str(msg.get_parameter(ed::g_name_ed_param_my_address));
     addr::addr his_address(addr::string_to_addr(
               his_address_str
             , "255.255.255.255"
@@ -2212,7 +2212,7 @@ void server::msg_connect(ed::message & msg)
                 reply.set_command(communicatord::g_name_communicatord_cmd_accept);
                 reply.add_parameter(communicatord::g_name_communicatord_param_server_name, f_server_name);
                 reply.add_parameter(
-                          communicatord::g_name_communicatord_param_my_address
+                          ed::g_name_ed_param_my_address
                         , f_connection_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
 
                 // services
@@ -2229,7 +2229,7 @@ void server::msg_connect(ed::message & msg)
                     reply.add_parameter(communicatord::g_name_communicatord_param_heard_of, f_services_heard_of);
                 }
 
-                std::string const his_address_str(msg.get_parameter(communicatord::g_name_communicatord_param_my_address));
+                std::string const his_address_str(msg.get_parameter(ed::g_name_ed_param_my_address));
                 addr::addr his_address(addr::string_to_addr(
                           his_address_str
                         , "255.255.255.255"
@@ -2474,8 +2474,8 @@ void server::msg_gossip(ed::message & msg)
     // with various neighbors; we have two modes:
     //
     // 1) my_address=... is defined -- in this case the
-    //    remote host sent us his address because he was
-    //    not sure whether we knew about him; add that
+    //    remote host sent us its address because it was
+    //    not sure whether we knew about it; add that
     //    address as a neighbor and go on as normal
     //
     // 2) heard_of=... is defined -- in this case, the
@@ -2494,7 +2494,7 @@ void server::msg_gossip(ed::message & msg)
     //    we eventually have an exact result.)
     //
     // When using (2) we are using what is called
-    // Gossiping in Computer Science. At thist time
+    // Gossiping in Computer Science. At this time
     // we use what is called the Flooding Algorithm.
     //
     // https://en.wikipedia.org/wiki/Flooding_(computer_networking)
@@ -2539,7 +2539,7 @@ void server::msg_gossip(ed::message & msg)
     // we are not connected to and ask others to do some
     // forwarding!)
     //
-    if(msg.has_parameter(communicatord::g_name_communicatord_param_my_address))
+    if(msg.has_parameter(ed::g_name_ed_param_my_address))
     {
         // this is a "simple" GOSSIP of a communicatord
         // telling us it exists and expects a connection
@@ -2548,7 +2548,7 @@ void server::msg_gossip(ed::message & msg)
         // in this case we just reply with RECEIVED to
         // confirm that we got the GOSSIP message
         //
-        std::string const reply_to(msg.get_parameter(communicatord::g_name_communicatord_param_my_address));
+        std::string const reply_to(msg.get_parameter(ed::g_name_ed_param_my_address));
         add_neighbors(reply_to);
 
         ed::message reply;
@@ -2586,7 +2586,7 @@ void server::msg_gossip(ed::message & msg)
     SNAP_LOG_ERROR
         << communicatord::g_name_communicatord_cmd_gossip
         << " must have "
-        << communicatord::g_name_communicatord_param_my_address
+        << ed::g_name_ed_param_my_address
         << "=... or "
         << communicatord::g_name_communicatord_param_heard_of
         << "=... defined."
@@ -2865,7 +2865,7 @@ void server::msg_register(ed::message & msg)
     reply.set_command(ed::g_name_ed_cmd_ready);
     reply.set_sent_from_server(f_server_name);
     reply.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
-    reply.add_parameter(communicatord::g_name_communicatord_param_my_address, f_connection_address);
+    reply.add_parameter(ed::g_name_ed_param_my_address, f_connection_address);
     //verify_command(base, reply); -- we cannot do that here since we did not yet get the COMMANDS reply
     conn->send_message_to_connection(reply);
 
@@ -3872,7 +3872,7 @@ void server::register_for_loadavg(std::string const & ip)
 void server::msg_save_loadavg(ed::message & msg)
 {
     std::string const avg_str(msg.get_parameter(communicatord::g_name_communicatord_param_avg));
-    std::string const my_address(msg.get_parameter(communicatord::g_name_communicatord_param_my_address));
+    std::string const my_address(msg.get_parameter(ed::g_name_ed_param_my_address));
     snapdev::timespec_ex const timestamp_str(msg.get_timespec_parameter(communicatord::g_name_communicatord_param_timestamp));
 
     communicatord::loadavg_item item;
@@ -3962,7 +3962,7 @@ void server::process_load_balancing()
         ss << avg;
         load_avg.add_parameter(communicatord::g_name_communicatord_param_avg, ss.str());
         load_avg.add_parameter(
-                  communicatord::g_name_communicatord_param_my_address
+                  ed::g_name_ed_param_my_address
                 , f_connection_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
         load_avg.add_parameter(communicatord::g_name_communicatord_param_timestamp, snapdev::now());
 
@@ -4623,7 +4623,7 @@ void server::process_connected(ed::connection::pointer_t conn)
         connect.set_sent_from_server(f_server_name);
         connect.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
         connect.add_version_parameter();
-        connect.add_parameter(communicatord::g_name_communicatord_param_my_address, f_connection_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
+        connect.add_parameter(ed::g_name_ed_param_my_address, f_connection_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
         connect.add_parameter(communicatord::g_name_communicatord_param_server_name, f_server_name);
         if(!f_explicit_neighbors.empty())
         {

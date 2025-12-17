@@ -73,7 +73,6 @@ param_list=list
 param_manual_down=manual_down
 param_message=message
 param_modified=modified
-param_my_address=my_address
 param_name=name
 param_neighbors=neighbors
 param_neighbors_count=neighbors_count
