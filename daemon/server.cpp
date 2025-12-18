@@ -2861,13 +2861,13 @@ void server::msg_register(ed::message & msg)
     // tell the connection we are ready
     // (many connections use that as a trigger to start work)
     //
-    ed::message reply;
-    reply.set_command(ed::g_name_ed_cmd_ready);
-    reply.set_sent_from_server(f_server_name);
-    reply.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
-    reply.add_parameter(ed::g_name_ed_param_my_address, f_connection_address);
-    //verify_command(base, reply); -- we cannot do that here since we did not yet get the COMMANDS reply
-    conn->send_message_to_connection(reply);
+    ed::message ready;
+    ready.set_command(ed::g_name_ed_cmd_ready);
+    ready.set_sent_from_server(f_server_name);
+    ready.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
+    ready.add_parameter(ed::g_name_ed_param_my_address, f_connection_address);
+    //verify_command(base, ready); -- we cannot do that here since we did not yet get the COMMANDS reply
+    conn->send_message_to_connection(ready);
 
     // status changed for this connection
     //
