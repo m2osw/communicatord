@@ -26,7 +26,7 @@
 
 // self
 //
-#include    "server.h"
+#include    "daemon.h"
 
 
 // eventdispatcher
@@ -46,7 +46,7 @@ class interrupt
 public:
     typedef std::shared_ptr<interrupt>     pointer_t;
 
-                        interrupt(server::pointer_t cs);
+                        interrupt(daemon::pointer_t cs);
     virtual             ~interrupt() override {}
 
     // ed::signal implementation

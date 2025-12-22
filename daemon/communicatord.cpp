@@ -35,12 +35,10 @@
 #include    "gossip_connection.h"
 #include    "interrupt.h"
 #include    "listener.h"
-#include    "load_timer.h"
 #include    "ping.h"
 #include    "remote_connection.h"
 #include    "remote_communicators.h"
 #include    "service_connection.h"
-#include    "stable_clock.h"
 #include    "unix_connection.h"
 #include    "unix_listener.h"
 
@@ -183,9 +181,9 @@ const advgetopt::option g_options[] =
         , advgetopt::Flags(advgetopt::standalone_all_flags<
               advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
 #ifdef _DEBUG
-        , advgetopt::Help("log all the messages received by the communicatord and verify them (as per the COMMAND message).")
+        , advgetopt::Help("log all the messages received by the communicatord and verify them (as per the COMMANDS message).")
 #else
-        , advgetopt::Help("verify the incoming messages (as per the COMMAND message).")
+        , advgetopt::Help("verify the incoming messages (as per the COMMANDS message).")
 #endif
     ),
     advgetopt::define_option(
@@ -410,14 +408,15 @@ advgetopt::options_environment const g_options_environment =
  * \param[in] argc  The number of arguments in \p argv.
  * \param[in] argv  The command line arguments.
  */
-server::server(int argc, char * argv[])
-    : f_opts(g_options_environment)
+communicatord::communicatord(int argc, char * argv[])
+    : server(serverplugins::get_id("communicatord"))
+    , f_opts(g_options_environment)
     , f_dispatcher(std::make_shared<ed::dispatcher>(this))
 {
     snaplogger::add_logger_options(f_opts);
     ed::add_message_definition_options(f_opts);
     f_opts.finish_parsing(argc, argv);
-    if(!snaplogger::process_logger_options(f_opts, "/etc/communicatord/logger"))
+    if(!snaplogger::process_logger_options(f_opts, "/etc/communicator/logger"))
     {
         // exit on any error
         //
@@ -435,33 +434,29 @@ server::server(int argc, char * argv[])
     set_dispatcher(f_dispatcher);
 
     f_dispatcher->add_matches({
-        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_accept, &server::msg_accept),
+        DISPATCHER_MATCH(communicator::g_name_communicatord_cmd_accept, &server::msg_accept),
         // default in dispatcher: ALIVE
-        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_clock_status, &server::msg_clock_status),
-        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_cluster_status, &server::msg_cluster_status),
+        DISPATCHER_MATCH(communicator::g_name_communicatord_cmd_clock_status, &server::msg_clock_status),
+        DISPATCHER_MATCH(communicator::g_name_communicatord_cmd_cluster_status, &server::msg_cluster_status),
         DISPATCHER_MATCH(ed::g_name_ed_cmd_commands, &server::msg_commands),
-        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_connect, &server::msg_connect),
-        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_disconnect, &server::msg_disconnect),
-        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_forget, &server::msg_forget),
-        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_gossip, &server::msg_gossip),
+        DISPATCHER_MATCH(communicator::g_name_communicatord_cmd_connect, &server::msg_connect),
+        DISPATCHER_MATCH(communicator::g_name_communicatord_cmd_disconnect, &server::msg_disconnect),
+        DISPATCHER_MATCH(communicator::g_name_communicatord_cmd_forget, &server::msg_forget),
+        DISPATCHER_MATCH(communicator::g_name_communicatord_cmd_gossip, &server::msg_gossip),
         // default in dispatcher: HELP
         // default in dispatcher: LEAK
-        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_listen_loadavg, &server::msg_listen_loadavg),
-        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_list_services, &server::msg_list_services),
-        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_loadavg, &server::msg_save_loadavg),
+        DISPATCHER_MATCH(communicator::g_name_communicatord_cmd_list_services, &server::msg_list_services),
         // default in dispatcher: LOG_ROTATE
-        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_public_ip, &server::msg_public_ip),
+        DISPATCHER_MATCH(communicator::g_name_communicatord_cmd_public_ip, &server::msg_public_ip),
         // default in dispatcher: QUITTING -- the default is not valid for us, we have it overridden, but no need to do anything here
         // default in dispatcher: READY
-        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_refuse, &server::msg_refuse),
-        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_register, &server::msg_register),
-        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_register_for_loadavg, &server::msg_register_for_loadavg),
+        DISPATCHER_MATCH(communicator::g_name_communicatord_cmd_refuse, &server::msg_refuse),
+        DISPATCHER_MATCH(communicator::g_name_communicatord_cmd_register, &server::msg_register),
         // default in dispatcher: RESTART
-        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_service_status, &server::msg_service_status),
+        DISPATCHER_MATCH(communicator::g_name_communicatord_cmd_service_status, &server::msg_service_status),
         // default in dispatcher: SERVICE_UNAVAILABLE
-        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_shutdown, &server::msg_shutdown),
-        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_unregister, &server::msg_unregister),
-        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_unregister_from_loadavg, &server::msg_unregister_from_loadavg),
+        DISPATCHER_MATCH(communicator::g_name_communicatord_cmd_shutdown, &server::msg_shutdown),
+        DISPATCHER_MATCH(communicator::g_name_communicatord_cmd_unregister, &server::msg_unregister),
         // default in dispatcher: STOP -- we overload the stop() which gets called by the message implementation
         // default in dispatcher: UNKNOWN -- we overload the function to include more details in the log
 
@@ -653,7 +648,7 @@ int server::init()
                                 , max_pending_connections
                                 , true
                                 , f_server_name);
-        f_local_listener->set_name("communicator local listener");
+        f_local_listener->set_name("communicator_local_listener");
         f_communicator->add_connection(f_local_listener);
 
         SNAP_LOG_CONFIGURATION
@@ -680,7 +675,7 @@ int server::init()
                 , unix_listen
                 , max_pending_connections
                 , f_server_name);
-        f_unix_listener->set_name("communicator unix listener");
+        f_unix_listener->set_name("communicator_unix_listener");
         f_communicator->add_connection(f_unix_listener);
 
         SNAP_LOG_CONFIGURATION
@@ -769,7 +764,7 @@ int server::init()
                     , max_pending_connections
                     , false
                     , f_server_name);
-            f_remote_listener->set_name("communicator remote listener");
+            f_remote_listener->set_name("communicator_remote_listener");
             f_communicator->add_connection(f_remote_listener);
 
             SNAP_LOG_CONFIGURATION
@@ -896,7 +891,7 @@ int server::init()
                     , max_pending_connections
                     , false
                     , f_server_name));
-            sl->set_name("communicator secure listener");
+            sl->set_name("communicator_secure_listener");
             sl->set_username(username);
             sl->set_password(password);
             f_communicator->add_connection(sl);
@@ -936,7 +931,7 @@ int server::init()
         {
             p->set_secret_code(f_opts.get_string("signal-secret"));
         }
-        p->set_name("communicator messenger (UDP)");
+        p->set_name("communicator_messenger_udp");
         f_ping = p;
         if(!f_communicator->add_connection(f_ping))
         {
@@ -952,12 +947,6 @@ int server::init()
                 << "\"."
                 << SNAP_LOG_SEND;
         }
-    }
-
-    {
-        f_loadavg_timer = std::make_shared<load_timer>(shared_from_this());
-        f_loadavg_timer->set_name("communicator load balancer timer");
-        f_communicator->add_connection(f_loadavg_timer);
     }
 
     // transform the --my-address to an addr::addr object
@@ -1260,7 +1249,7 @@ bool server::forward_message(ed::message & msg)
                                         : msg.get_server());
     std::string const service(msg.get_service());
 
-#if 0
+#if 1
 SNAP_LOG_VERBOSE
 << "---------------- forward message ["
 << msg.get_command()
@@ -1268,6 +1257,8 @@ SNAP_LOG_VERBOSE
 << server_name
 << "] / ["
 << service
+<< "] <- ["
+<< communicatord::g_name_communicatord_service_private_broadcast
 << "]"
 << SNAP_LOG_SEND;
 #endif
@@ -1296,10 +1287,16 @@ SNAP_LOG_VERBOSE
                 << SNAP_LOG_SEND;
             return false;
         }
+SNAP_LOG_ERROR
+<< "so it looks like we want to broadcast but..."
+<< SNAP_LOG_SEND;
         broadcast_message(msg);
         return true;
     }
 
+SNAP_LOG_ERROR
+<< "but we don't broadcast?!?"
+<< SNAP_LOG_SEND;
     base_connection::vector_t accepting_remote_connections;
     bool const all_servers(server_name.empty()
                 || server_name == communicatord::g_name_communicatord_server_any);
@@ -1314,14 +1311,29 @@ SNAP_LOG_VERBOSE
         base_connection::pointer_t base_conn(std::dynamic_pointer_cast<base_connection>(nc));
         if(base_conn == nullptr)
         {
+SNAP_LOG_ERROR
+<< "---[forward]--- ignore non base-connection ["
+<< nc->get_name()
+<< "]"
+<< SNAP_LOG_SEND;
             continue;
         }
+SNAP_LOG_ERROR
+<< "---[forward]--- test base-connection ["
+<< nc->get_name()
+<< "]"
+<< SNAP_LOG_SEND;
 
         // verify that there is a server name in all connections
         // (if not we have a bug somewhere else)
         //
         if(base_conn->get_server_name().empty())
         {
+SNAP_LOG_ERROR
+<< "---[forward]--- verify server name ["
+<< nc->get_name()
+<< "]"
+<< SNAP_LOG_SEND;
             if(!is_debug())
             {
                 // ignore in non-debug versions because a throw
@@ -1374,8 +1386,16 @@ SNAP_LOG_VERBOSE
 
         bool try_remote(true);
         if(all_servers
+        || server_name == communicatord::g_name_communicatord_service_private_broadcast
         || server_name == base_conn->get_server_name())
         {
+SNAP_LOG_ERROR
+<< "---[forward]--- server name match ["
+<< nc->get_name()
+<< "] server name=["
+<< server_name
+<< "]"
+<< SNAP_LOG_SEND;
             bool is_service(false);
             {
                 service_connection::pointer_t conn(std::dynamic_pointer_cast<service_connection>(nc));
@@ -1420,6 +1440,11 @@ SNAP_LOG_VERBOSE
 
                         if(verify_command(base_conn, msg))
                         {
+SNAP_LOG_ERROR
+<< "send message to a connection [TBD"
+//<< base_conn->get_name()
+<< "]"
+<< SNAP_LOG_SEND;
                             base_conn->send_message_to_connection(msg);
                         }
                     }
@@ -1448,6 +1473,11 @@ SNAP_LOG_VERBOSE
         {
             try_remote = remote_servers;
         }
+SNAP_LOG_ERROR
+<< "---[forward]--- local did not work -- try remote? [no name"
+//<< nc->get_name()
+<< "] -> " << std::boolalpha << try_remote
+<< SNAP_LOG_SEND;
         if(try_remote)
         {
             // TODO: limit sending to remote only if they have that service?
@@ -1476,13 +1506,23 @@ SNAP_LOG_VERBOSE
             }
         }
     }
+SNAP_LOG_ERROR
+<< "---[forward]--- check something else? ["
+<< service
+<< "] and server=["
+<< server_name
+<< "] from local services? all_servers=" << std::boolalpha << all_servers
+<< SNAP_LOG_SEND;
 
-    if((all_servers || server_name == f_server_name)
+    if((all_servers || server_name == f_server_name || server_name == communicatord::g_name_communicatord_service_private_broadcast)
     && f_local_services_list.find(service) != f_local_services_list.end())
     {
         // its a service that is expected on this computer, but it is not
         // running right now... so cache the message
         //
+SNAP_LOG_ERROR
+<< "---[forward]--- so we found a local service?"
+<< SNAP_LOG_SEND;
         cache_message_t const cached(f_local_message_cache.cache_message(msg));
         if(cached == cache_message_t::CACHE_MESSAGE_REPLY)
         {
@@ -1633,24 +1673,33 @@ bool server::check_broadcast_message(ed::message const & msg)
 bool server::communicator_message(ed::message & msg)
 {
     std::string const server_name(msg.get_server());
-    if(!server_name.empty() 
+SNAP_LOG_WARNING << "--- server name = [" << server_name << "] -- [" << f_server_name << "]" << SNAP_LOG_SEND;
+    if(!server_name.empty()
     && server_name != communicatord::g_name_communicatord_server_me       // this is an abbreviation meaning "f_server_name"
-    && server_name != communicatord::g_name_communicatord_server_any)
+    && server_name != communicatord::g_name_communicatord_server_any
+    && server_name != f_server_name)
     {
         // message is not for the communicatord server
         //
+SNAP_LOG_WARNING << "--- server test failed for communicator test?" << SNAP_LOG_SEND;
         return false;
     }
 
+    // TBD: I think that if server_name == f_server_name then the service
+    //      name should be defined (i.e. not empty())
+    //
     std::string const service(msg.get_service());
+SNAP_LOG_WARNING << "--- service name = [" << service << "] -- [" << communicatord::g_name_communicatord_service_communicatord << "]" << SNAP_LOG_SEND;
     if(!service.empty()
     && service != communicatord::g_name_communicatord_service_communicatord)
     {
         // message is directed to another service
         //
+SNAP_LOG_WARNING << "--- service test failed for communicator test?" << SNAP_LOG_SEND;
         return false;
     }
 
+SNAP_LOG_WARNING << "--- test past: it is for the communicator." << SNAP_LOG_SEND;
     return true;
 }
 
@@ -1858,12 +1907,14 @@ void server::msg_accept(ed::message & msg)
 
 void server::msg_clock_status(ed::message & msg)
 {
+SNAP_LOG_WARNING << "--- msg_clock_status() called..." << SNAP_LOG_SEND;
     base_connection::pointer_t conn(msg.user_data<base_connection>());
     if(conn == nullptr)
     {
         return;
     }
 
+SNAP_LOG_WARNING << "--- msg_clock_status() with valid user connection..." << SNAP_LOG_SEND;
     send_clock_status(std::dynamic_pointer_cast<ed::connection>(conn));
 }
 
@@ -2890,24 +2941,6 @@ void server::msg_register(ed::message & msg)
 }
 
 
-void server::msg_register_for_loadavg(ed::message & msg)
-{
-    if(!is_tcp_connection(msg))
-    {
-        return;
-    }
-
-    base_connection::pointer_t conn(msg.user_data<base_connection>());
-    if(conn == nullptr)
-    {
-        return;
-    }
-
-    conn->set_wants_loadavg(true);
-    f_loadavg_timer->set_enable(true);
-}
-
-
 void server::msg_service_status(ed::message & msg)
 {
     if(!msg.has_parameter(communicatord::g_name_communicatord_param_service))
@@ -3015,6 +3048,11 @@ void server::msg_unregister(ed::message & msg)
         // now remove the service name
         // (send_status() above needs the name to still be in place!)
         //
+        SNAP_LOG_VERBOSE
+            << "removing name of \""
+            << c->get_name()
+            << "\" connection since it was successfully UNREGISTERed"
+            << SNAP_LOG_SEND;
         c->set_name(std::string());
 
         // get rid of that connection now (it is faster than
@@ -3022,41 +3060,6 @@ void server::msg_unregister(ed::message & msg)
         // list of connections on the next loop).
         //
         f_communicator->remove_connection(c);
-    }
-}
-
-
-void server::msg_unregister_from_loadavg(ed::message & msg)
-{
-    if(!is_tcp_connection(msg))
-    {
-        return;
-    }
-
-    base_connection::pointer_t conn(msg.user_data<base_connection>());
-    if(conn == nullptr)
-    {
-        return;
-    }
-
-    conn->set_wants_loadavg(false);
-
-    // check whether all connections are now unregistered
-    //
-    ed::connection::vector_t const & all_connections(f_communicator->get_connections());
-    if(all_connections.end() == std::find_if(
-            all_connections.begin(),
-            all_connections.end(),
-            [](auto const & c)
-            {
-                base_connection::pointer_t b(std::dynamic_pointer_cast<base_connection>(c));
-                return b->wants_loadavg();
-            }))
-    {
-        // no more connections requiring LOADAVG messages
-        // so stop the timer
-        //
-        f_loadavg_timer->set_enable(false);
     }
 }
 
@@ -3072,7 +3075,7 @@ void server::broadcast_message(
     int hops(0);
     time_t timeout(0);
 
-    // note: the "broacast_msgid" is required when we end up sending that
+    // note: the "broadcast_msgid" is required when we end up sending that
     //       message forward to some other computers; so we have to go
     //       through that if() block; however, the timeout was already
     //       already checked, so we probably would not need it to do
@@ -3188,29 +3191,79 @@ void server::broadcast_message(
         bool const remote(hops < 5 && (all || destination == communicatord::g_name_communicatord_service_private_broadcast));
 
         ed::connection::vector_t const & connections(f_communicator->get_connections());
+SNAP_LOG_WARNING
+<< "broadcasting message "
+<< msg.get_command()
+<< " to "
+<< connections.size()
+<< " connections with destination ["
+<< destination
+<< "]..."
+<< SNAP_LOG_SEND;
         for(auto const & nc : connections)
         {
             // try for a service or communicatord that connected to us
             //
+            unix_connection::pointer_t unix_conn(std::dynamic_pointer_cast<unix_connection>(nc));
+            if(unix_conn != nullptr)
+            {
+                if(unix_conn->understand_command(msg.get_command())) // destination: "*" or "?" or "."
+                {
+                    //verify_command(unix_conn, message); -- we reach this line only if the command is understood, it is therefore good
+SNAP_LOG_WARNING
+<< "forward message to ["
+<< unix_conn->get_name()
+<< "] msg=["
+<< msg.to_string()
+<< "]..."
+<< SNAP_LOG_SEND;
+                    unix_conn->send_message(msg);
+                }
+                continue;
+            }
             service_connection::pointer_t conn(std::dynamic_pointer_cast<service_connection>(nc));
+SNAP_LOG_WARNING
+<< "checking connection ["
+<< nc->get_name()
+<< "]..."
+<< SNAP_LOG_SEND;
             remote_connection::pointer_t remote_conn;
-            if(!conn)
+            if(conn == nullptr)
             {
                 remote_conn = std::dynamic_pointer_cast<remote_connection>(nc);
             }
+SNAP_LOG_WARNING
+<< "recognized connection? ["
+<< std::boolalpha << (conn != nullptr)
+<< " / "
+<< (remote_conn != nullptr)
+<< "]..."
+<< SNAP_LOG_SEND;
             bool broadcast(false);
             if(conn != nullptr)
             {
+SNAP_LOG_WARNING
+<< "local broadcasting checking ["
+<< conn->get_name()
+<< "]..."
+<< SNAP_LOG_SEND;
                 switch(conn->get_address().get_network_type())
                 {
                 case addr::network_type_t::NETWORK_TYPE_LOOPBACK:
                     // these are localhost services, avoid sending the
-                    // message is the destination does not know the
+                    // message if the destination does not know the
                     // command
                     //
                     if(conn->understand_command(msg.get_command())) // destination: "*" or "?" or "."
                     {
                         //verify_command(conn, message); -- we reach this line only if the command is understood, it is therefore good
+SNAP_LOG_WARNING
+<< "forward message to ["
+<< conn->get_name()
+<< "] msg=["
+<< msg.to_string()
+<< "]..."
+<< SNAP_LOG_SEND;
                         conn->send_message(msg);
                     }
                     break;
@@ -3276,7 +3329,7 @@ void server::broadcast_message(
             }
             if(broadcast)
             {
-                // get the IP address of the remote communicatord
+                // get the IP address of the local connection or remote communicatord
                 //
                 std::string const address((conn != nullptr
                             ? conn->get_address()
@@ -3448,6 +3501,7 @@ void server::send_clock_status(ed::connection::pointer_t reply_connection)
 {
     ed::message clock_status_msg;
 
+SNAP_LOG_WARNING << "--- send_clock_status() prepare clock status message..." << static_cast<int>(f_clock_status) << SNAP_LOG_SEND;
     clock_status_msg.set_sent_from_server(f_server_name);
     clock_status_msg.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
     clock_status_msg.set_command(communicatord::g_name_communicatord_cmd_clock_unstable);
@@ -3484,14 +3538,27 @@ void server::send_clock_status(ed::connection::pointer_t reply_connection)
 
     }
 
+SNAP_LOG_WARNING << "--- send_clock_status() check connection :" << std::boolalpha << (reply_connection != nullptr) << SNAP_LOG_SEND;
     if(reply_connection != nullptr)
     {
         // reply to a direct CLOCK_STATUS
         //
-        service_connection::pointer_t r(std::dynamic_pointer_cast<service_connection>(reply_connection));
-        if(r->understand_command(clock_status_msg.get_command()))
+        unix_connection::pointer_t unix_conn(std::dynamic_pointer_cast<unix_connection>(reply_connection));
+        if(unix_conn != nullptr)
         {
-            r->send_message(clock_status_msg);
+            if(unix_conn->understand_command(clock_status_msg.get_command()))
+            {
+                unix_conn->send_message(clock_status_msg);
+            }
+        }
+        else
+        {
+            service_connection::pointer_t conn(std::dynamic_pointer_cast<service_connection>(reply_connection));
+            if(conn != nullptr
+            && conn->understand_command(clock_status_msg.get_command()))
+            {
+                conn->send_message(clock_status_msg);
+            }
         }
     }
     else
@@ -3774,231 +3841,6 @@ void server::cluster_status(ed::connection::pointer_t reply_connection)
         << quorum
         << ")"
         << SNAP_LOG_SEND;
-}
-
-
-/** \brief Request LOADAVG messages from a communicatord.
- *
- * This function gets called whenever a local service sends us a
- * request to listen to the LOADAVG messages of a specific
- * communicatord.
- *
- * \param[in] msg  The LISTEN_LOADAVG message.
- */
-void server::msg_listen_loadavg(ed::message & msg)
-{
-    std::string const ips(msg.get_parameter(communicatord::g_name_communicatord_param_ips));
-
-    std::vector<std::string> ip_list;
-    snapdev::tokenize_string(ip_list, ips, { "," });
-
-    // we have to save those as IP addresses since the remote
-    // communicators come and go and we have to make sure
-    // that all get our REGISTER_FOR_LOADAVG message when they
-    // come back after a broken link
-    //
-    for(auto const & ip : ip_list)
-    {
-        auto it(f_registered_neighbors_for_loadavg.find(ip));
-        if(it == f_registered_neighbors_for_loadavg.end())
-        {
-            // add this one, it was not there yet
-            //
-            f_registered_neighbors_for_loadavg.insert(ip);
-
-            register_for_loadavg(ip);
-        }
-    }
-}
-
-
-void server::register_for_loadavg(std::string const & ip)
-{
-    addr::addr address(addr::string_to_addr(
-              ip
-            , "127.0.0.1"
-            , communicatord::LOCAL_PORT  // the port is ignored, use a safe default
-            , "tcp"));
-    ed::connection::vector_t const & all_connections(f_communicator->get_connections());
-    auto const & it(std::find_if(
-            all_connections.begin(),
-            all_connections.end(),
-            [address](auto const & connection)
-            {
-                remote_connection::pointer_t remote_conn(std::dynamic_pointer_cast<remote_connection>(connection));
-                if(remote_conn != nullptr)
-                {
-                    return remote_conn->get_connection_address() == address;
-                }
-                else
-                {
-                    service_connection::pointer_t service_conn(std::dynamic_pointer_cast<service_connection>(connection));
-                    if(service_conn != nullptr)
-                    {
-                        return service_conn->get_connection_address() == address;
-                    }
-                }
-
-                return false;
-            }));
-
-    if(it != all_connections.end())
-    {
-        // there is such a connection, send it a request for
-        // LOADAVG message
-        //
-        ed::message register_message;
-        register_message.set_command(communicatord::g_name_communicatord_cmd_register_for_loadavg);
-        register_message.set_sent_from_server(f_server_name);
-        register_message.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
-
-        remote_connection::pointer_t remote_conn(std::dynamic_pointer_cast<remote_connection>(*it));
-        if(remote_conn != nullptr)
-        {
-            remote_conn->send_message(register_message);
-        }
-        else
-        {
-            service_connection::pointer_t service_conn(std::dynamic_pointer_cast<service_connection>(*it));
-            if(service_conn != nullptr)
-            {
-                service_conn->send_message(register_message);
-            }
-        }
-    }
-}
-
-
-void server::msg_save_loadavg(ed::message & msg)
-{
-    std::string const avg_str(msg.get_parameter(communicatord::g_name_communicatord_param_avg));
-    std::string const my_address(msg.get_parameter(ed::g_name_ed_param_my_address));
-    snapdev::timespec_ex const timestamp_str(msg.get_timespec_parameter(communicatord::g_name_communicatord_param_timestamp));
-
-    communicatord::loadavg_item item;
-
-    // Note: we do not use the port so whatever number here is fine
-    addr::addr a(addr::string_to_addr(
-                  my_address
-                , "127.0.0.1"
-                , communicatord::LOCAL_PORT  // the port is ignore, use a safe default
-                , "tcp"));
-    a.set_port(communicatord::LOCAL_PORT); // actually force the port so in effect it is ignored
-    a.get_ipv6(item.f_address);
-
-    item.f_avg = std::stof(avg_str);
-    if(item.f_avg < 0.0)
-    {
-        return;
-    }
-
-    item.f_timestamp = timestamp_str;
-    if(snapdev::timespec_ex(item.f_timestamp) < snapdev::timespec_ex(SERVERPLUGINS_UNIX_TIMESTAMP(UTC_BUILD_YEAR, 1, 1, 0, 0, 0), 0))
-    {
-        return;
-    }
-
-    communicatord::loadavg_file file;
-    file.load();
-    file.add(item);
-    file.save();
-}
-
-
-void server::process_load_balancing()
-{
-    static bool error_emitted = false;
-    std::ifstream in;
-    in.open("/proc/loadavg", std::ios::in | std::ios::binary);
-    if(in.is_open())
-    {
-        error_emitted = false;
-
-        std::string avg_str;
-        for(;;)
-        {
-            char c;
-            in.read(&c, 1);
-            if(in.fail())
-            {
-                SNAP_LOG_ERROR
-                    << "error reading the /proc/loadavg data."
-                    << SNAP_LOG_SEND;
-                return;
-            }
-            if(std::isspace(c))
-            {
-                // we only read the first number (1 min. load avg.)
-                break;
-            }
-            avg_str += c;
-        }
-
-        // we really only need the first number, we would not know what
-        // to do with the following ones at this time...
-        // (although that could help know whether the load average is
-        // going up or down, but it's not that easy, really.)
-        //
-        // we divide by the number of processors because each computer
-        // could have a different number of processors and a load
-        // average of 1 on a computer with 16 processors really
-        // represents 1/16th of the machine capacity.
-        //
-        float const avg(std::stof(avg_str) / f_number_of_processors);
-
-        // TODO: see whether the current epsilon is good enough
-        if(std::fabs(f_last_loadavg - avg) < 0.1f)
-        {
-            // do not send if it did not change lately
-            return;
-        }
-        f_last_loadavg = avg;
-
-        ed::message load_avg;
-        load_avg.set_command(communicatord::g_name_communicatord_cmd_loadavg);
-        load_avg.set_sent_from_server(f_server_name);
-        load_avg.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
-        std::stringstream ss;
-        ss << avg;
-        load_avg.add_parameter(communicatord::g_name_communicatord_param_avg, ss.str());
-        load_avg.add_parameter(
-                  ed::g_name_ed_param_my_address
-                , f_connection_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
-        load_avg.add_parameter(communicatord::g_name_communicatord_param_timestamp, snapdev::now());
-
-        ed::connection::vector_t const & all_connections(f_communicator->get_connections());
-        std::for_each(
-                all_connections.begin(),
-                all_connections.end(),
-                [&load_avg](auto const & connection)
-                {
-                    base_connection::pointer_t base(std::dynamic_pointer_cast<base_connection>(connection));
-                    if(base
-                    && base->wants_loadavg())
-                    {
-                        remote_connection::pointer_t remote_conn(std::dynamic_pointer_cast<remote_connection>(connection));
-                        if(remote_conn != nullptr)
-                        {
-                            remote_conn->send_message(load_avg);
-                        }
-                        else
-                        {
-                            service_connection::pointer_t service_conn(std::dynamic_pointer_cast<service_connection>(connection));
-                            if(service_conn != nullptr)
-                            {
-                                service_conn->send_message(load_avg);
-                            }
-                        }
-                    }
-                });
-    }
-    else if(!error_emitted)
-    {
-        error_emitted = false;
-        SNAP_LOG_ERROR
-            << "error opening file \"/proc/loadavg\"."
-            << SNAP_LOG_SEND;
-    }
 }
 
 
@@ -4578,9 +4420,6 @@ void server::stop(bool quitting)
 
     f_communicator->remove_connection(f_ping);              // UDP/IP
     f_ping.reset();
-
-    f_communicator->remove_connection(f_loadavg_timer);     // load balancer timer
-    f_loadavg_timer.reset();
 
 //#ifdef _DEBUG
     {

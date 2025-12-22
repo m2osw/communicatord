@@ -1,7 +1,7 @@
 # Global names for the Communicator Daemon Environment
 
 introducer=name
-project=communicatord
+project=communicator
 
 [public]
 cmd_accept=ACCEPT
@@ -39,8 +39,8 @@ cmd_unreachable=UNREACHABLE
 cmd_unregister=UNREGISTER
 cmd_unregister_from_loadavg=UNREGISTER_FROM_LOADAVG
 
-# the ipwall status is required by communicatord and prinbee which both
-# are dependencies of iplock so define the name here
+# the ipwall status is required by communicator and prinbee daemons which
+# both are dependencies of iplock so define the name here
 cmd_ipwall_get_status=IPWALL_GET_STATUS
 cmd_ipwall_current_status=IPWALL_CURRENT_STATUS
 

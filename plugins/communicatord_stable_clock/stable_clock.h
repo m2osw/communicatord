@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
+// Copyright (c) 2011-2026  Made to Order Software Corp.  All Rights Reserved
 //
 // https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
@@ -47,7 +47,7 @@
  * \li CLOCK_STABLE -- the clock is considered stable, however, it may be
  *                     in the "no NTP" state, check the clock_resolution
  *                     parameter
- * \li CLOCK_UNSTABLE -- the clock was not yet checked or it the tool timed
+ * \li CLOCK_UNSTABLE -- the clock was not yet checked or the tool timed
  *                       out, the clock_error parameter is set to "checking"
  *                       or "invalid"
  *
@@ -79,6 +79,8 @@
 
 
 namespace communicator_daemon
+{
+namespace stable_clock
 {
 
 
@@ -128,5 +130,6 @@ private:
 
 
 
+} // namespace stable_clock
 } // namespace communicator_daemon
 // vim: ts=4 sw=4 et

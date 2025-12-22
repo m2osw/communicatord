@@ -58,11 +58,11 @@ namespace communicator_daemon
  * system and forward it to whichever computer that requested the
  * information.
  *
- * \param[in] cs  The communicatord server we are listening for.
+ * \param[in] l  The loadavg plugin class we are listening for.
  */
-load_timer::load_timer(server::pointer_t cs)
+load_timer::load_timer(loadavg * l)
     : timer(1'000'000LL)  // 1 second in microseconds
-    , f_server(cs)
+    , f_loadavg(l)
 {
     set_enable(false);
 }
@@ -70,7 +70,7 @@ load_timer::load_timer(server::pointer_t cs)
 
 void load_timer::process_timeout()
 {
-    f_server->process_load_balancing();
+    f_loadavg->process_load_balancing();
 }
 
 

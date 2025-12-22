@@ -286,7 +286,7 @@ void communicator::process_communicatord_options()
     // extract the scheme and segments
     //
     edhttp::uri u;
-    u.set_uri(f_opts.get_string("communicatord-listen"), true, true);
+    u.set_uri(f_opts.get_string("communicatord_listen"), true, true);
 
     std::string const scheme(u.scheme());
 

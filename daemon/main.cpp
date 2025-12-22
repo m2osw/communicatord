@@ -61,7 +61,8 @@ int main(int argc, char * argv[])
     }
     catch(advgetopt::getopt_exit const & e)
     {
-        // expected exit from the advgetopt (i.e. --help)
+        // expected exit from advgetopt (i.e. --help)
+        //
         return e.code();
     }
     catch(libexcept::exception_t const & e)

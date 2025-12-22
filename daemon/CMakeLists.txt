@@ -24,15 +24,13 @@
 set(COMMUNICATORD_SOURCE_FILES
     cache.cpp
     remote_communicators.cpp
-    server.cpp
+    communicatord.cpp
     utils.cpp
 
     # eventdispatcher connections
 
         # system
         interrupt.cpp
-        load_timer.cpp
-        stable_clock.cpp
 
         # listeners (a.k.a. servers)
         listener.cpp

@@ -28,7 +28,7 @@
 
 // self
 //
-#include    "server.h"
+//#include    "loadavg.h"
 
 
 // eventdispatcher
@@ -39,23 +39,32 @@
 
 namespace communicator_daemon
 {
+namespace loadavg
+{
 
+
+
+class loadavg;
 
 
 class load_timer
     : public ed::timer
 {
 public:
-                        load_timer(server::pointer_t cs);
+    typedef std::shared_ptr<load_timer>     pointer_t;
+
+                        load_timer(loadavg * l);
 
     // ed::timer implementation
+    //
     virtual void        process_timeout() override;
 
 private:
-    server::pointer_t   f_server = server::pointer_t();
+    loadavg *           f_loadavg = nullptr;
 };
 
 
 
+} // namespace loadavg
 } // namespace communicator_daemon
 // vim: ts=4 sw=4 et

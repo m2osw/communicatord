@@ -135,6 +135,8 @@ void unix_listener::process_accept()
             << "new client connection could not be added to the ed::communicator list of connections."
             << SNAP_LOG_SEND;
     }
+else
+SNAP_LOG_FATAL << "client unix connection was added to the ed::communicator" << SNAP_LOG_SEND;
 }
 
 

@@ -68,7 +68,7 @@ interrupt::interrupt(server::pointer_t cs)
     , f_server(cs)
 {
     unblock_signal_on_destruction();
-    set_name("communicatord interrupt");
+    set_name("communicatord_interrupt");
 }
 
 

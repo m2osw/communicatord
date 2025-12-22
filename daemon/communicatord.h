@@ -39,6 +39,12 @@
 #include    <eventdispatcher/dispatcher_support.h>
 
 
+// serverplugins
+//
+#include    <serverplugins/server.h>
+//#include    <serverplugins/signals.h>
+
+
 // advgetopt
 //
 #include    <advgetopt/advgetopt.h>
@@ -70,20 +76,21 @@ enum clock_status_t
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
-class server
-    : public std::enable_shared_from_this<server>
+class communicatord
+    : public std::enable_shared_from_this<communicatord>
     , public ed::dispatcher_support
     , public ed::connection_with_send_message
+    , public serverplugins::server
 {
 public:
-    typedef std::shared_ptr<server>     pointer_t;
+    typedef std::shared_ptr<communicatord>     pointer_t;
 
     static std::size_t const    COMMUNICATORD_MAX_CONNECTIONS = 100;
 
-                                server(int argc, char * argv[]);
-                                server(server const & src) = delete;
-    virtual                     ~server() override;
-    server &                    operator = (server const & rhs) = delete;
+                                communicatord(int argc, char * argv[]);
+                                communicatord(communicatord const & src) = delete;
+    virtual                     ~communicatord() override;
+    communicatord &             operator = (communicatord const & rhs) = delete;
 
     int                         run();
 
@@ -168,7 +175,6 @@ private:
     ed::connection::pointer_t       f_secure_listener = ed::connection::pointer_t();  // TCP/IP
     ed::connection::pointer_t       f_unix_listener = ed::connection::pointer_t();    // Unix socket
     ed::connection::pointer_t       f_ping = ed::connection::pointer_t();             // UDP/IP
-    ed::connection::pointer_t       f_loadavg_timer = ed::connection::pointer_t();    // a 1 second timer to calculate load (used to load balance)
     clock_status_t                  f_clock_status = CLOCK_STATUS_UNKNOWN;
     float                           f_last_loadavg = 0.0f;
     addr::addr                      f_connection_address = addr::addr();
@@ -178,7 +184,6 @@ private:
     advgetopt::string_set_t         f_services_heard_of_list = advgetopt::string_set_t();
     std::string                     f_explicit_neighbors = std::string();
     addr::addr::set_t               f_all_neighbors = addr::addr::set_t();
-    advgetopt::string_set_t         f_registered_neighbors_for_loadavg = advgetopt::string_set_t();
     std::shared_ptr<remote_communicators>
                                     f_remote_communicators = std::shared_ptr<remote_communicators>();
     size_t                          f_max_connections = COMMUNICATORD_MAX_CONNECTIONS;

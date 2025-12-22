@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
+// Copyright (c) 2011-2026  Made to Order Software Corp.  All Rights Reserved
 //
 // https://snapwebsites.org/project/communicatord
 // contact@m2osw.com
@@ -30,6 +30,8 @@
 //
 #include    "stable_clock.h"
 
+
+
 // communicatord
 //
 #include    <communicatord/exception.h>
@@ -52,6 +54,8 @@
 
 
 namespace communicator_daemon
+{
+namespace stable_clock
 {
 
 
@@ -365,5 +369,6 @@ void stable_clock::process_timeout()
 
 
 
+} // namespace stable_clock
 } // namespace communicator_daemon
 // vim: ts=4 sw=4 et
