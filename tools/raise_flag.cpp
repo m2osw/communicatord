@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -16,10 +16,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// communicatord
+// communicator
 //
-#include    <communicatord/flags.h>
-#include    <communicatord/version.h>
+#include    <communicator/flags.h>
+#include    <communicator/version.h>
 
 
 // as2js
@@ -161,7 +161,7 @@ advgetopt::option const g_command_line_options[] =
         , advgetopt::Flags(advgetopt::all_flags<
               advgetopt::GETOPT_FLAG_REQUIRED
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
-        , advgetopt::DefaultValue("communicatord")  // TODO: the default should be changeable
+        , advgetopt::DefaultValue("communicator")  // TODO: the default should be changeable
         , advgetopt::Help("the name of the user managing the flags at the specified location.")
     ),
     advgetopt::define_option(
@@ -170,7 +170,7 @@ advgetopt::option const g_command_line_options[] =
         , advgetopt::Flags(advgetopt::all_flags<
               advgetopt::GETOPT_FLAG_REQUIRED
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
-        , advgetopt::DefaultValue("communicatord")  // TODO: the default should be changeable
+        , advgetopt::DefaultValue("communicator")  // TODO: the default should be changeable
         , advgetopt::Help("the name of the group managing the flags at the specified location.")
     ),
     advgetopt::define_option(
@@ -234,7 +234,7 @@ advgetopt::group_description const g_group_descriptions[] =
 #pragma GCC diagnostic ignored "-Wpedantic"
 advgetopt::options_environment const g_options_environment =
 {
-    .f_project_name = "communicatord",
+    .f_project_name = "communicator",
     .f_group_name = "communicatord",
     .f_options = g_command_line_options,
     .f_options_files_directory = nullptr,
@@ -248,7 +248,7 @@ advgetopt::options_environment const g_options_environment =
     .f_help_header = "Usage: %p [-<opt>] [<unit> <section> <flag> [<message>]]\n"
                      "where -<opt> is one or more of:",
     .f_help_footer = "%c",
-    .f_version = COMMUNICATORD_VERSION_STRING,
+    .f_version = COMMUNICATOR_VERSION_STRING,
     .f_license = "GNU GPL v3",
     .f_copyright = "Copyright (c) 2018-"
                    SNAPDEV_STRINGIZE(UTC_BUILD_YEAR)
@@ -283,8 +283,8 @@ private:
     int                         list_in_json();
 
     advgetopt::getopt           f_opts;
-    communicatord::flag::pointer_t
-                                f_flag = communicatord::flag::pointer_t();
+    communicator::flag::pointer_t
+                                f_flag = communicator::flag::pointer_t();
     snapdev::as_root::pointer_t f_as_root = snapdev::as_root::pointer_t();
 };
 
@@ -295,17 +295,20 @@ raise_flag::raise_flag(int argc, char * argv[])
     snaplogger::add_logger_options(f_opts);
     f_opts.finish_parsing(argc, argv);
 
-    // become communicatord so we can save the flag file as expected
+    // become `communicator` so we can save the flag file as expected
     // and also the logger works
     //
     if(switch_user() != 0)
     {
-        throw advgetopt::getopt_exit("could not become communicatord user.", 1);
+        // TODO: use the correct name, it may be changed to something other
+        //       than communicator
+        //
+        throw advgetopt::getopt_exit("could not become `communicator` user.", 1);
     }
 
     if(!snaplogger::process_logger_options(
               f_opts
-            , "/etc/communicatord/logger"
+            , "/etc/communicator/logger"
             , std::cout
             , false))
     {
@@ -398,7 +401,7 @@ int raise_flag::down()
     }
 
     build_flag();
-    f_flag->set_state(communicatord::flag::state_t::STATE_DOWN);
+    f_flag->set_state(communicator::flag::state_t::STATE_DOWN);
     f_flag->save();
 
     return 0;
@@ -417,7 +420,7 @@ int raise_flag::up()
     }
 
     build_flag();
-    f_flag->set_state(communicatord::flag::state_t::STATE_UP);
+    f_flag->set_state(communicator::flag::state_t::STATE_UP);
     f_flag->save();
 
     return 0;
@@ -426,7 +429,7 @@ int raise_flag::up()
 
 int raise_flag::build_flag()
 {
-    f_flag = std::make_shared<communicatord::flag>(
+    f_flag = std::make_shared<communicator::flag>(
               f_opts.get_string("--", 0)    // unit
             , f_opts.get_string("--", 1)    // section
             , f_opts.get_string("--", 2));  // name
@@ -513,7 +516,7 @@ int raise_flag::switch_user()
 
 int raise_flag::count()
 {
-    communicatord::flag::list_t flags(communicatord::flag::load_flags());
+    communicator::flag::list_t flags(communicator::flag::load_flags());
     std::cout << flags.size() << std::endl;
     return flags.empty() ? 0 : 1;
 }
@@ -521,14 +524,14 @@ int raise_flag::count()
 
 int raise_flag::raised()
 {
-    communicatord::flag::list_t flags(communicatord::flag::load_flags());
+    communicator::flag::list_t flags(communicator::flag::load_flags());
     return flags.empty() ? 0 : 1;
 }
 
 
 int raise_flag::list_in_plain_text()
 {
-    communicatord::flag::list_t flags(communicatord::flag::load_flags());
+    communicator::flag::list_t flags(communicator::flag::load_flags());
 
     std::map<std::string, std::string::size_type> widths;
 
@@ -573,7 +576,7 @@ int raise_flag::list_in_plain_text()
         //widths["date"]        = std::max(widths["date"],        ...);
         //widths["modified"]    = std::max(widths["modified"],    ...);
 
-        communicatord::flag::tag_list_t const & tags(f->get_tags());
+        communicator::flag::tag_list_t const & tags(f->get_tags());
         std::string const tags_string(snapdev::join_strings(tags, ", "));
         widths["tags"] = std::max(widths["tags"], tags_string.length());
     }
@@ -649,7 +652,7 @@ int raise_flag::list_in_json()
     as2js::json json;
     as2js::json::json_value_ref root(json["flags"]);
 
-    communicatord::flag::list_t flags(communicatord::flag::load_flags());
+    communicator::flag::list_t flags(communicator::flag::load_flags());
     for(auto const & f : flags)
     {
         as2js::json::json_value_ref item(json["flag"][-1]);
@@ -664,7 +667,7 @@ int raise_flag::list_in_json()
         item["priority"] =    f->get_priority();
         item["manual"] =      f->get_manual_down();
 
-        communicatord::flag::tag_list_t const & tags(f->get_tags());
+        communicator::flag::tag_list_t const & tags(f->get_tags());
         if(!tags.empty())
         {
             as2js::json::json_value_ref tag_list(item["tags"][-1]);

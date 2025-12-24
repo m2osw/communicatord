@@ -1,6 +1,6 @@
 # Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 #
-# https://snapwebsites.org/project/communicatord
+# https://snapwebsites.org/project/communicator
 # contact@m2osw.com
 #
 # This program is free software: you can redistribute it and/or modify
@@ -20,14 +20,14 @@
 ##
 ## Documentation
 ##
-project(communicatord-documentation)
+project(communicator-documentation)
 
 find_package(SnapDoxygen)
 AddDoxygenTarget(
-    communicatord
-    ${COMMUNICATORD_VERSION_MAJOR}
-    ${COMMUNICATORD_VERSION_MINOR}
-    ${COMMUNICATORD_VERSION_PATCH}
+    communicator
+    ${COMMUNICATOR_VERSION_MAJOR}
+    ${COMMUNICATOR_VERSION_MINOR}
+    ${COMMUNICATOR_VERSION_PATCH}
 )
 
 # vim: ts=4 sw=4 et

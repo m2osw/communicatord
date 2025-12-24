@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -16,10 +16,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// communicatord
+// communicator
 //
-#include    <communicatord/names.h>
-#include    <communicatord/version.h>
+#include    <communicator/names.h>
+#include    <communicator/version.h>
 
 
 // eventdispatcher
@@ -130,7 +130,7 @@ private:
     cluster_messenger::pointer_t        f_messenger = cluster_messenger::pointer_t();
     std::string                         f_cluster_status = std::string();       // UP or DOWN
     std::string                         f_cluster_complete = std::string();     // COMPLETE or INCOMPLETE
-    size_t                              f_neighbors_count = 0;
+    std::size_t                         f_neighbors_count = 0;
 };
 #pragma GCC diagnostic pop
 
@@ -146,7 +146,7 @@ advgetopt::option const g_options[] =
         , advgetopt::Flags(advgetopt::all_flags<
               advgetopt::GETOPT_FLAG_REQUIRED
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
-        , advgetopt::DefaultValue("/etc/communicatord/communicatord.conf")
+        , advgetopt::DefaultValue("/etc/communicator/communicatord.conf")
         , advgetopt::Help("path to the communicatord configuration file.")
     ),
     advgetopt::end_options()
@@ -160,7 +160,7 @@ advgetopt::option const g_options[] =
 #pragma GCC diagnostic ignored "-Wpedantic"
 advgetopt::options_environment const g_options_environment =
 {
-    .f_project_name = "communicatord",
+    .f_project_name = "communicator",
     .f_group_name = "communicatord",
     .f_options = g_options,
     .f_options_files_directory = nullptr,
@@ -174,7 +174,7 @@ advgetopt::options_environment const g_options_environment =
     .f_help_header = "Usage: %p [-<opt>]\n"
                      "where -<opt> is one or more of:",
     .f_help_footer = "%c",
-    .f_version = COMMUNICATORD_VERSION_STRING,
+    .f_version = COMMUNICATOR_VERSION_STRING,
     .f_license = "GNU GPL v3",
     .f_copyright = "Copyright (c) 2011-"
                    SNAPDEV_STRINGIZE(UTC_BUILD_YEAR)
@@ -196,10 +196,10 @@ cluster::cluster(int argc, char * argv[])
     , f_communicator(ed::communicator::instance())
 {
     add_matches({
-        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_cluster_up, &cluster::msg_cluster_status),
-        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_cluster_down, &cluster::msg_cluster_status),
-        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_cluster_complete, &cluster::msg_cluster_complete),
-        DISPATCHER_MATCH(communicatord::g_name_communicatord_cmd_cluster_incomplete, &cluster::msg_cluster_complete),
+        DISPATCHER_MATCH(communicator::g_name_communicator_cmd_cluster_up, &cluster::msg_cluster_status),
+        DISPATCHER_MATCH(communicator::g_name_communicator_cmd_cluster_down, &cluster::msg_cluster_status),
+        DISPATCHER_MATCH(communicator::g_name_communicator_cmd_cluster_complete, &cluster::msg_cluster_complete),
+        DISPATCHER_MATCH(communicator::g_name_communicator_cmd_cluster_incomplete, &cluster::msg_cluster_complete),
     });
 
     f_opts.finish_parsing(argc, argv);
@@ -207,9 +207,10 @@ cluster::cluster(int argc, char * argv[])
     advgetopt::conf_file_setup setup(f_opts.get_string("communicatord-config"));
     f_communicatord_config = advgetopt::conf_file::get_conf_file(setup);
 
-    // TODO: convert to using the communidatord library object
+    // TODO: convert to using the communicator library object
+    //
     f_communicator_addr = addr::string_to_addr(
-                  f_communicatord_config->get_parameter(communicatord::g_name_communicatord_config_local_listen).c_str()
+                  f_communicatord_config->get_parameter(communicator::g_name_communicator_config_local_listen).c_str()
                 , "localhost"
                 , 4040
                 , "tcp");
@@ -229,10 +230,10 @@ int cluster::run()
     // an exception so this works)
     //
     ed::message register_cluster;
-    register_cluster.set_command(communicatord::g_name_communicatord_cmd_register);
+    register_cluster.set_command(communicator::g_name_communicator_cmd_register);
     register_cluster.add_parameter(
-                      communicatord::g_name_communicatord_param_service
-                    , communicatord::g_name_communicatord_service_cluster);
+                      communicator::g_name_communicator_param_service
+                    , communicator::g_name_communicator_service_cluster);
     register_cluster.add_version_parameter();
     send_message(register_cluster);
 
@@ -253,8 +254,8 @@ void cluster::ready(ed::message & msg)
     snapdev::NOT_USED(msg);
 
     ed::message clusterstatus_message;
-    clusterstatus_message.set_command(communicatord::g_name_communicatord_cmd_cluster_status);
-    clusterstatus_message.set_service(communicatord::g_name_communicatord_service_communicatord);
+    clusterstatus_message.set_command(communicator::g_name_communicator_cmd_cluster_status);
+    clusterstatus_message.set_service(communicator::g_name_communicator_service_communicatord);
     send_message(clusterstatus_message);
 }
 

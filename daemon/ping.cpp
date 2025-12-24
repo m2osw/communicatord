@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -48,14 +48,14 @@ namespace communicator_daemon
  * The messenger receives UDP messages from various sources (mainly
  * backends at this point).
  *
- * \param[in] cs  The communicator server we are listening for.
+ * \param[in] s  The communicator server we are listening for.
  * \param[in] address  The address and port to listen on. Most often it is
  *                     127.0.0.1 for the UDP because we currently only allow
  *                     for local messages.
  */
-ping::ping(server::pointer_t cs, addr::addr const & address)
+ping::ping(communicatord * s, addr::addr const & address)
     : udp_server_message_connection(address)
-    , base_connection(cs, true)
+    , base_connection(s, true)
 {
 }
 

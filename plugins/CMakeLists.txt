@@ -1,6 +1,6 @@
 # Copyright (c) 2025-2026  Made to Order Software Corp.  All Rights Reserved
 #
-# https://snapwebsites.org/project/communicatord
+# https://snapwebsites.org/project/communicator
 # contact@m2osw.com
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,19 +16,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-project(communicatord_plugins)
+project(communicator_plugins)
 
 # Find includes in corresponding build directories
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 
 # We need a common place to install the plugins
-set(PLUGIN_INSTALL_DIR lib/communicatord/plugins)
+set(PLUGIN_INSTALL_DIR lib/communicator/plugins)
 
 
 # Keep the plugins in alphabetical order for ease of management
+add_subdirectory(communicatord_check_clock)
 add_subdirectory(communicatord_loadavg)
-add_subdirectory(communicatord_stable_clock)
 
 
 # vim: ts=4 sw=4 nocindent

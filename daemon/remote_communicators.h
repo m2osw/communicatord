@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -32,7 +32,7 @@
 
 // self
 //
-#include    "server.h"
+#include    "communicatord.h"
 
 
 
@@ -58,8 +58,11 @@ public:
     typedef std::shared_ptr<remote_communicators>    pointer_t;
 
                                             remote_communicators(
-                                                  server::pointer_t communicator
+                                                  communicatord * s
                                                 , addr::addr const & my_addr);
+                                            remote_communicators(remote_communicators const &) = delete;
+
+    remote_communicators                    operator = (remote_communicators const &) = delete;
 
     addr::addr const &                      get_connection_address() const;
     void                                    add_remote_communicator(std::string const & addr_port);
@@ -80,7 +83,7 @@ private:
                                             sorted_gossip_connections_by_address_t;
 
     ed::communicator::pointer_t             f_communicator = ed::communicator::pointer_t();
-    server::pointer_t                       f_server = server::pointer_t();
+    communicatord *                         f_server = nullptr;
     addr::addr const &                      f_connection_address;
     std::int64_t                            f_last_start_date = 0;
     addr::addr::set_t                       f_all_ips = addr::addr::set_t();

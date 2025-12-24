@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -29,7 +29,7 @@
 
 // self
 //
-#include    "server.h"
+#include    "communicatord.h"
 
 
 // eventdispatcher
@@ -59,9 +59,12 @@ public:
     typedef std::vector<pointer_t>              vector_t;
 
                                 base_connection(
-                                      server::pointer_t cs
+                                      communicatord * s
                                     , bool is_udp);
+                                base_connection(base_connection const &) = delete;
     virtual                     ~base_connection();
+
+    base_connection &           operator = (base_connection const &) = delete;
 
     void                        connection_started();
     time_t                      get_connection_started() const;
@@ -98,7 +101,7 @@ public:
     virtual int                 get_socket() const = 0;
 
 protected:
-    server::pointer_t           f_server = server::pointer_t();
+    communicatord *             f_server = nullptr;
 
 private:
     advgetopt::string_set_t     f_understood_commands = advgetopt::string_set_t();

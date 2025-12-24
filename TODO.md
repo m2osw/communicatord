@@ -1,4 +1,9 @@
 
+* Add support to easily allow additional command line options for plugins
+  (i.e. through .ini files as done in the sitter; code that needs to be
+  moved to the advgetopt library so we can just load a set of .ini files
+  from a folder and voilà)
+
 * Use bare pointers for child connections
 
   Look into the daemon to replace the shared pointers within children with
@@ -12,6 +17,9 @@
 
   i.e. right now, if we quit because of an exception, we do not do a good
   job at cleaning up the server.
+
+* Look at configuration paths, I think many are "unexpected" (i.e. still
+  use "communicatord.d" for example, when it should be "communicator.d")
 
 * Properly test password usage and requirements
 
@@ -87,12 +95,14 @@
          (2) is the value valid for that parameter? [PARTIAL]
          (3) are required parameter present? [DONE]
          (4) make sure message definitions do not reuse "global" parameters
-             (i.e. cache=no, transmission_status=failure, etc.)
+             (i.e. `cache=no`, `transmission_status=failure`, etc.)
          (5) support a way to define "global" parameters
          (6) whether the message supports broadcasting or not
+         (7) whether a message is local or cluster wide
 
-  For (2) we only support a generic test at the moment (i.e. is it an
-  integer? but not a more detailed test i.e. is it between 0 and 100).
+  For (2) we only support generic tests at the moment (i.e. is it an
+  integer, IP address, ... but not a more detailed test
+  i.e. is that integer between 0 and 100).
 
 * Time Accuracy in your Cluster
 
@@ -107,10 +117,12 @@
   accuracy should be much higher. This may not always be possible, though,
   especially on really large networks which would require separate data
   centers. In that case, having a tool to verify that our computers are all
-  in sync. is certain quite important.
+  in sync. is certainly quite important.
 
   Note that the sitter is already setup to verify that some NTP system is
-  up and running your your computer.
+  up and running your computer. The communicator daemon also has its own
+  implementation checking the local clock to make sure there is an NTP
+  system and that system is UP.
 
 * Broadcast only if message supported
 
@@ -124,7 +136,7 @@
   The snaprfs wants to send a message to all the other snaprfs running on the
   cluster. To do so, we should be able to indicate "snaprfs" as the service
   name, only if we do that we'll have the message sent to one "snaprfs"
-  (probably ourself). The idea here would be to look into a way to (1) do
+  (probably ourselves). The idea here would be to look into a way to (1) do
   a broadcast and (2) specify the service so we do not try to send it to
   all registered services instead limit the sending to remote services.
 

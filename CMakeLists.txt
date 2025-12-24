@@ -1,6 +1,6 @@
 # Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 #
-# https://snapwebsites.org/project/communicatord
+# https://snapwebsites.org/project/communicator
 # contact@m2osw.com
 #
 # This program is free software: you can redistribute it and/or modify
@@ -21,7 +21,7 @@ cmake_minimum_required(VERSION 3.10.2)
 ##
 ## communicator RPC project
 ##
-project(communicatord_project)
+project(communicator_project)
 
 find_package(AdvGetOpt                REQUIRED)
 find_package(As2Js                    REQUIRED)
@@ -38,15 +38,16 @@ find_package(SnapDev                  REQUIRED)
 find_package(SnapLogger               REQUIRED)
 find_package(VerifyMessageDefinitions REQUIRED)
 
-SnapGetVersion(COMMUNICATORD ${CMAKE_CURRENT_SOURCE_DIR})
+SnapGetVersion(COMMUNICATOR ${CMAKE_CURRENT_SOURCE_DIR})
 
 include_directories(
     ${PROJECT_SOURCE_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-add_subdirectory(communicatord)      # helper library
+add_subdirectory(communicator )      # helper library
 add_subdirectory(daemon       )      # communicator service
+add_subdirectory(plugins      )      # plugins for the communicator service
 add_subdirectory(cmake        )      # find helper library
 #add_subdirectory(conf         )      # configuration files
 add_subdirectory(doc          )      # various docs

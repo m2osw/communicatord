@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -17,10 +17,10 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 /** \file
- * \brief Implementation of the listener.
+ * \brief Implementation of the Unix listener.
  *
- * The listener connection is the one listening for connections from
- * local and remote services.
+ * The Unix listener connection is the one listening for connections from
+ * local services through a Unix streaming socket.
  */
 
 // self
@@ -74,7 +74,7 @@ namespace communicator_daemon
  * \warning
  * At this time the \p max_connections parameter is ignored.
  *
- * \param[in] cs  The address to the communicator server.
+ * \param[in] s  The communicator server.
  * \param[in] address  The address:port to listen on. Most often it is
  * 0.0.0.0:4040 (plain connection) or 0.0.0.0:4041 (secure connection).
  * \param[in] max_connections  The maximum number of connections to keep
@@ -83,13 +83,18 @@ namespace communicator_daemon
  * \param[in] server_name  The name of the server running this instance.
  */
 unix_listener::unix_listener(
-          server::pointer_t cs
+          communicatord * s
         , addr::addr_unix const & address
         , int max_connections
         , std::string const & server_name)
     : local_stream_server_connection(address, max_connections, true, true)
-    , f_server(cs)
+    , f_server(s)
     , f_server_name(server_name)
+{
+}
+
+
+unix_listener::~unix_listener()
 {
 }
 

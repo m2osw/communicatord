@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -21,13 +21,13 @@
  * \brief The declaration of the service class.
  *
  * The service class is the one used whenever a service connects to the
- * communicatord daemon.
+ * communicator daemon.
  */
 
 // self
 //
 #include    "base_connection.h"
-#include    "server.h"
+#include    "communicatord.h"
 
 
 // eventdispatcher
@@ -48,7 +48,7 @@ public:
     typedef std::shared_ptr<unix_connection>    pointer_t;
 
                         unix_connection(
-                                  server::pointer_t cs
+                                  communicatord * s
                                 , snapdev::raii_fd_t client
                                 , std::string const & server_name);
     virtual             ~unix_connection() override;

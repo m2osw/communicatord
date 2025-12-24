@@ -7,7 +7,7 @@
 
 if [ "$1" = "purge" ]
 then
-    ENVIRONMENT_NAME=communicatord
+    ENVIRONMENT_NAME=communicator
     PACKAGE_NAME=communicatord
     SOCKET_GROUP=communicator-user
 
@@ -50,7 +50,8 @@ then
     then
         if pgrep -G ${SOCKET_GROUP} > /dev/null
         then
-            echo "warning: Cannot delete group '${SOCKET_GROUP}' because there are still processes running using this group!"
+            echo "warning: Cannot delete group '${SOCKET_GROUP}' because there are still processes running using that group!"
+            echo "warning: Once down with these processes run: 'delgroup ${SOCKET_GROUP}'"
         else
             delgroup --quiet ${SOCKET_GROUP} > /dev/null || true
         fi

@@ -1,6 +1,6 @@
 # Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 #
-# https://snapwebsites.org/project/communicatord
+# https://snapwebsites.org/project/communicator
 # contact@m2osw.com
 #
 # This program is free software: you can redistribute it and/or modify
@@ -19,9 +19,9 @@
 AtomicNames(names.an)
 
 ##
-## communicatord library
+## communicator library
 ##
-project(communicatord)
+project(communicator)
 
 # Put the version in the header file
 configure_file(
@@ -55,16 +55,17 @@ target_link_libraries(${PROJECT_NAME}
     ${EVENTDISTPACHER_LIBRARIES}
     ${LIBADDR_LIBRARIES}
     ${LIBEXCEPT_LIBRARIES}
+    ${SERVERPLUGINS_LIBRARIES}
     ${SNAPLOGGER_LIBRARIES}
 )
 
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
     VERSION
-        ${COMMUNICATORD_VERSION_MAJOR}.${COMMUNICATORD_VERSION_MINOR}
+        ${COMMUNICATOR_VERSION_MAJOR}.${COMMUNICATOR_VERSION_MINOR}
 
     SOVERSION
-        ${COMMUNICATORD_VERSION_MAJOR}
+        ${COMMUNICATOR_VERSION_MAJOR}
 )
 
 install(
@@ -91,7 +92,7 @@ install(
         ${CMAKE_CURRENT_BINARY_DIR}/version.h
 
     DESTINATION
-        include/communicatord
+        include/communicator
 )
 
 

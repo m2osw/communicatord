@@ -2,6 +2,6 @@
 
 # Where to place your .service files
 #
-COMMUNICATORD_SERVICES_DIR=/usr/share/communicatord/services
+COMMUNICATOR_SERVICES_DIR=/usr/share/communicator/services
 
 # vim: syntax=sh

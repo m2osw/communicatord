@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -17,12 +17,12 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 /** \file
- * \brief Implementation of the Communicator service connection.
+ * \brief Implementation of the Unix service connection.
  *
- * A service is a local daemon offering a service to our system. Such
- * as service connections to the communicatord daemon via the local
- * TCP connection and uses that connection to register itself and
- * then send messages to other services wherever they are in the network.
+ * A local service can connect to the communicator daemon via this Unix
+ * connection. This is practical since a Unix connection is safe from
+ * remote attacks and also it is really fast and much less likely to
+ * inadvertently be blocked by the firewall.
  */
 
 // self
@@ -31,9 +31,9 @@
 
 
 
-// communicatord
+// communicator
 //
-#include    <communicatord/names.h>
+#include    <communicator/names.h>
 
 
 // last include
@@ -50,9 +50,9 @@ namespace communicator_daemon
 /** \class unix_connection
  * \brief Listen for messages.
  *
- * The communicatord TCP connection simply listen for process_message()
+ * The communicatord Unix connection simply listen for process_message()
  * callbacks and processes those messages by calling the process_message()
- * of the connections class.
+ * of the connection class.
  *
  * It also listens for disconnections so it can send a new STATUS command
  * whenever the connection goes down.
@@ -64,38 +64,24 @@ namespace communicator_daemon
  * The constructor of the service connection expects a socket that
  * was just accept()'ed.
  *
- * The communicatord daemon listens on to two different ports
- * and two different addresses on those ports:
+ * The communicatord daemon listens through a socket files created under
+ * `/run/communicator/...`. By default, the socket is named
+ * `communicatord.sock`. It uses that specific folder because it gets
+ * created with the correct user and group ownership and that allows the
+ * daemon to make use of that folder for writing.
  *
- * \li TCP 127.0.0.1:4040 -- this address is expected to be used by all the
- * local services
- *
- * \li TCP 0.0.0.0:4040 -- this address is expected to be used by remote
- * communicators; it is often changed to a private network IP
- * address such as 192.168.0.1 to increase safety. However, if your
- * cluster spans multiple data centers, it will not be possible to
- * use a private network IP address.
- *
- * \li UDP 127.0.0.1:4041 -- this special port is used to accept UDP
- * signals sent to the communicatord; UDP signals are most often
- * used to very quickly send signals without having to have a full
- * TCP connection to a daemon
- *
- * The connections happen on 127.0.0.1 are fully trusted. Connections
- * happening on 0.0.0.0 are generally viewed as tainted.
- *
- * \param[in] cs  The communicator server (i.e. parent)
+ * \param[in] s  The communicator server (i.e. parent).
  * \param[in] client  The socket that was just returned by the accept()
  *                    command.
  * \param[in] server_name  The name of the server we are running on
- *                         (i.e. generally your hostname.)
+ *                         (i.e. generally your hostname).
  */
 unix_connection::unix_connection(
-          server::pointer_t cs
+          communicatord * s
         , snapdev::raii_fd_t client
         , std::string const & server_name)
     : local_stream_server_client_message_connection(std::move(client))
-    , base_connection(cs, false)
+    , base_connection(s, false)
     , f_server_name(server_name)
 {
 }
@@ -126,7 +112,7 @@ unix_connection::~unix_connection()
     // make sure that if we had a connection understanding STATUS
     // we do not send that status
     //
-    remove_command(communicatord::g_name_communicatord_cmd_status);
+    remove_command(communicator::g_name_communicator_cmd_status);
 
     // now ask the server to send a new STATUS to all connections
     // that understand that message; we pass our pointer since we
@@ -224,9 +210,9 @@ void unix_connection::process_hup()
         //       process_invalid(), process_error(), process_timeout()?
         //
         ed::message hangup;
-        hangup.set_command(communicatord::g_name_communicatord_cmd_hangup);
-        hangup.set_service(communicatord::g_name_communicatord_service_local_broadcast);
-        hangup.add_parameter(communicatord::g_name_communicatord_param_server_name, get_server_name());
+        hangup.set_command(communicator::g_name_communicator_cmd_hangup);
+        hangup.set_service(communicator::g_name_communicator_service_local_broadcast);
+        hangup.add_parameter(communicator::g_name_communicator_param_server_name, get_server_name());
         f_server->broadcast_message(hangup);
 
         f_server->cluster_status(shared_from_this());

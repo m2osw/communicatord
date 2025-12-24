@@ -1,0 +1,21 @@
+#!/usr/bin/dh-exec
+
+# Service, Scripts, Library
+#
+debian/tmp/usr/bin/cluster-status                                     usr/bin/
+debian/tmp/usr/bin/message                                            usr/bin/
+debian/tmp/usr/bin/raise-flag                                         usr/bin/
+debian/tmp/usr/bin/timedate-wait                                      usr/bin/
+#debian/tmp/usr/lib/snapmanager/manager_plugins/libcommunicator.so         usr/lib/snapmanager/manager_plugins/
+debian/tmp/usr/lib/libcommunicator.so.*                               usr/lib
+debian/tmp/usr/share/eventdispatcher/messages                         usr/share/eventdispatcher/messages/
+
+# Configuration Files
+#
+conf/flags.conf                                                       etc/communicator/
+conf/logger/raise-flag.conf                                           usr/share/snaplogger/etc/
+
+# README.md
+#
+conf/conf-README.md                                                => etc/communicator/communicator.d/README.md
+conf/ssl-README.md                                                 => etc/communicator/ssl/README.md

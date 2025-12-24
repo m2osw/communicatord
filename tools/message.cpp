@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -17,11 +17,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-// communicatord
+// communicator
 //
-#include    <communicatord/communicator.h>
-#include    <communicatord/names.h>
-#include    <communicatord/version.h>
+#include    <communicator/communicator.h>
+#include    <communicator/names.h>
+#include    <communicator/version.h>
 
 
 // eventdispatcher
@@ -130,7 +130,7 @@ namespace
 
 
 constexpr char const * g_history_file = "~/.message_history";
-constexpr char const * g_gui_command = "/var/lib/communicatord/sendmessage.gui";
+constexpr char const * g_gui_command = "/var/lib/communicator/sendmessage.gui";
 
 
 const advgetopt::option g_command_line_options[] =
@@ -240,7 +240,7 @@ advgetopt::group_description const g_group_descriptions[] =
 
 char const * const g_configuration_directories[] =
 {
-    "/etc/communicatord",
+    "/etc/communicator",
     nullptr
 };
 
@@ -264,7 +264,7 @@ advgetopt::options_environment const g_command_line_options_environment =
     .f_help_header = "Usage: %p [-<opt>] [<message> ...]\n"
                      "where -<opt> is one or more of:",
     .f_help_footer = "%c",
-    .f_version = COMMUNICATORD_VERSION_STRING,
+    .f_version = COMMUNICATOR_VERSION_STRING,
     .f_license = "GNU GPL v3",
     .f_copyright = "Copyright (c) 2013-"
                    SNAPDEV_STRINGIZE(UTC_BUILD_YEAR)
@@ -474,10 +474,10 @@ public:
         // as the default.
         //
         //     cd://<ip>:<port> -- a plain TCP connection
-        //     cd:///run/communicatod/stream.sock -- a plain local stream connection (Unix)
+        //     cd:///run/communicator/stream.sock -- a plain local stream connection (Unix)
         //     cds://<ip>:<port> -- a secure TCP connection
         //     cdu://<ip>:<port> -- a plain UDP connection
-        //     cdu:///run/communicatord/datagram.sock -- a plain local datagram connection (Unix)
+        //     cdu:///run/communicator/datagram.sock -- a plain local datagram connection (Unix)
         //     cdb://<ip>:<port> -- a broadcasting UDP connection
         //
         try
@@ -521,7 +521,7 @@ public:
                 addr::addr const a(addr::string_to_addr(
                           f_uri.domain()
                         , "127.0.0.1"
-                        , communicatord::LOCAL_PORT
+                        , communicator::LOCAL_PORT
                         , "tcp"));
                 switch(a.get_network_type())
                 {
@@ -557,7 +557,7 @@ public:
             addr::addr const a(addr::string_to_addr(
                       address
                     , "127.0.0.1"
-                    , communicatord::SECURE_PORT
+                    , communicator::SECURE_PORT
                     , "tcp"));
             switch(a.get_network_type())
             {
@@ -595,7 +595,7 @@ public:
                 addr::addr a(addr::string_to_addr(
                           address
                         , "127.0.0.1"
-                        , communicatord::UDP_PORT
+                        , communicator::UDP_PORT
                         , "udp"));
                 switch(a.get_network_type())
                 {
@@ -629,7 +629,7 @@ public:
             addr::addr const a(addr::string_to_addr(
                       address
                     , "127.0.0.1"
-                    , communicatord::UDP_PORT
+                    , communicator::UDP_PORT
                     , "udp"));
             switch(a.get_network_type())
             {
@@ -863,7 +863,7 @@ public:
         ed::udp_server_message_connection::send_message(
                       f_ip_address
                     , msg
-                    , config->get_parameter(communicatord::g_name_communicatord_config_signal_secret));
+                    , config->get_parameter(communicator::g_name_communicator_config_signal_secret));
     }
 
     void send_dgram_message(ed::message & msg)
@@ -876,7 +876,7 @@ public:
         ed::local_dgram_server_message_connection::send_message(
                       f_unix_address
                     , msg
-                    , config->get_parameter(communicatord::g_name_communicatord_config_signal_secret));
+                    , config->get_parameter(communicator::g_name_communicator_config_signal_secret));
     }
 
     connection_t set_selected_connection_type() const
@@ -884,7 +884,8 @@ public:
         return f_selected_connection_type;
     }
 
-    // call when you do /tcp and /udp in CUI/GUI
+    // called when you do /tcp and /udp in CUI/GUI
+    //
     void set_selected_connection_type(connection_t type)
     {
         if(f_selected_connection_type != type)
@@ -1194,7 +1195,7 @@ public:
         f_opts.finish_parsing(argc, argv);
         if(!snaplogger::process_logger_options(
                               f_opts
-                            , "/etc/communicatord/logger"
+                            , "/etc/communicator/logger"
                             , std::cout
                             , false))
         {
@@ -1266,14 +1267,14 @@ public:
 
     int start_gui()
     {
-        // the GUI is a separate executable wchi is installed along the
-        // communicatord-gui package so as to not impose Qt on all
+        // the GUI is a separate executable which is installed along the
+        // communicator-gui package so as to not impose Qt on all
         // servers; you probably don't need a GUI on your non-X servers
         // anyway--try the 'cui' instead
         //
         if(access(g_gui_command, R_OK | X_OK) != 0)
         {
-            std::cerr << "error: the --gui is not currently available; did you install the communicatord-gui package? -- on a server, consider using --cui instead." << std::endl;
+            std::cerr << "error: the --gui is not currently available; did you install the communicator-gui package? -- on a server, consider using --cui instead." << std::endl;
             return 1;
         }
         std::string cmd(g_gui_command);

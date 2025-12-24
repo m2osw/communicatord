@@ -28,7 +28,7 @@
 #include    "catch_main.h"
 
 
-// communicatord
+// communicator daemon
 //
 #include    <daemon/base_connection.h>
 
@@ -38,7 +38,7 @@ class test_connection
     : public communicator_daemon::base_connection
 {
 public:
-    test_connection(communicator_daemon::server::pointer_t s)
+    test_connection(communicator_daemon::communicatord * s)
         : base_connection(s, false)
     {
     }
@@ -54,7 +54,7 @@ CATCH_TEST_CASE("base_connection", "[connection]")
 {
     CATCH_START_SECTION("base_connection: verify default object")
     {
-        communicator_daemon::server::pointer_t s;
+        communicator_daemon::communicatord * s(nullptr);
         test_connection tc(s);
 
         // verify defaults

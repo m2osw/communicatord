@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2026  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -30,11 +30,12 @@
 //
 #include    "stable_clock.h"
 
+#include    "check_clock.h"
 
 
-// communicatord
+// communicator
 //
-#include    <communicatord/exception.h>
+#include    <communicator/exception.h>
 
 
 // cppprocess
@@ -55,7 +56,7 @@
 
 namespace communicator_daemon
 {
-namespace stable_clock
+namespace check_clock
 {
 
 
@@ -108,11 +109,11 @@ void reset_state(process_state_t * state)
  * The constructor creates a runner and a thread and then start the thread.
  * The runner is in charge of everything after that.
  *
- * \param[in] cs  The communicator server we are listening for.
+ * \param[in] s  The check_clock plugin we are working for.
  */
-stable_clock::stable_clock(server * cs)
+stable_clock::stable_clock(check_clock * s)
     : timer(60LL * 60LL * 1'000'000LL)  // wake up every hour, in microseconds
-    , f_server(cs)
+    , f_check_clock(s)
 {
     // get a first tick immediately (once the run() loop starts)
     //
@@ -193,7 +194,7 @@ void stable_clock::start_ntp_wait()
     ed::connection * c(dynamic_cast<ed::connection *>(this));
     if(c == nullptr)
     {
-        throw communicatord::logic_error("the stable_clock class must be used with a connection class."); // LCOV_EXCL_LINE
+        throw communicator::logic_error("the stable_clock class must be used with a connection class."); // LCOV_EXCL_LINE
     }
 
     ed::signal_child::pointer_t child_signal(ed::signal_child::get_instance());
@@ -223,7 +224,7 @@ bool stable_clock::ntp_wait_exited(
     clock_status_t s(r == 0
                 ? clock_status_t::CLOCK_STATUS_STABLE
                 : clock_status_t::CLOCK_STATUS_INVALID);
-    f_server->set_clock_status(s);
+    f_check_clock->set_clock_status(s);
 
     return true;
 }
@@ -302,7 +303,7 @@ void stable_clock::start_timedate_wait()
     ed::connection * c(dynamic_cast<ed::connection *>(this));
     if(c == nullptr)
     {
-        throw communicatord::logic_error("the stable_clock class must be used with a connection class."); // LCOV_EXCL_LINE
+        throw communicator::logic_error("the stable_clock class must be used with a connection class."); // LCOV_EXCL_LINE
     }
 
     ed::signal_child::pointer_t child_signal(ed::signal_child::get_instance());
@@ -332,7 +333,7 @@ bool stable_clock::timedate_wait_exited(
     clock_status_t s(r == 0
                 ? clock_status_t::CLOCK_STATUS_STABLE
                 : clock_status_t::CLOCK_STATUS_INVALID);
-    f_server->set_clock_status(s);
+    f_check_clock->set_clock_status(s);
 
     return true;
 }
@@ -363,12 +364,12 @@ void stable_clock::process_timeout()
         // we did not find a way to check the clock,
         // tell the user we do not have an NTP service
         //
-        f_server->set_clock_status(clock_status_t::CLOCK_STATUS_NO_NTP);
+        f_check_clock->set_clock_status(clock_status_t::CLOCK_STATUS_NO_NTP);
     }
 }
 
 
 
-} // namespace stable_clock
+} // namespace check_clock
 } // namespace communicator_daemon
 // vim: ts=4 sw=4 et

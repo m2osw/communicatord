@@ -2,25 +2,13 @@
 
 # Service, Scripts, Library
 #
-debian/tmp/usr/bin/cluster-status                                     usr/bin/
-debian/tmp/usr/bin/message                                            usr/bin/
-debian/tmp/usr/bin/raise-flag                                         usr/bin/
-debian/tmp/usr/bin/timedate-wait                                      usr/bin/
 debian/tmp/usr/sbin/communicatord                                     usr/sbin/
-#debian/tmp/usr/lib/snapmanager/manager_plugins/libcommunicator.so         usr/lib/snapmanager/manager_plugins/
-debian/tmp/usr/lib/libcommunicatord.so.*                              usr/lib
-debian/tmp/usr/share/eventdispatcher/messages                         usr/share/eventdispatcher/messages/
 
 # Configuration Files
 #
-conf/communicatord.conf                                               etc/communicatord/
-conf/confcommunicatord                                                usr/share/communicatord/
-conf/flags.conf                                                       etc/communicatord/
-conf/logger/communicatord.conf                                        usr/share/snaplogger/etc/
+conf/flags.conf                                                       etc/communicator/
 conf/logger/raise-flag.conf                                           usr/share/snaplogger/etc/
 
 # README.md
 #
-conf/conf-README.md                                                => etc/communicatord/communicatord.d/README.md
-conf/ssl-README.md                                                 => etc/communicatord/ssl/README.md
-conf/service-README.md                                             => usr/share/communicatord/services/README.md
+conf/service-README.md                                             => usr/share/communicator/services/README.md

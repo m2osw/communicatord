@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -51,12 +51,13 @@ public:
     typedef std::shared_ptr<ping>  pointer_t;
 
                         ping(
-                              server::pointer_t cs
+                              communicatord * s
                             , addr::addr const & address);
 
     virtual int         get_socket() const;
 
     // ed::udp_server_message_connection implementation
+    //
     virtual void        process_message(ed::message & msg) override;
 };
 

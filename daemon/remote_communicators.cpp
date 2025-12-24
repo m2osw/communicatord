@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -29,7 +29,7 @@
  * a remote communicatord.
  *
  * The communicatord service does not connect to other local services.
- * Instead, local services connnect to it.
+ * Instead, local services connect to it.
  */
 
 // self
@@ -40,10 +40,10 @@
 #include    "remote_connection.h"
 
 
-// communicatord
+// communicator
 //
-#include    <communicatord/communicator.h>
-#include    <communicatord/names.h>
+#include    <communicator/communicator.h>
+#include    <communicator/names.h>
 
 
 // snapdev
@@ -79,10 +79,10 @@ namespace communicator_daemon
 
 
 remote_communicators::remote_communicators(
-              server::pointer_t server
+              communicatord * s
             , addr::addr const & my_addr)
     : f_communicator(ed::communicator::instance())
-    , f_server(server)
+    , f_server(s)
     , f_connection_address(my_addr)
 {
 }
@@ -102,7 +102,7 @@ void remote_communicators::add_remote_communicator(std::string const & addr_port
     addr::addr remote_addr(addr::string_to_addr(
                   addr_port
                 , std::string()
-                , communicatord::REMOTE_PORT
+                , communicator::REMOTE_PORT
                 , "tcp"));
 
     add_remote_communicator(remote_addr);
@@ -339,9 +339,9 @@ void remote_communicators::server_unreachable(addr::addr const & remote_addr)
     // we just broadcast the IP address of the non-responding computer
     //
     ed::message unreachable;
-    unreachable.set_command(communicatord::g_name_communicatord_cmd_unreachable);
-    unreachable.set_service(communicatord::g_name_communicatord_service_local_broadcast);
-    unreachable.add_parameter(communicatord::g_name_communicatord_param_who, remote_addr.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
+    unreachable.set_command(communicator::g_name_communicator_cmd_unreachable);
+    unreachable.set_service(communicator::g_name_communicator_service_local_broadcast);
+    unreachable.add_parameter(communicator::g_name_communicator_param_who, remote_addr.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
     f_server->broadcast_message(unreachable);
 }
 

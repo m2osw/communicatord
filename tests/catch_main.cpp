@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -26,7 +26,7 @@
 
 // communicator
 //
-#include    <communicatord/version.h>
+#include    <communicator/version.h>
 
 
 // libexcept
@@ -71,7 +71,7 @@ int main(int argc, char * argv[])
 
     return SNAP_CATCH2_NAMESPACE::snap_catch2_main(
               "communicator"
-            , COMMUNICATORD_VERSION_STRING
+            , COMMUNICATOR_VERSION_STRING
             , argc
             , argv
             , []() { libexcept::set_collect_stack(libexcept::collect_stack_t::COLLECT_STACK_NO); }

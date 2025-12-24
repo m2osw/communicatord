@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -19,9 +19,9 @@
 
 // self
 //
-#include    "communicatord/loadavg.h"
+#include    "communicator/loadavg.h"
 
-#include    "communicatord/exception.h"
+#include    "communicator/exception.h"
 
 
 // snaplogger
@@ -60,15 +60,12 @@
 
 
 
-namespace communicatord
+namespace communicator
 {
 
 
 namespace
 {
-
-
-
 
 
 
@@ -342,7 +339,7 @@ std::string get_loadavg_path()
 {
     if(g_filename.empty())
     {
-        set_loadavg_path("/var/lib/communicatord");
+        set_loadavg_path("/var/lib/communicator");
     }
 
     return g_filename;
@@ -350,5 +347,5 @@ std::string get_loadavg_path()
 
 
 
-} // namespace communicatord
+} // namespace communicator
 // vim: ts=4 sw=4 et

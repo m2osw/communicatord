@@ -35,7 +35,7 @@ the controller totally effortlessly.
 
     # Basic idea at the moment...
     class MyService
-        : public communicatord::communicator("<name>")
+        : public communicator::communicator("<name>")
     {
         MyService()
             : add_communicator_options(f_opts)
@@ -57,12 +57,35 @@ It also simplifies sending message as you don't have to know everything
 about the eventdispatcher library to send messages with this library
 extension.
 
-    COMMUNICATORD_MESSAGE("COMMAND")
-        << communicatord::param("name", "value")
+## Sending a Message
+
+Here is an example on how to send a message with the current version:
+
+    ed::message msg("MESSAGE");
+    msg.add_parameter("name", "value");
+    msg.add_parameter("uri", uri);
+    connection.send_message(msg, true);
+
+**IMPORTANT NOTE:** In most cases, commands and names are statically defined
+                    values found in the `names.an` file. You should use
+                    those definition instead by including the `names.h` and
+                    then names such as:
+
+                        communicator::g_name_communicator_param_uri
+
+## Ideas
+
+### A la snaplogger
+
+Using a macro creating a class that accepts the `<<` operator:
+
+    COMMUNICATOR_MESSAGE("COMMAND")
+        << connection
+        << communicator::param("name", "value")
         << ...
-        << communicatord::cache
-        << communicatord::...
-        << COMMUNICATORD_SEND;
+        << communicator::cache
+        << communicator::...
+        << COMMUNICATOR_SEND;
 
 So, something similar to the snaplogger feature, but for messages in the
 eventdispatcher (actually, this may be a feature that can live in the
@@ -70,33 +93,25 @@ eventdispatcher in which case we could use `ED_MESSAGE` and
 `ED_SEND`, the TCP connection to the communicator would be the
 default place where these messages would go).
 
+### Using References and Functions
+
 Another idea, if we do not need a copy, would be to use a `message()`
 function which returns a reference which we can use just like the `<<`
 but the syntax would be more like:
 
     communicator.message("COMMAND").param("name", "value").cache();
 
-Thinking about it, though, it's not really any simpler than:
-
-    ed::message msg("COMMAND");
-    msg.add_parameter("name", "value");
-    connection.send_message(msg, true);
-
-**IMPORTANT NOTE:** In most cases, commands and names are statically defined
-                    values are found in the `names.an` file. You should use
-                    those definition instead by including the `names.h` and
-                    then names such as:
-
-                        communicatord::g_name_communicatord_param_uri
+Thinking about it, though, it's not really any simpler than what we currently
+have.
 
 ## Flags
 
-The `communicatord` library inheriated the ability to raise and lower
+The `communicator` library inherited the ability to raise and lower
 flags. In most cases, this is done with simple macros.
 
 First we want to raise a flag:
 
-    COMMUNICATORD_FLAG_UP(
+    COMMUNICATOR_FLAG_UP(
               "<service>"
             , "<section>"
             , "<flag>"
@@ -112,7 +127,7 @@ First we want to raise a flag:
 Except for the `save()`, the other parameters are optional. If you prefer,
 you can save the pointer and reuse it for each additional call:
 
-    auto flag(COMMUNICATORD_FLAG_UP(
+    auto flag(COMMUNICATOR_FLAG_UP(
               "<service>"
             , "<section>"
             , "<flag>"
@@ -128,7 +143,7 @@ you can save the pointer and reuse it for each additional call:
 If possible (i.e. `set_manual_down(false)`, which is the default value),
 you then can take the flag down once the alarm goes off:
 
-    COMMUNICATORD_FLAG_DOWN(
+    COMMUNICATOR_FLAG_DOWN(
               "<service>"
             , "<section>"
             , "<flag>")
@@ -136,12 +151,12 @@ you then can take the flag down once the alarm goes off:
 
 As above, you could save the pointer and call `save()` on a separate line.
 Note that using the other `set_...()` functions when dropping a flag
-is not necessary (that data will be ignored by the `save()`).
+is not necessary (that data is ignored in this case).
 
 
 # Daemon
 
-The Communicator is primarily a deamon which can graphically map your
+The Communicator is primarily a daemon which can graphically map your
 network and the location of each of your services to allow for messages to
 seamlessly travel between all the services.
 

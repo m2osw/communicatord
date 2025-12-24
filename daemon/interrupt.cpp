@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -61,14 +61,14 @@ namespace communicator_daemon
  * Specifically, it listens on the SIGINT signal, which is the equivalent
  * to the Ctrl-C.
  *
- * \param[in] cs  The communicatord we are listening for.
+ * \param[in] s  The communicator server we are listening for.
  */
-interrupt::interrupt(server::pointer_t cs)
+interrupt::interrupt(communicatord * s)
     : signal(SIGINT)
-    , f_server(cs)
+    , f_server(s)
 {
     unblock_signal_on_destruction();
-    set_name("communicatord_interrupt");
+    set_name("communicator_interrupt");
 }
 
 

@@ -1,6 +1,6 @@
 // Copyright (c) 2013-2025  Made to Order Software Corp.  All Rights Reserved.
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 // 
 // This program is free software: you can redistribute it and/or modify
@@ -32,11 +32,11 @@
 
 // self
 //
-#include    <communicatord/flags.h>
+#include    <communicator/flags.h>
 
-#include    <communicatord/exception.h>
-#include    <communicatord/names.h>
-#include    <communicatord/version.h>
+#include    <communicator/exception.h>
+#include    <communicator/names.h>
+#include    <communicator/version.h>
 
 
 // advgetopt
@@ -72,7 +72,7 @@
 
 
 
-namespace communicatord
+namespace communicator
 {
 
 
@@ -80,14 +80,14 @@ namespace
 {
 
 
-constexpr char const * const        g_communicatord_flags = "/etc/communicatord/flags.conf";
+constexpr char const * const        g_communicator_flags = "/etc/communicator/flags.conf";
 
 
 std::string get_config_param(std::string const & name, std::string const & default_value)
 {
     // TODO: fix this load, we need to support a sub-directory
     //
-    advgetopt::conf_file_setup setup(g_communicatord_flags);
+    advgetopt::conf_file_setup setup(g_communicator_flags);
     advgetopt::conf_file::pointer_t server_config(advgetopt::conf_file::get_conf_file(setup));
     if(server_config->has_parameter(name))
     {
@@ -119,7 +119,7 @@ std::string get_path_to_flag_files()
     {
         // get the path (once unless the directory does not exist)
         //
-        std::string const path(get_config_param("path", "/var/lib/communicatord/flags"));
+        std::string const path(get_config_param("path", "/var/lib/communicator/flags"));
 
         // make sure the directory exists
         //
@@ -148,8 +148,8 @@ std::string get_path_to_flag_files()
                   path.c_str()
                 , false
                 , 0775
-                , "communicatord"   // TODO: make these names come from flags.conf
-                , "communicatord");
+                , "communicator"   // TODO: make these names come from flags.conf
+                , "communicator");
             if(r != 0)
             {
                 int const e(errno);
@@ -170,7 +170,7 @@ std::string get_path_to_flag_files()
                 SNAP_LOG_ERROR
                     << "could not find the flags directory \""
                     << path
-                    << "\"; did you start communicatord yet? (it creates it if not yet present)"
+                    << "\"; did you start communicator yet? (it creates it if not yet present)"
                     << SNAP_LOG_SEND;
             }
         }
@@ -202,8 +202,8 @@ std::string get_path_to_flag_files()
  *
  * This function creates a new flag in memory.
  *
- * New flags are generally created using one of the COMMUNICATORD_FLAG_UP()
- * or the COMMUNICATORD_FLAG_DOWN() macros, which will automatically
+ * New flags are generally created using one of the COMMUNICATOR_FLAG_UP()
+ * or the COMMUNICATOR_FLAG_DOWN() macros, which will automatically
  * initialize the flag, especially the source filename, the function name,
  * and the line number where the flag is being created, and the status
  * which the macro describes.
@@ -279,71 +279,71 @@ flag::flag(std::string const & filename)
     advgetopt::conf_file_setup setup(get_filename());
     advgetopt::conf_file::pointer_t file(advgetopt::conf_file::get_conf_file(setup));
 
-    if(!file->has_parameter(communicatord::g_name_communicatord_param_unit)
-    || !file->has_parameter(communicatord::g_name_communicatord_param_section)
-    || !file->has_parameter(communicatord::g_name_communicatord_param_name)
-    || !file->has_parameter(communicatord::g_name_communicatord_param_message))
+    if(!file->has_parameter(communicator::g_name_communicator_param_unit)
+    || !file->has_parameter(communicator::g_name_communicator_param_section)
+    || !file->has_parameter(communicator::g_name_communicator_param_name)
+    || !file->has_parameter(communicator::g_name_communicator_param_message))
     {
         throw invalid_parameter("a flag file is expected to include a unit, section, and name field, along with a message field. Other fields are optional.");
     }
 
-    f_unit = file->get_parameter(communicatord::g_name_communicatord_param_unit);
-    f_section = file->get_parameter(communicatord::g_name_communicatord_param_section);
-    f_name = file->get_parameter(communicatord::g_name_communicatord_param_name);
+    f_unit = file->get_parameter(communicator::g_name_communicator_param_unit);
+    f_section = file->get_parameter(communicator::g_name_communicator_param_section);
+    f_name = file->get_parameter(communicator::g_name_communicator_param_name);
 
-    if(file->has_parameter(communicatord::g_name_communicatord_param_source_file))
+    if(file->has_parameter(communicator::g_name_communicator_param_source_file))
     {
-        f_source_file = file->get_parameter(communicatord::g_name_communicatord_param_source_file);
+        f_source_file = file->get_parameter(communicator::g_name_communicator_param_source_file);
     }
 
-    if(file->has_parameter(communicatord::g_name_communicatord_param_function))
+    if(file->has_parameter(communicator::g_name_communicator_param_function))
     {
-        f_function = file->get_parameter(communicatord::g_name_communicatord_param_function);
+        f_function = file->get_parameter(communicator::g_name_communicator_param_function);
     }
 
-    if(file->has_parameter(communicatord::g_name_communicatord_param_line))
+    if(file->has_parameter(communicator::g_name_communicator_param_line))
     {
-        f_line = std::stol(file->get_parameter(communicatord::g_name_communicatord_param_line));
+        f_line = std::stol(file->get_parameter(communicator::g_name_communicator_param_line));
     }
 
-    f_message = file->get_parameter(communicatord::g_name_communicatord_param_message);
+    f_message = file->get_parameter(communicator::g_name_communicator_param_message);
 
-    if(file->has_parameter(communicatord::g_name_communicatord_param_priority))
+    if(file->has_parameter(communicator::g_name_communicator_param_priority))
     {
-        f_priority = std::stol(file->get_parameter(communicatord::g_name_communicatord_param_priority));
+        f_priority = std::stol(file->get_parameter(communicator::g_name_communicator_param_priority));
     }
 
-    if(file->has_parameter(communicatord::g_name_communicatord_param_manual_down))
+    if(file->has_parameter(communicator::g_name_communicator_param_manual_down))
     {
-        f_manual_down = file->get_parameter(communicatord::g_name_communicatord_param_manual_down)
-                                                    == communicatord::g_name_communicatord_value_yes;
+        f_manual_down = file->get_parameter(communicator::g_name_communicator_param_manual_down)
+                                                    == communicator::g_name_communicator_value_yes;
     }
 
     time_t const now(time(nullptr));
-    if(file->has_parameter(communicatord::g_name_communicatord_param_date))
+    if(file->has_parameter(communicator::g_name_communicator_param_date))
     {
-        f_date = std::stol(file->get_parameter(communicatord::g_name_communicatord_param_date));
+        f_date = std::stol(file->get_parameter(communicator::g_name_communicator_param_date));
     }
     else
     {
         f_date = now;
     }
 
-    if(file->has_parameter(communicatord::g_name_communicatord_param_modified))
+    if(file->has_parameter(communicator::g_name_communicator_param_modified))
     {
-        f_modified = std::stol(file->get_parameter(communicatord::g_name_communicatord_param_modified));
+        f_modified = std::stol(file->get_parameter(communicator::g_name_communicator_param_modified));
     }
     else
     {
         f_modified = now;
     }
 
-    if(file->has_parameter(communicatord::g_name_communicatord_param_tags))
+    if(file->has_parameter(communicator::g_name_communicator_param_tags))
     {
         // here we use an intermediate tag_list vector so the tokenize_string
         // works then add those string in the f_tags parameter
         //
-        std::string const tags(file->get_parameter(communicatord::g_name_communicatord_param_tags));
+        std::string const tags(file->get_parameter(communicator::g_name_communicator_param_tags));
         std::vector<std::string> tag_list;
         snapdev::tokenize_string(tag_list
                       , tags
@@ -353,19 +353,19 @@ flag::flag(std::string const & filename)
         f_tags.insert(tag_list.begin(), tag_list.end());
     }
 
-    if(file->has_parameter(communicatord::g_name_communicatord_param_hostname))
+    if(file->has_parameter(communicator::g_name_communicator_param_hostname))
     {
-        f_hostname = file->get_parameter(communicatord::g_name_communicatord_param_hostname);
+        f_hostname = file->get_parameter(communicator::g_name_communicator_param_hostname);
     }
 
-    if(file->has_parameter(communicatord::g_name_communicatord_param_count))
+    if(file->has_parameter(communicator::g_name_communicator_param_count))
     {
-        f_count = std::stol(file->get_parameter(communicatord::g_name_communicatord_param_count));
+        f_count = std::stol(file->get_parameter(communicator::g_name_communicator_param_count));
     }
 
-    if(file->has_parameter(communicatord::g_name_communicatord_param_version))
+    if(file->has_parameter(communicator::g_name_communicator_param_version))
     {
-        f_version = file->get_parameter(communicatord::g_name_communicatord_param_version);
+        f_version = file->get_parameter(communicator::g_name_communicator_param_version);
     }
 }
 
@@ -373,7 +373,7 @@ flag::flag(std::string const & filename)
 /** \brief Mark this flag as beeing set by the raise-flag tool.
  *
  * The raise-flag tool calls this function to avoid an infinite loop.
- * The save() function tries to create the files as "communicatord". If that
+ * The save() function tries to create the files as "communicator". If that
  * fails, it invokes the raise-flag tool instead. That invocation does not
  * happen if this very function was called before save() is called.
  *
@@ -504,7 +504,7 @@ flag & flag::set_message(std::string const & message)
 
 /** \brief Set the error message.
  *
- * A flag is always accompagned by an error message of some sort.
+ * A flag is always accompanied by an error message of some sort.
  * For example, the sendmail backend checks whether postfix is
  * installed on that computer. If not, it raises a flag with an
  * error message saying something like this: "The sendmail backend
@@ -667,7 +667,7 @@ std::string const & flag::get_name() const
 /** \brief Retrieve the name of the source file.
  *
  * This function retrieves the source filename. This is set using the
- * macros. It helps finding the reason for the falg being raised if
+ * macros. It helps finding the reason for the flag being raised if
  * the message is not clear enough.
  *
  * \return The source file name.
@@ -767,7 +767,7 @@ std::string const & flag::get_message() const
  * If you want to increase the priority so the error shows up in an email,
  * increase the priority to at least 50. Remember that a really high priority
  * (close to 100) will increase the number of emails. Watch out as it could
- * both the admninistrators.
+ * both the administrators.
  *
  * When displaying the flags, the highest priority is used and a single
  * message is sent for all the priorities.
@@ -792,8 +792,8 @@ int flag::get_priority() const
  *
  * This function returns true if the process never brings its
  * flag down automatically. This is particularly true if the process
- * use the COMMUNICATORD_FLAG_UP() macro but never uses the corresponding
- * COMMUNICATORD_FLAG_DOWN()--corresponding as in with the same first
+ * use the COMMUNICATOR_FLAG_UP() macro but never uses the corresponding
+ * COMMUNICATOR_FLAG_DOWN()--corresponding as in with the same first
  * three strings (unit, section, name).
  *
  * \return true if the flag has to be taken down (deleted) manually.
@@ -891,18 +891,18 @@ int flag::get_count() const
 
 /** \brief Get the version used to create this flag file.
  *
- * When the flag file gets saved, the current version of the communicatord
+ * When the flag file gets saved, the current version of the communicator
  * project gets saved in the file as the "version" field. This function
  * returns that value. You can compare the value against:
  *
  * \code
  *     // dynamically get the version of the library at run time
  *     //
- *     communicatord::get_version_string()
+ *     communicator::get_version_string()
  *
  *     // statically use the version of the library at compile time
  *     //
- *     COMMUNICATORD_VERSION_STRING
+ *     COMMUNICATOR_VERSION_STRING
  * \endcode
  *
  * Note that if the file gets updated, then the version of the newest write
@@ -980,8 +980,8 @@ std::string flag::to_string() const
  *
  * \attention
  * Your implementation of the flags must make sure to use the
- * COMMUNICATORD_FLAG_UP() when an error is detected and use
- * the COMMUNICATORD_FLAG_DOWN() when the error is not detected
+ * COMMUNICATOR_FLAG_UP() when an error is detected and use
+ * the COMMUNICATOR_FLAG_DOWN() when the error is not detected
  * anymore. This is important since the file needs to disappear
  * once the problem was resolved.
  *
@@ -999,15 +999,15 @@ bool flag::save()
         return false;
     }
 
-    std::string communicator_user(get_config_param("user", "communicatord"));
-    std::string communicator_group(get_config_param("group", "communicatord"));
+    std::string communicator_user(get_config_param("user", "communicator"));
+    std::string communicator_group(get_config_param("group", "communicator"));
     if(communicator_user.empty())
     {
-        communicator_user = "communicatord";
+        communicator_user = "communicator";
     }
     if(communicator_group.empty())
     {
-        communicator_group = "communicatord";
+        communicator_group = "communicator";
     }
 
     snapdev::as_root::pointer_t safe_user;
@@ -1056,7 +1056,7 @@ bool flag::save()
                 return false;
             }
 
-            // try to become communicatord although we do not expect
+            // try to become communicator although we do not expect
             // that to ever happen here
             //
             try
@@ -1190,8 +1190,8 @@ bool flag::save()
         bool has_count(false);
         if(exists)
         {
-            has_date = file->has_parameter(communicatord::g_name_communicatord_param_date);
-            has_count = file->has_parameter(communicatord::g_name_communicatord_param_count);
+            has_date = file->has_parameter(communicator::g_name_communicator_param_date);
+            has_count = file->has_parameter(communicator::g_name_communicator_param_count);
         }
 
         std::string const now(std::to_string(time(nullptr)));
@@ -1199,52 +1199,52 @@ bool flag::save()
         // setup all the fields as required
         // (note that setting up the first one will read the file if it exists...)
         //
-        file->set_parameter(std::string(), communicatord::g_name_communicatord_param_unit,        f_unit);
-        file->set_parameter(std::string(), communicatord::g_name_communicatord_param_section,     f_section);
-        file->set_parameter(std::string(), communicatord::g_name_communicatord_param_name,        f_name);
-        file->set_parameter(std::string(), communicatord::g_name_communicatord_param_message,     f_message);
-        file->set_parameter(std::string(), communicatord::g_name_communicatord_param_priority,    std::to_string(f_priority));
-        file->set_parameter(std::string(), communicatord::g_name_communicatord_param_manual_down, f_manual_down
-                                                                                                    ? communicatord::g_name_communicatord_value_yes
-                                                                                                    : communicatord::g_name_communicatord_value_no);
-        file->set_parameter(std::string(), communicatord::g_name_communicatord_param_modified,    now);
-        file->set_parameter(std::string(), communicatord::g_name_communicatord_param_hostname,    snapdev::gethostname());
-        file->set_parameter(std::string(), communicatord::g_name_communicatord_param_version,     COMMUNICATORD_VERSION_STRING);
+        file->set_parameter(std::string(), communicator::g_name_communicator_param_unit,        f_unit);
+        file->set_parameter(std::string(), communicator::g_name_communicator_param_section,     f_section);
+        file->set_parameter(std::string(), communicator::g_name_communicator_param_name,        f_name);
+        file->set_parameter(std::string(), communicator::g_name_communicator_param_message,     f_message);
+        file->set_parameter(std::string(), communicator::g_name_communicator_param_priority,    std::to_string(f_priority));
+        file->set_parameter(std::string(), communicator::g_name_communicator_param_manual_down, f_manual_down
+                                                                                                    ? communicator::g_name_communicator_value_yes
+                                                                                                    : communicator::g_name_communicator_value_no);
+        file->set_parameter(std::string(), communicator::g_name_communicator_param_modified,    now);
+        file->set_parameter(std::string(), communicator::g_name_communicator_param_hostname,    snapdev::gethostname());
+        file->set_parameter(std::string(), communicator::g_name_communicator_param_version,     COMMUNICATOR_VERSION_STRING);
 
         if(!f_function.empty())
         {
-            file->set_parameter(std::string(), communicatord::g_name_communicatord_param_function, f_function);
+            file->set_parameter(std::string(), communicator::g_name_communicator_param_function, f_function);
         }
         if(f_line > 0)
         {
-            file->set_parameter(std::string(), communicatord::g_name_communicatord_param_line, std::to_string(f_line));
+            file->set_parameter(std::string(), communicator::g_name_communicator_param_line, std::to_string(f_line));
         }
         if(!f_source_file.empty())
         {
-            file->set_parameter(std::string(), communicatord::g_name_communicatord_param_source_file, f_source_file);
+            file->set_parameter(std::string(), communicator::g_name_communicator_param_source_file, f_source_file);
         }
         if(!has_date)
         {
             // do not update the "date" parameter if already defined
             // see the "modified" parameter, which gets set to "now" each time
             //
-            file->set_parameter(std::string(), communicatord::g_name_communicatord_param_date, std::to_string(f_date));
+            file->set_parameter(std::string(), communicator::g_name_communicator_param_date, std::to_string(f_date));
         }
         if(!f_tags.empty())
         {
-            file->set_parameter(std::string(), communicatord::g_name_communicatord_param_tags, snapdev::join_strings(f_tags, ","));
+            file->set_parameter(std::string(), communicator::g_name_communicator_param_tags, snapdev::join_strings(f_tags, ","));
         }
 
         if(has_count)
         {
             // increment existing counter by 1
             //
-            file->set_parameter(std::string(), communicatord::g_name_communicatord_param_count,
-                                std::to_string(std::stol(file->get_parameter(communicatord::g_name_communicatord_param_count)) + 1));
+            file->set_parameter(std::string(), communicator::g_name_communicator_param_count,
+                                std::to_string(std::stol(file->get_parameter(communicator::g_name_communicator_param_count)) + 1));
         }
         else
         {
-            file->set_parameter(std::string(), communicatord::g_name_communicatord_param_count, "1");
+            file->set_parameter(std::string(), communicator::g_name_communicator_param_count, "1");
         }
 
         // now save that data to file
@@ -1431,8 +1431,8 @@ flag::list_t flag::load_flags()
             // additional entries in the directory (the ignore happens because
             // of the throw in the load_flag() function.)
             //
-            auto flag(COMMUNICATORD_FLAG_UP(
-                      "communicatord"
+            auto flag(COMMUNICATOR_FLAG_UP(
+                      "communicator"
                     , "flag"
                     , "too-many-flags"
                     , "too many flags were raised, showing only the first 100,"
@@ -1454,5 +1454,5 @@ flag::list_t flag::load_flags()
 
 
 
-} // namespace communicatord
+} // namespace communicator
 // vim: ts=4 sw=4 et

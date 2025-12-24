@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -30,9 +30,9 @@
 
 
 
-// communicatord
+// communicator
 //
-#include    <communicatord/names.h>
+#include    <communicator/names.h>
 
 
 // advgetopt
@@ -92,9 +92,9 @@ namespace communicator_daemon
 cache_message_t cache::cache_message(ed::message & msg)
 {
     std::string cache_value;
-    if(msg.has_parameter(communicatord::g_name_communicatord_param_cache))
+    if(msg.has_parameter(communicator::g_name_communicator_param_cache))
     {
-        cache_value = msg.get_parameter(communicatord::g_name_communicatord_param_cache);
+        cache_value = msg.get_parameter(communicator::g_name_communicator_param_cache);
     }
 
     // convert `cache` in a map of name/value parameters

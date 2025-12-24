@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -41,8 +41,9 @@
 
 // serverplugins
 //
+#include    <serverplugins/collection.h>
 #include    <serverplugins/server.h>
-//#include    <serverplugins/signals.h>
+#include    <serverplugins/signals.h>
 
 
 // advgetopt
@@ -64,16 +65,6 @@ class base_connection;
 class remote_communicators;
 
 
-enum clock_status_t
-{
-    CLOCK_STATUS_UNKNOWN,       // i.e. we did not yet receive an answer from ntp-wait or timedate-wait
-
-    CLOCK_STATUS_NO_NTP,
-    CLOCK_STATUS_STABLE,
-    CLOCK_STATUS_INVALID,
-};
-
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
 class communicatord
@@ -93,20 +84,22 @@ public:
     communicatord &             operator = (communicatord const & rhs) = delete;
 
     int                         run();
+    std::string const &         get_server_name() const;
 
     // ed::dispatcher_support implementation
+    //
     virtual bool                dispatch_message(ed::message & msg) override;
 
     // ed::connection_with_send_message implementation
+    //
     virtual bool                send_message(ed::message & msg, bool cache = false) override;
     virtual void                stop(bool quitting) override;
 
-    void                        set_clock_status(clock_status_t status);
-    void                        send_clock_status(ed::connection::pointer_t reply_connection);
     void                        send_status(
                                           ed::connection::pointer_t connection
                                         , ed::connection::pointer_t * reply_connection = nullptr);
     std::string                 get_local_services() const;
+    addr::addr                  get_connection_address() const;
     std::string                 get_services_heard_of() const;
     void                        add_neighbors(std::string const & new_neighbors);
     void                        remove_neighbor(std::string const & neighbor);
@@ -126,6 +119,10 @@ public:
     bool                        is_debug() const;
     bool                        is_tcp_connection(ed::message & msg); // connection defined in message is TCP (or Unix) opposed to UDP
 
+    PLUGIN_SIGNAL_WITH_MODE(initialize, (advgetopt::getopt & opts), (opts), NEITHER);
+    PLUGIN_SIGNAL_WITH_MODE(terminate, (), (), NEITHER);
+    PLUGIN_SIGNAL_WITH_MODE(new_connection, (std::shared_ptr<base_connection> conn), (conn), NEITHER);
+
     void                        msg_accept(ed::message & msg);
     void                        msg_clock_status(ed::message & msg);
     void                        msg_cluster_status(ed::message & msg);
@@ -134,22 +131,19 @@ public:
     void                        msg_disconnect(ed::message & msg);
     void                        msg_forget(ed::message & msg);
     void                        msg_gossip(ed::message & msg);
-    void                        msg_listen_loadavg(ed::message & msg);
     void                        msg_list_services(ed::message & msg);
     virtual void                msg_log_unknown(ed::message & msg); // reimplementation to indicate the name of the connection when available
     void                        msg_public_ip(ed::message & msg);
     void                        msg_quitting(ed::message & msg);
     void                        msg_refuse(ed::message & msg);
     void                        msg_register(ed::message & msg);
-    void                        msg_register_for_loadavg(ed::message & msg);
-    void                        msg_save_loadavg(ed::message & msg);
     void                        msg_service_status(ed::message & msg);
     void                        msg_shutdown(ed::message & msg);
     void                        msg_unregister(ed::message & msg);
-    void                        msg_unregister_from_loadavg(ed::message & msg);
 
 private:
     int                         init();
+    void                        load_plugins();
     void                        drop_privileges();
     void                        refresh_heard_of();
     void                        register_for_loadavg(std::string const & ip);
@@ -161,7 +155,6 @@ private:
     advgetopt::getopt               f_opts;
     ed::dispatcher::pointer_t       f_dispatcher = ed::dispatcher::pointer_t();
     std::string                     f_server_name = std::string();
-    int                             f_number_of_processors = 1;
     std::string                     f_neighbors_cache_filename = std::string();
     std::string                     f_user_name = std::string();
     std::string                     f_group_name = std::string();
@@ -175,8 +168,6 @@ private:
     ed::connection::pointer_t       f_secure_listener = ed::connection::pointer_t();  // TCP/IP
     ed::connection::pointer_t       f_unix_listener = ed::connection::pointer_t();    // Unix socket
     ed::connection::pointer_t       f_ping = ed::connection::pointer_t();             // UDP/IP
-    clock_status_t                  f_clock_status = CLOCK_STATUS_UNKNOWN;
-    float                           f_last_loadavg = 0.0f;
     addr::addr                      f_connection_address = addr::addr();
     std::string                     f_local_services = std::string();
     advgetopt::string_set_t         f_local_services_list = advgetopt::string_set_t();
@@ -186,8 +177,8 @@ private:
     addr::addr::set_t               f_all_neighbors = addr::addr::set_t();
     std::shared_ptr<remote_communicators>
                                     f_remote_communicators = std::shared_ptr<remote_communicators>();
-    size_t                          f_max_connections = COMMUNICATORD_MAX_CONNECTIONS;
-    size_t                          f_total_count_sent = 0; // f_all_neighbors.size() sent along CLUSTERUP/DOWN/COMPLETE/INCOMPLETE
+    std::size_t                     f_max_connections = COMMUNICATORD_MAX_CONNECTIONS;
+    std::size_t                     f_total_count_sent = 0; // f_all_neighbors.size() sent along CLUSTERUP/DOWN/COMPLETE/INCOMPLETE
     bool                            f_shutdown = false;
     bool                            f_debug_all_messages = false;
     bool                            f_force_restart = false;
@@ -195,6 +186,8 @@ private:
     std::map<std::string, time_t>   f_received_broadcast_messages = (std::map<std::string, time_t>());
     std::string                     f_cluster_status = std::string();
     std::string                     f_cluster_complete = std::string();
+    serverplugins::collection::pointer_t
+                                    f_plugins = serverplugins::collection::pointer_t();
 };
 #pragma GCC diagnostic pop
 

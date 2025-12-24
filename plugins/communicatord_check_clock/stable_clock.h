@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2026  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -63,7 +63,7 @@
 
 // self
 //
-#include    "server.h"
+//#include    "communicatord.h"
 
 
 // eventdispatcher
@@ -80,7 +80,7 @@
 
 namespace communicator_daemon
 {
-namespace stable_clock
+namespace check_clock
 {
 
 
@@ -93,6 +93,9 @@ enum process_state_t
 };
 
 
+class check_clock;
+
+
 class stable_clock
     : public ed::timer
 {
@@ -100,7 +103,7 @@ public:
     typedef std::shared_ptr<stable_clock>   pointer_t;
     typedef std::weak_ptr<stable_clock>     weak_pointer_t;
 
-                            stable_clock(server * cs);
+                            stable_clock(check_clock * c);
                             stable_clock(stable_clock const &) = delete;
 
     stable_clock            operator = (stable_clock const &) = delete;
@@ -108,6 +111,7 @@ public:
     void                    set_timedate_wait_command(std::string const & command);
 
     // implement ed::timer
+    //
     virtual void            process_timeout() override;
 
 private:
@@ -123,13 +127,13 @@ private:
                                   ed::child_status const & status
                                 , cppprocess::process::pointer_t p);
 
-    server *                f_server = nullptr;
+    check_clock *           f_check_clock = nullptr;
     process_state_t         f_process_state = process_state_t::PROCESS_STATE_IDLE;
     std::string             f_timedate_wait_command = std::string();
 };
 
 
 
-} // namespace stable_clock
+} // namespace check_clock
 } // namespace communicator_daemon
 // vim: ts=4 sw=4 et

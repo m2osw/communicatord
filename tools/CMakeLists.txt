@@ -1,6 +1,6 @@
 # Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 #
-# https://snapwebsites.org/project/communicatord
+# https://snapwebsites.org/project/communicator
 # contact@m2osw.com
 #
 # This program is free software: you can redistribute it and/or modify
@@ -38,7 +38,7 @@ target_include_directories(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME}
-    communicatord
+    communicator
     ${ADVGETOPT_LIBRARIES}
     ${EDHTTP_LIBRARIES}
     ${EVENTDISPATCHER_LIBRARIES}
@@ -80,7 +80,7 @@ target_include_directories(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME}
-    communicatord
+    communicator
     ${ADVGETOPT_LIBRARIES}
     ${EVENTDISPATCHER_LIBRARIES}
     ${LIBADDR_LIBRARIES}
@@ -117,7 +117,7 @@ target_include_directories(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME}
-    communicatord
+    communicator
     ${ADVGETOPT_LIBRARIES}
     ${AS2JS_LIBRARIES}
     ${EDHTTP_LIBRARIES}

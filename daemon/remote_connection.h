@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -23,6 +23,8 @@
  * This is the definition of the remote communicatord connection.
  * Connection used to communicate with other communicators running
  * on other servers.
+ *
+ * This connection is expected to be encrypted.
  */
 
 // self
@@ -54,7 +56,7 @@ public:
     static uint64_t const           REMOTE_CONNECTION_TOO_BUSY_TIMEOUT  = 24LL * 60LL * 60LL * 1'000'000LL;   // 24 hours
 
                                     remote_connection(
-                                              server::pointer_t cs
+                                              communicatord * s
                                             , addr::addr const & addr
                                             , bool secure);
     virtual                         ~remote_connection() override;
@@ -70,7 +72,7 @@ public:
     addr::addr const &              get_address() const;
 
 private:
-    addr::addr                      f_address;
+    addr::addr const                f_address;
     int                             f_failures = -1;
     time_t                          f_failure_start_time = 0;
     bool                            f_flagged = false;

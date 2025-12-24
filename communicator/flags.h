@@ -1,6 +1,6 @@
 // Copyright (c) 2013-2025  Made to Order Software Corp.  All Rights Reserved.
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 // 
 // This program is free software: you can redistribute it and/or modify
@@ -29,7 +29,7 @@
 #include    <source_location>
 
 
-namespace communicatord
+namespace communicator
 {
 
 
@@ -127,17 +127,17 @@ private:
 
 
 
-#define COMMUNICATORD_FLAG_UP(unit, section, name, message)   \
-            std::make_shared<communicatord::flag>( \
-                communicatord::flag(unit, section, name) \
+#define COMMUNICATOR_FLAG_UP(unit, section, name, message)   \
+            std::make_shared<communicator::flag>( \
+                communicator::flag(unit, section, name) \
                     .set_message(message))
 
-#define COMMUNICATORD_FLAG_DOWN(unit, section, name) \
-            std::make_shared<communicatord::flag>( \
-                communicatord::flag(unit, section, name) \
-                    .set_state(communicatord::flag::state_t::STATE_DOWN))
+#define COMMUNICATOR_FLAG_DOWN(unit, section, name) \
+            std::make_shared<communicator::flag>( \
+                communicator::flag(unit, section, name) \
+                    .set_state(communicator::flag::state_t::STATE_DOWN))
 
 
 
-} // namespace communicatord
+} // namespace communicator
 // vim: ts=4 sw=4 et

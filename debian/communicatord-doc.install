@@ -1,2 +1,0 @@
-debian/tmp/usr/share/doc/communicatord/html/*    usr/share/doc/communicatord/html/
-doc/man/clusterstatus.1                          usr/share/man/man1/

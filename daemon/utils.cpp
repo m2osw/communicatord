@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -30,9 +30,9 @@
 
 
 
-// communicatord
+// communicator
 //
-#include    <communicatord/communicator.h>
+#include    <communicator/communicator.h>
 
 
 // snapdev
@@ -202,7 +202,7 @@ std::string canonicalize_neighbors(std::string const & neighbors)
     p.set_allow(addr::allow_t::ALLOW_REQUIRED_ADDRESS, true);
     p.set_allow(addr::allow_t::ALLOW_MULTI_ADDRESSES_COMMAS, true);
     p.set_allow(addr::allow_t::ALLOW_MULTI_ADDRESSES_SPACES, true);
-    p.set_default_port(communicatord::REMOTE_PORT);
+    p.set_default_port(communicator::REMOTE_PORT);
     p.set_protocol("tcp");
     addr::addr_range::vector_t list(p.parse(neighbors));
 

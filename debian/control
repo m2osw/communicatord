@@ -1,4 +1,4 @@
-Source: communicatord
+Source: communicator
 Priority: extra
 Maintainer: Alexis Wilke <alexis@m2osw.com>
 Build-Depends: cmake,
@@ -32,29 +32,38 @@ Homepage: https://snapwebsites.org/
 Vcs-Git: https://github.com/m2osw/snapcpp.git
 Vcs-Browser: https://github.com/m2osw/eventdispatcher
 
-Package: communicatord-doc
+Package: communicator-doc
 Section: doc
 Architecture: all
 Depends: ${misc:Depends}
 Description: Documentation for the communicator daemons and tools.
- The communicator service is a deamon allowing RPC like communication
+ The communicator service is a daemon allowing RPC like communication
  between services running in a cluster of servers. This package holds the
  documentation of the service.
+
+Package: communicator
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: The Communicator library, an advanced RPC system.
+ This package holds the communicator library used by clients of the
+ Communicator daemon. It allows for connecting and handling basic messages
+ without duplicating the code in each client.
 
 Package: communicatord
 Section: libs
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: The Communicator, an advanced RPC system.
- This package holds the commmunicator service which runs on all your
- computers in your cluster and allows free communication between all the
+Description: The Communicator daemon, an advanced RPC system.
+ This package holds the communicator service which runs on all your
+ computers in your cluster and allows easy communication between all the
  services running on those computers without the need to graph the location
  of each service (auto-discovery).
 
-Package: communicatord-dev
-Section: libs
+Package: communicator-dev
+Section: libdevel
 Architecture: any
-Depends: communicatord, ${shlibs:Depends}, ${misc:Depends}
+Depends: communicator, ${shlibs:Depends}, ${misc:Depends}
 Description: The Communicator headers for developers.
  This package adds the necessary files for a developer to compile and link
  against the communicator library.

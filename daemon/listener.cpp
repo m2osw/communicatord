@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -30,9 +30,9 @@
 #include    "service_connection.h"
 
 
-// communicatord
+// communicator
 //
-#include    <communicatord/names.h>
+#include    <communicator/names.h>
 
 
 // snaplogger
@@ -77,7 +77,7 @@ namespace communicator_daemon
  * \warning
  * At this time the \p max_connections parameter is ignored.
  *
- * \param[in] cs  The communicator server pointer.
+ * \param[in] s  The communicator server pointer.
  * \param[in] address  The address:port to listen on. Most often it is
  * 0.0.0.0:4040 (plain connection) or 0.0.0.0:4041 (secure connection).
  * \param[in] certificate  The filename of a PEM file with a certificate.
@@ -89,7 +89,7 @@ namespace communicator_daemon
  * \param[in] server_name  The name of the server running this instance.
  */
 listener::listener(
-          server::pointer_t cs
+          communicatord * s
         , addr::addr const & address
         , std::string const & certificate
         , std::string const & private_key
@@ -105,12 +105,17 @@ listener::listener(
                 : ed::mode_t::MODE_ALWAYS_SECURE)
             , max_connections
             , true)
-    , f_server(cs)
+    , f_server(s)
     , f_local(local)
     , f_server_name(server_name)
 {
     //set_name(...) -- this is done in the server.cpp because the listener
     //                 is used for many different type of listening
+}
+
+
+listener::~listener()
+{
 }
 
 
@@ -193,7 +198,7 @@ void listener::process_accept()
         // (but that does not affect the service name)
         //
         service->set_name(
-                  std::string(communicatord::g_name_communicatord_connection_remote_communicator_in)
+                  std::string(communicator::g_name_communicator_connection_remote_communicator_in)
                 + ": "
                 + service->get_remote_address().to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
         service->mark_as_remote();

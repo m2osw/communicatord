@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -44,7 +44,7 @@
 #include    <string_view>
 
 
-namespace communicatord
+namespace communicator
 {
 
 
@@ -53,12 +53,12 @@ constexpr int const             LOCAL_PORT = 4040;      // cd://<loopback-ip>
 constexpr int const             UDP_PORT = 4041;        // cdu://<loopback-ip> (any IP is accepted at the moment, but it's expected to be local)
 constexpr int const             REMOTE_PORT = 4042;     // cd://<private-ip>
 constexpr int const             SECURE_PORT = 4043;     // cds://<public-ip>
-constexpr std::string_view      g_communicatord_default_ip = "127.0.0.1";
-constexpr std::string_view      g_communicatord_any_ip = "0.0.0.0";
-constexpr std::string_view      g_communicatord_default_port = snapdev::integer_to_string_literal<LOCAL_PORT>.data();
-constexpr std::string_view      g_communicatord_colon = ":";
-constexpr std::string_view      g_communicatord_default_ip_port = snapdev::join_string_views<g_communicatord_default_ip, g_communicatord_colon, g_communicatord_default_port>;
-constexpr std::string_view      g_communicatord_any_ip_port = snapdev::join_string_views<g_communicatord_any_ip, g_communicatord_colon, g_communicatord_default_port>;
+constexpr std::string_view      g_communicator_default_ip = "127.0.0.1";
+constexpr std::string_view      g_communicator_any_ip = "0.0.0.0";
+constexpr std::string_view      g_communicator_default_port = snapdev::integer_to_string_literal<LOCAL_PORT>.data();
+constexpr std::string_view      g_communicator_colon = ":";
+constexpr std::string_view      g_communicator_default_ip_port = snapdev::join_string_views<g_communicator_default_ip, g_communicator_colon, g_communicator_default_port>;
+constexpr std::string_view      g_communicator_any_ip_port = snapdev::join_string_views<g_communicator_any_ip, g_communicator_colon, g_communicator_default_port>;
 
 
 
@@ -78,7 +78,7 @@ public:
     virtual                     ~communicator();
     communicator &              operator = (communicator const &) = delete;
 
-    void                        process_communicatord_options();
+    void                        process_communicator_options();
     std::string const &         service_name() const;
     void                        unregister_communicator(bool quitting);
     bool                        is_connected() const;
@@ -99,5 +99,5 @@ void request_failure(ed::message & msg);
 
 
 
-} // namespace communicatord
+} // namespace communicator
 // vim: ts=4 sw=4 et

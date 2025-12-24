@@ -1,6 +1,6 @@
 # Copyright (c) 2025-2026  Made to Order Software Corp.  All Rights Reserved
 #
-# https://snapwebsites.org/project/communicatord
+# https://snapwebsites.org/project/communicator
 # contact@m2osw.com
 #
 # This program is free software: you can redistribute it and/or modify
@@ -43,7 +43,7 @@ install(
         ${CMAKE_CURRENT_SOURCE_DIR}/
 
     DESTINATION
-        include/communicatord/plugins
+        include/communicator/plugins
 
     FILES_MATCHING PATTERN
         "*.h"

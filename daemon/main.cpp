@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@
 
 // self
 //
-#include    "server.h"
+#include    "communicatord.h"
 
 
 
@@ -56,7 +56,7 @@ int main(int argc, char * argv[])
 
     try
     {
-        communicator_daemon::server::pointer_t server(std::make_shared<communicator_daemon::server>(argc, argv));
+        communicator_daemon::communicatord::pointer_t server(std::make_shared<communicator_daemon::communicatord>(argc, argv));
         return server->run();
     }
     catch(advgetopt::getopt_exit const & e)

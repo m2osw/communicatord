@@ -1,5 +1,5 @@
 
-# Communicatord Configuration
+# Communicator Daemon Configuration
 
 To change configuration parameters we strongly suggest that you use this
 folder.
@@ -16,8 +16,8 @@ run the `communicatord` command like so:
 
     $ communicatord --configuration-filenames
     Configuration filenames:
-     . /etc/communicatord/communicatord.conf
-     . /etc/communicatord/communicatord.d/50-communicatord.conf
+     . /etc/communicator/communicatord.conf
+     . /etc/communicator/communicator.d/50-communicatord.conf
 
 The number of files may vary depending on the version and which files are
 already defined.

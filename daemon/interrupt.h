@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -26,7 +26,7 @@
 
 // self
 //
-#include    "daemon.h"
+#include    "communicatord.h"
 
 
 // eventdispatcher
@@ -46,14 +46,18 @@ class interrupt
 public:
     typedef std::shared_ptr<interrupt>     pointer_t;
 
-                        interrupt(daemon::pointer_t cs);
+                        interrupt(communicatord * s);
+                        interrupt(interrupt const &) = delete;
     virtual             ~interrupt() override {}
 
+    interrupt           operator = (interrupt const &) = delete;
+
     // ed::signal implementation
+    //
     virtual void        process_signal() override;
 
 private:
-    server::pointer_t   f_server;
+    communicatord *     f_server = nullptr;
 };
 
 

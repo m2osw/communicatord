@@ -10,23 +10,23 @@
 
 if [ "$1" = "configure" ]
 then
-    ENVIRONMENT_NAME=communicatord
+    ENVIRONMENT_NAME=communicator
     PACKAGE_NAME=communicatord
-    USER_NAME=communicatord
-    GROUP_NAME=communicatord
+    USER_NAME=communicator
+    GROUP_NAME=communicator
     SOCKET_GROUP=communicator-user
 
-    # Add communicatord user to communicator-user group
+    # Add communicator user to communicator-user group
     #
     usermod --append --groups ${SOCKET_GROUP} ${USER_NAME}
 
-    COMMUNICATORD_SECURE_CONFIGURATION_DIR=/etc/${ENVIRONMENT_NAME}/${ENVIRONMENT_NAME}.d
+    COMMUNICATOR_SECURE_CONFIGURATION_DIR=/etc/${ENVIRONMENT_NAME}/${ENVIRONMENT_NAME}.d
 
     # Create a default user editable communicatord.conf file if it does not
     # exist yet
     #
-    COMMUNICATORD_SECURE_CONFIGURATION_FILE=${COMMUNICATORD_SECURE_CONFIGURATION_DIR}/35-${PACKAGE_NAME}.conf
-    if test ! -f ${COMMUNICATORD_SECURE_CONFIGURATION_FILE}
+    COMMUNICATOR_SECURE_CONFIGURATION_FILE=${COMMUNICATOR_SECURE_CONFIGURATION_DIR}/35-${PACKAGE_NAME}.conf
+    if test ! -f ${COMMUNICATOR_SECURE_CONFIGURATION_FILE}
     then
         # When first installing, we do not have the public IP address
         # (okay, we do, but we cannot be sure which one is right because
@@ -34,19 +34,19 @@ then
         # a default file if it does not already exist and put some info
         # to make it a bit easier to deal with the matter
         #
-        echo "# Secure variables to define in a secure configuration file" >${COMMUNICATORD_SECURE_CONFIGURATION_FILE}
-        echo "#" >>${COMMUNICATORD_SECURE_CONFIGURATION_FILE}
-        echo "# See /etc/communicatord/communicatord.conf for documentation" >>${COMMUNICATORD_SECURE_CONFIGURATION_FILE}
-        echo "#" >>${COMMUNICATORD_SECURE_CONFIGURATION_FILE}
-        echo "#secure_listen=" >>${COMMUNICATORD_SECURE_CONFIGURATION_FILE}
-        echo "#signal_secret=" >>${COMMUNICATORD_SECURE_CONFIGURATION_FILE}
+        echo "# Secure variables to define in a secure configuration file" >${COMMUNICATOR_SECURE_CONFIGURATION_FILE}
+        echo "#" >>${COMMUNICATOR_SECURE_CONFIGURATION_FILE}
+        echo "# See /etc/communicator/communicatord.conf for documentation" >>${COMMUNICATOR_SECURE_CONFIGURATION_FILE}
+        echo "#" >>${COMMUNICATOR_SECURE_CONFIGURATION_FILE}
+        echo "#secure_listen=" >>${COMMUNICATOR_SECURE_CONFIGURATION_FILE}
+        echo "#signal_secret=" >>${COMMUNICATOR_SECURE_CONFIGURATION_FILE}
 
-        chmod 0600 ${COMMUNICATORD_SECURE_CONFIGURATION_FILE}
-        chown "${USER_NAME}":"${GROUP_NAME}" ${COMMUNICATORD_SECURE_CONFIGURATION_FILE}
+        chmod 0600 ${COMMUNICATOR_SECURE_CONFIGURATION_FILE}
+        chown "${USER_NAME}":"${GROUP_NAME}" ${COMMUNICATOR_SECURE_CONFIGURATION_FILE}
     fi
 
-    COMMUNICATORD_USER_CONFIGURATION_FILE=${COMMUNICATORD_SECURE_CONFIGURATION_DIR}/50-${PACKAGE_NAME}.conf
-    if test ! -f ${COMMUNICATORD_USER_CONFIGURATION_FILE}
+    COMMUNICATOR_USER_CONFIGURATION_FILE=${COMMUNICATOR_SECURE_CONFIGURATION_DIR}/50-${PACKAGE_NAME}.conf
+    if test ! -f ${COMMUNICATOR_USER_CONFIGURATION_FILE}
     then
         # When first installing, we do not have the public IP address
         # (okay, we do, but we cannot be sure which one is right because
@@ -54,19 +54,19 @@ then
         # a default file if it does not already exist and put some info
         # to make it a bit easier to deal with the matter
         #
-        echo "# Various variables that you are likely to need to edit for communicatord" >${COMMUNICATORD_USER_CONFIGURATION_FILE}
-        echo "# to communicate remotely for more info and details about the variables" >>${COMMUNICATORD_USER_CONFIGURATION_FILE}
-        echo "# defined here, check the file of the same name one directory up" >>${COMMUNICATORD_USER_CONFIGURATION_FILE}
-        echo "#" >>${COMMUNICATORD_USER_CONFIGURATION_FILE}
-        echo "# In most cases, if your hostname is properly defined, server_name" >>${COMMUNICATORD_USER_CONFIGURATION_FILE}
-        echo "# does not need to be changed." >>${COMMUNICATORD_USER_CONFIGURATION_FILE}
-        echo "#" >>${COMMUNICATORD_USER_CONFIGURATION_FILE}
-        echo "# The my_address and listen variables should be set to the public" >>${COMMUNICATORD_USER_CONFIGURATION_FILE}
-        echo "# IP address of this computer (from eth0 or tun0)." >>${COMMUNICATORD_USER_CONFIGURATION_FILE}
-        echo "#" >>${COMMUNICATORD_USER_CONFIGURATION_FILE}
-        echo "#server_name=" >>${COMMUNICATORD_USER_CONFIGURATION_FILE}
-        echo "#my_address=" >>${COMMUNICATORD_USER_CONFIGURATION_FILE}
-        echo "#listen=" >>${COMMUNICATORD_USER_CONFIGURATION_FILE}
+        echo "# Various variables that you are likely to need to edit for communicatord" >${COMMUNICATOR_USER_CONFIGURATION_FILE}
+        echo "# to communicate remotely for more info and details about the variables" >>${COMMUNICATOR_USER_CONFIGURATION_FILE}
+        echo "# defined here, check the file of the same name one directory up" >>${COMMUNICATOR_USER_CONFIGURATION_FILE}
+        echo "#" >>${COMMUNICATOR_USER_CONFIGURATION_FILE}
+        echo "# In most cases, if your hostname is properly defined, server_name" >>${COMMUNICATOR_USER_CONFIGURATION_FILE}
+        echo "# does not need to be changed." >>${COMMUNICATOR_USER_CONFIGURATION_FILE}
+        echo "#" >>${COMMUNICATOR_USER_CONFIGURATION_FILE}
+        echo "# The my_address and listen variables should be set to the public" >>${COMMUNICATOR_USER_CONFIGURATION_FILE}
+        echo "# IP address of this computer (from eth0 or tun0)." >>${COMMUNICATOR_USER_CONFIGURATION_FILE}
+        echo "#" >>${COMMUNICATOR_USER_CONFIGURATION_FILE}
+        echo "#server_name=" >>${COMMUNICATOR_USER_CONFIGURATION_FILE}
+        echo "#my_address=" >>${COMMUNICATOR_USER_CONFIGURATION_FILE}
+        echo "#listen=" >>${COMMUNICATOR_USER_CONFIGURATION_FILE}
     fi
 
     # Create the logfile because the communicatord user may have

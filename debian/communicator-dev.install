@@ -1,0 +1,4 @@
+conf/confcommunicator                                                 usr/share/communicator/
+usr/include/communicator
+usr/lib/libcommunicator.so
+usr/share/cmake/Communicator/CommunicatorConfig.cmake

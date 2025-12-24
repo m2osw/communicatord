@@ -3,7 +3,7 @@
 # Start the communicatord locally for a developer
 
 # Make sure that the Debug binary exists
-BINARY_DIR=`cd ../../BUILD/Debug/contrib/communicatord && pwd`
+BINARY_DIR=`cd ../../BUILD/Debug/contrib/communicator && pwd`
 COMMUNICATORD=${BINARY_DIR}/daemon/communicatord
 if test ! -x "${COMMUNICATORD}"
 then
@@ -80,5 +80,5 @@ ${GDB} ${COMMUNICATORD} \
 	--secure-listen admin:password1@${SECURE_LISTEN}:4043 \
 	--certificate ${TMP_DIR}/cert.crt \
 	--private-key ${TMP_DIR}/priv.key \
-	--services ${BINARY_DIR}/../../dist/share/communicatord/services
+	--services ${BINARY_DIR}/../../dist/share/communicator/services
 

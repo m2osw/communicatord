@@ -28,7 +28,7 @@ send_message(
 	server: communicatord,
 	service: communicator_test,
 	parameters: {
-		filename: "/var/log/communicatord/communicatord.log"
+		filename: "/var/log/communicator/communicatord.log"
 	})
 
 label(name: next_message)

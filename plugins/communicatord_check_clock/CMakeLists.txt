@@ -1,6 +1,6 @@
-# Copyright (c) 2025-2026  Made to Order Software Corp.  All Rights Reserved
+# Copyright (c) 2011-2026  Made to Order Software Corp.  All Rights Reserved
 #
-# https://snapwebsites.org/project/sitter
+# https://snapwebsites.org/project/communicator
 # contact@m2osw.com
 #
 # This program is free software: you can redistribute it and/or modify
@@ -20,6 +20,8 @@
 project(communicatord_stable_clock)
 
 add_library(${PROJECT_NAME} SHARED
+    check_clock.cpp
+
     stable_clock.cpp
 )
 
@@ -41,7 +43,7 @@ install(
         ${CMAKE_CURRENT_SOURCE_DIR}/
 
     DESTINATION
-        include/communicatord/plugins
+        include/communicator/plugins
 
     FILES_MATCHING PATTERN
         "*.h"

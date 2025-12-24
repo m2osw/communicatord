@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -28,6 +28,8 @@
 //
 #include    "load_timer.h"
 
+#include    "loadavg.h"
+
 
 // last include
 //
@@ -35,11 +37,9 @@
 
 
 
-
-
-
-
 namespace communicator_daemon
+{
+namespace loadavg
 {
 
 
@@ -68,6 +68,11 @@ load_timer::load_timer(loadavg * l)
 }
 
 
+load_timer::~load_timer()
+{
+}
+
+
 void load_timer::process_timeout()
 {
     f_loadavg->process_load_balancing();
@@ -75,5 +80,6 @@ void load_timer::process_timeout()
 
 
 
+} // namespace loadavg
 } // namespace communicator_daemon
 // vim: ts=4 sw=4 et

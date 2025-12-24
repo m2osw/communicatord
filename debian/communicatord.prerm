@@ -5,7 +5,7 @@
 
 if [ "$1" = "deconfigure" ]
 then
-    ENVIRONMENTNAME=communicatord
+    ENVIRONMENTNAME=communicator
 
     # make sure to shred all the logs
     #

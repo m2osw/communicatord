@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2026  Made to Order Software Corp.  All Rights Reserved.
 //
-// https://snapwebsites.org/project/sitter
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 // 
 // This program is free software: you can redistribute it and/or modify
@@ -21,7 +21,32 @@
 //
 #include    "loadavg.h"
 
-//#include    "load_timer.h"
+#include    "load_timer.h"
+
+#include    "../../daemon/remote_connection.h"
+#include    "../../daemon/service_connection.h"
+#include    "../../daemon/unix_connection.h"
+
+
+// communicator
+//
+#include    <communicator/communicator.h>
+#include    <communicator/exception.h>
+#include    <communicator/loadavg.h>
+#include    <communicator/names.h>
+
+
+// eventdispatcher
+//
+#include    <eventdispatcher/names.h>
+
+
+// libaddr
+//
+//#include    <libaddr/addr.h>
+#include    <libaddr/addr_parser.h>
+//#include    <libaddr/iface.h>
+//#include    <libaddr/addr_unix.h>
 
 
 // advgetopt
@@ -46,6 +71,12 @@
 //#include    <snapdev/not_used.h>
 //#include    <snapdev/not_reached.h>
 //#include    <snapdev/trim_string.h>
+#include    <snapdev/tokenize_string.h>
+
+
+// C++
+//
+#include    <thread>
 
 
 // last include
@@ -63,8 +94,8 @@ namespace loadavg
 
 SERVERPLUGINS_START(loadavg)
     , ::serverplugins::description(
-            "Load the load average of this computer and share with others."
-    , ::serverplugins::dependency("server")
+            "Load the load average of this computer and share with others.")
+    , ::serverplugins::dependency("communicatord")
     , ::serverplugins::help_uri("https://snapwebsites.org/help")
     , ::serverplugins::categorization_tag("statistics")
 SERVERPLUGINS_END(loadavg)
@@ -79,8 +110,9 @@ SERVERPLUGINS_END(loadavg)
  */
 void loadavg::bootstrap()
 {
-    SERVERPLUGINS_LISTEN(loadavg, "server", server, initilization, boost::placeholders::_1);
-    SERVERPLUGINS_LISTEN(loadavg, "server", server, terminate, boost::placeholders::_1);
+    SERVERPLUGINS_LISTEN(loadavg, communicatord, initialize, boost::placeholders::_1);
+    SERVERPLUGINS_LISTEN0(loadavg, communicatord, terminate);
+    SERVERPLUGINS_LISTEN(loadavg, communicatord, new_connection, boost::placeholders::_1);
 }
 
 
@@ -92,55 +124,77 @@ void loadavg::bootstrap()
  * This allows other services and communicators to receive the loadavg
  * information from the computer running this communicator daemon.
  *
- * \param[in] s  Communicator daemon.
+ * \todo
+ * The opts is not changeable from the plugins, instead we need the
+ * serverplugins to load config files as required. There is already
+ * an example in the sitter: `void server::add_plugin_options()`.
+ * But since that would be useful for all that have plugins, we want
+ * that to be moved to the serverplugins instead of copy/pasting that
+ * everywhere.
  */
-void loadavg::on_initialization(server * s)
+void loadavg::on_initialize(advgetopt::getopt & opts)
 {
+    snapdev::NOT_USED(opts);
+
     SNAP_LOG_DEBUG
         << "loadavg::on_initialization(): processing"
         << SNAP_LOG_SEND;
 
+    f_communicator = ed::communicator::instance();
+
+    f_number_of_processors = std::max(1U, std::thread::hardware_concurrency());
+
     if(f_tag != ed::dispatcher_match::DISPATCHER_MATCH_NO_TAG)
     {
-        throw communicatord::logic_error("plugin already initialized.");
+        throw communicator::logic_error("plugin already initialized.");
     }
     f_tag = ed::dispatcher_match::get_next_tag();
+
+    communicatord::pointer_t s(plugins()->get_server<communicatord>());
 
     ed::dispatcher::pointer_t dispatcher(s->get_dispatcher());
     dispatcher->add_matches({
         ::ed::define_match(
-              ::ed::Expression(communicatord::g_name_communicatord_cmd_listen_loadavg)
-            , ::ed::Callback(&loadavg::msg_listen_loadavg)
+              ::ed::Expression(communicator::g_name_communicator_cmd_listen_loadavg)
+            , ::ed::Callback(std::bind(&loadavg::msg_listen_loadavg, this, std::placeholders::_1))
             , ::ed::Tag(f_tag)
         ),
         ::ed::define_match(
-              ::ed::Expression(communicatord::g_name_communicatord_cmd_loadavg)
-            , ::ed::Callback(&loadavg::msg_save_loadavg)
+              ::ed::Expression(communicator::g_name_communicator_cmd_loadavg)
+            , ::ed::Callback(std::bind(&loadavg::msg_save_loadavg, this, std::placeholders::_1))
             , ::ed::Tag(f_tag)
         ),
         ::ed::define_match(
-              ::ed::Expression(communicatord::g_name_communicatord_cmd_register_for_loadavg)
-            , ::ed::Callback(&loadavg::msg_register_for_loadavg)
+              ::ed::Expression(communicator::g_name_communicator_cmd_register_for_loadavg)
+            , ::ed::Callback(std::bind(&loadavg::msg_register_for_loadavg, this, std::placeholders::_1))
             , ::ed::Tag(f_tag)
         ),
         ::ed::define_match(
-              ::ed::Expression(communicatord::g_name_communicatord_cmd_unregister_from_loadavg)
-            , ::ed::Callback(&loadavg::msg_unregister_from_loadavg)
+              ::ed::Expression(communicator::g_name_communicator_cmd_unregister_from_loadavg)
+            , ::ed::Callback(std::bind(&loadavg::msg_unregister_from_loadavg, this, std::placeholders::_1))
             , ::ed::Tag(f_tag)
         ),
     });
 
-    f_loadavg_timer = std::make_shared<load_timer>(shared_from_this());
+    f_loadavg_timer = std::make_shared<load_timer>(this);
     f_loadavg_timer->set_name("loadavg_timer");
-    f_communicator->add_connection(f_loadavg_timer);
+    if(!f_communicator->add_connection(f_loadavg_timer))
+    {
+        f_loadavg_timer.reset();
+
+        SNAP_LOG_ERROR
+            << "could not add the check_clock_status connection to ed::communicator"
+            << SNAP_LOG_SEND;
+    }
 }
 
 
-void loadavg::on_terminate(server * s)
+void loadavg::on_terminate()
 {
     f_communicator->remove_connection(f_loadavg_timer);
     f_loadavg_timer.reset();
 
+    communicatord::pointer_t s(plugins()->get_server<communicatord>());
     s->get_dispatcher()->remove_matches(f_tag);
 }
 
@@ -148,14 +202,14 @@ void loadavg::on_terminate(server * s)
 /** \brief Request LOADAVG messages from a communicatord.
  *
  * This function gets called whenever a local service sends us a
- * request to listen to the LOADAVG messages of a specific
+ * request to listen to the LOADAVG messages of one or more
  * communicatord.
  *
  * \param[in] msg  The LISTEN_LOADAVG message.
  */
 void loadavg::msg_listen_loadavg(ed::message & msg)
 {
-    std::string const ips(msg.get_parameter(communicatord::g_name_communicatord_param_ips));
+    std::string const ips(msg.get_parameter(communicator::g_name_communicator_param_ips));
 
     // we save those as IP addresses since the remote
     // communicators come and go and we have to make sure
@@ -165,7 +219,8 @@ void loadavg::msg_listen_loadavg(ed::message & msg)
     // Note: I don't think this is correct since if one registers anew each
     //       time then it would be re-added once the other communicator is ready
     //
-    snapdev::tokenize_string(f_registered_neighbors_for_loadavg, ips, { "," });
+    advgetopt::string_set_t ip_list;
+    snapdev::tokenize_string(ip_list, ips, { "," });
 
     for(auto const & ip : ip_list)
     {
@@ -184,19 +239,19 @@ void loadavg::msg_listen_loadavg(ed::message & msg)
 
 void loadavg::msg_save_loadavg(ed::message & msg)
 {
-    std::string const avg_str(msg.get_parameter(communicatord::g_name_communicatord_param_avg));
+    std::string const avg_str(msg.get_parameter(communicator::g_name_communicator_param_avg));
     std::string const my_address(msg.get_parameter(ed::g_name_ed_param_my_address));
-    snapdev::timespec_ex const timestamp_str(msg.get_timespec_parameter(communicatord::g_name_communicatord_param_timestamp));
+    snapdev::timespec_ex const timestamp_str(msg.get_timespec_parameter(communicator::g_name_communicator_param_timestamp));
 
-    communicatord::loadavg_item item;
+    communicator::loadavg_item item;
 
     // Note: we do not use the port so whatever number here is fine
     addr::addr a(addr::string_to_addr(
                   my_address
                 , "127.0.0.1"
-                , communicatord::LOCAL_PORT  // the port is ignore, use a safe default
+                , communicator::LOCAL_PORT  // the port is ignore, use a safe default
                 , "tcp"));
-    a.set_port(communicatord::LOCAL_PORT); // actually force the port so in effect it is ignored
+    a.set_port(communicator::LOCAL_PORT); // actually force the port so in effect it is ignored
     a.get_ipv6(item.f_address);
 
     item.f_avg = std::stof(avg_str);
@@ -211,7 +266,7 @@ void loadavg::msg_save_loadavg(ed::message & msg)
         return;
     }
 
-    communicatord::loadavg_file file;
+    communicator::loadavg_file file;
     file.load();
     file.add(item);
     file.save();
@@ -220,7 +275,8 @@ void loadavg::msg_save_loadavg(ed::message & msg)
 
 void loadavg::msg_register_for_loadavg(ed::message & msg)
 {
-    if(!is_tcp_connection(msg))
+    communicatord::pointer_t s(plugins()->get_server<communicatord>());
+    if(!s->is_tcp_connection(msg))
     {
         return;
     }
@@ -238,7 +294,8 @@ void loadavg::msg_register_for_loadavg(ed::message & msg)
 
 void loadavg::msg_unregister_from_loadavg(ed::message & msg)
 {
-    if(!is_tcp_connection(msg))
+    communicatord::pointer_t s(plugins()->get_server<communicatord>());
+    if(!s->is_tcp_connection(msg))
     {
         return;
     }
@@ -276,22 +333,22 @@ void loadavg::register_for_loadavg(std::string const & ip)
     addr::addr address(addr::string_to_addr(
               ip
             , "127.0.0.1"
-            , communicatord::LOCAL_PORT  // the port is ignored, use a safe default
+            , communicator::LOCAL_PORT  // the port is ignored, use a safe default
             , "tcp"));
     ed::connection::vector_t const & all_connections(f_communicator->get_connections());
     auto const & it(std::find_if(
             all_connections.begin(),
             all_connections.end(),
-            [address](auto const & connection)
+            [address](auto const & conn)
             {
-                remote_connection::pointer_t remote_conn(std::dynamic_pointer_cast<remote_connection>(connection));
+                remote_connection::pointer_t remote_conn(std::dynamic_pointer_cast<remote_connection>(conn));
                 if(remote_conn != nullptr)
                 {
                     return remote_conn->get_connection_address() == address;
                 }
                 else
                 {
-                    service_connection::pointer_t service_conn(std::dynamic_pointer_cast<service_connection>(connection));
+                    service_connection::pointer_t service_conn(std::dynamic_pointer_cast<service_connection>(conn));
                     if(service_conn != nullptr)
                     {
                         return service_conn->get_connection_address() == address;
@@ -305,29 +362,43 @@ void loadavg::register_for_loadavg(std::string const & ip)
     {
         // there is such a connection, send it a request for LOADAVG messages
         //
-        ed::message register_message;
-        register_message.set_command(communicatord::g_name_communicatord_cmd_register_for_loadavg);
-        register_message.set_sent_from_server(f_server_name);
-        register_message.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
+        base_connection::pointer_t conn(std::dynamic_pointer_cast<base_connection>(*it));
+        on_new_connection(conn);
+    }
+}
 
-        remote_connection::pointer_t remote_conn(std::dynamic_pointer_cast<remote_connection>(*it));
-        if(remote_conn != nullptr)
+
+void loadavg::on_new_connection(base_connection::pointer_t conn)
+{
+    // when connecting to another communicator, we want to register to
+    // receive it's loadavg data so we send that message immediately
+    // (TBD: this maybe too soon? although I think it's after the ACCEPT
+    // or REGISTER-ed so we should be good.)
+    //
+    ed::message register_message;
+    register_message.set_command(communicator::g_name_communicator_cmd_register_for_loadavg);
+    communicatord::pointer_t s(plugins()->get_server<communicatord>());
+    register_message.set_sent_from_server(s->get_server_name());
+    register_message.set_sent_from_service(communicator::g_name_communicator_service_communicatord);
+
+    remote_connection::pointer_t remote_conn(std::dynamic_pointer_cast<remote_connection>(conn));
+    if(remote_conn != nullptr)
+    {
+        remote_conn->send_message(register_message);
+    }
+    else
+    {
+        service_connection::pointer_t service_conn(std::dynamic_pointer_cast<service_connection>(conn));
+        if(service_conn != nullptr)
         {
-            remote_conn->send_message(register_message);
-        }
-        else
-        {
-            service_connection::pointer_t service_conn(std::dynamic_pointer_cast<service_connection>(*it));
-            if(service_conn != nullptr)
-            {
-                service_conn->send_message(register_message);
-            }
+            service_conn->send_message(register_message);
         }
     }
 }
 
 
-void server::process_load_balancing()
+
+void loadavg::process_load_balancing()
 {
     static bool error_emitted = false;
     std::ifstream in;
@@ -377,16 +448,17 @@ void server::process_load_balancing()
         f_last_loadavg = avg;
 
         ed::message load_avg;
-        load_avg.set_command(communicatord::g_name_communicatord_cmd_loadavg);
-        load_avg.set_sent_from_server(f_server_name);
-        load_avg.set_sent_from_service(communicatord::g_name_communicatord_service_communicatord);
+        load_avg.set_command(communicator::g_name_communicator_cmd_loadavg);
+        communicatord::pointer_t s(plugins()->get_server<communicatord>());
+        load_avg.set_sent_from_server(s->get_server_name());
+        load_avg.set_sent_from_service(communicator::g_name_communicator_service_communicatord);
         std::stringstream ss;
         ss << avg;
-        load_avg.add_parameter(communicatord::g_name_communicatord_param_avg, ss.str());
+        load_avg.add_parameter(communicator::g_name_communicator_param_avg, ss.str());
         load_avg.add_parameter(
                   ed::g_name_ed_param_my_address
-                , f_connection_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
-        load_avg.add_parameter(communicatord::g_name_communicatord_param_timestamp, snapdev::now());
+                , s->get_connection_address().to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
+        load_avg.add_parameter(communicator::g_name_communicator_param_timestamp, snapdev::now());
 
         ed::connection::vector_t const & all_connections(f_communicator->get_connections());
         std::for_each(

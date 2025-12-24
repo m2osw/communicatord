@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -27,7 +27,7 @@
 
 // self
 //
-#include    "server.h"
+#include    "communicatord.h"
 
 
 // eventdispatcher
@@ -47,15 +47,20 @@ public:
     typedef std::shared_ptr<listener>       pointer_t;
 
                         listener(
-                              server::pointer_t cs
+                              communicatord * s
                             , addr::addr const & addr
                             , std::string const & certificate
                             , std::string const & private_key
                             , int max_connections
                             , bool local
                             , std::string const & server_name);
+                        listener(listener const &) = delete;
+    virtual             ~listener();
+
+    listener            operator = (listener const &) = delete;
 
     // ed::tcp_server_connection
+    //
     virtual void        process_accept() override;
 
     void                set_username(std::string const & username);
@@ -64,7 +69,7 @@ public:
     std::string         get_password() const;
 
 private:
-    server::pointer_t   f_server = server::pointer_t();
+    communicatord *     f_server = nullptr;
     bool const          f_local = false;
     std::string const   f_server_name;
     std::string         f_username = std::string();

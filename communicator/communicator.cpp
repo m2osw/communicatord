@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -18,10 +18,10 @@
 
 // self
 //
-#include    "communicatord/communicator.h"
+#include    "communicator/communicator.h"
 
-#include    "communicatord/exception.h"
-#include    "communicatord/names.h"
+#include    "communicator/exception.h"
+#include    "communicator/names.h"
 
 
 // snaplogger
@@ -53,14 +53,14 @@
 
 
 
-namespace communicatord
+namespace communicator
 {
 
 namespace
 {
 
 
-/** \brief Options to handle the communicatord connection.
+/** \brief Options to handle the communicator connection.
  *
  * One can connect to the communicator daemon through several possible
  * connetions:
@@ -80,7 +80,7 @@ advgetopt::option const g_options[] =
     // COMMUNICATOR OPTIONS
     //
     advgetopt::define_option(
-          advgetopt::Name("communicatord-listen")
+          advgetopt::Name("communicator-listen")
         , advgetopt::Flags(advgetopt::all_flags<
               advgetopt::GETOPT_FLAG_GROUP_OPTIONS
             , advgetopt::GETOPT_FLAG_COMMAND_LINE
@@ -88,7 +88,7 @@ advgetopt::option const g_options[] =
             , advgetopt::GETOPT_FLAG_CONFIGURATION_FILE
             , advgetopt::GETOPT_FLAG_REQUIRED
             , advgetopt::GETOPT_FLAG_SHOW_SYSTEM>())
-        , advgetopt::EnvironmentVariableName("COMMUNICATORD_LISTEN")
+        , advgetopt::EnvironmentVariableName("COMMUNICATOR_LISTEN")
         , advgetopt::DefaultValue("cd:///run/communicatord/communicatord.sock")
         , advgetopt::Help("define the communicator daemon connection type as a scheme (cd://, cdu://, cds://, cdb://) along an \"address:port\" or \"/socket/path\".")
     ),
@@ -100,10 +100,10 @@ advgetopt::option const g_options[] =
 
 
 
-class communicatord_connection
+class communicator_connection
 {
 public:
-    virtual             ~communicatord_connection() {}
+    virtual             ~communicator_connection() {}
 
     virtual bool        is_connected() const = 0;
 };
@@ -111,7 +111,7 @@ public:
 
 class local_stream
     : public ed::local_stream_client_permanent_message_connection
-    , public communicatord_connection
+    , public communicator_connection
 {
 public:
     local_stream(
@@ -143,7 +143,7 @@ public:
 
 class tcp_stream
     : public ed::tcp_client_permanent_message_connection
-    , public communicatord_connection
+    , public communicator_connection
 {
 public:
     tcp_stream(
@@ -175,7 +175,7 @@ public:
 
 class udp_dgram
     : public ed::udp_server_message_connection
-    , public communicatord_connection
+    , public communicator_connection
 {
 public:
     typedef std::shared_ptr<udp_dgram>  pointer_t;
@@ -274,11 +274,11 @@ communicator::~communicator()
  * your service since it would continue to listen for messages on this
  * connection forever.
  */
-void communicator::process_communicatord_options()
+void communicator::process_communicator_options()
 {
     if(f_communicator_connection != nullptr)
     {
-        throw logic_error("process_communicatord_options() called twice.");
+        throw logic_error("process_communicator_options() called twice.");
     }
 
     ed::process_message_definition_options(f_opts);
@@ -286,7 +286,7 @@ void communicator::process_communicatord_options()
     // extract the scheme and segments
     //
     edhttp::uri u;
-    u.set_uri(f_opts.get_string("communicatord_listen"), true, true);
+    u.set_uri(f_opts.get_string("communicator_listen"), true, true);
 
     std::string const scheme(u.scheme());
 
@@ -314,14 +314,14 @@ void communicator::process_communicatord_options()
         {
             // I don't think this is possible
             //
-            connection_unavailable const e("the communicatord requires at least one address to work.");
+            connection_unavailable const e("the communicator requires at least one address to work.");
             SNAP_LOG_FATAL
                 << e
                 << SNAP_LOG_SEND;
             throw e;
         }
 
-        if(scheme == g_name_communicatord_scheme_cd)
+        if(scheme == g_name_communicator_scheme_cd)
         {
             for(auto const & r : ranges)
             {
@@ -344,7 +344,7 @@ void communicator::process_communicatord_options()
                     , ed::mode_t::MODE_PLAIN
                     , f_service_name);
         }
-        else if(scheme == g_name_communicatord_scheme_cds)
+        else if(scheme == g_name_communicator_scheme_cds)
         {
             for(auto const & r : ranges)
             {
@@ -363,7 +363,7 @@ void communicator::process_communicatord_options()
                     , ed::mode_t::MODE_ALWAYS_SECURE
                     , f_service_name);
         }
-        else if(scheme == g_name_communicatord_scheme_cdu)
+        else if(scheme == g_name_communicator_scheme_cdu)
         {
             // I don't think that the URI object can return a "to" only range
             //
@@ -406,7 +406,7 @@ void communicator::process_communicatord_options()
             conn->simulate_connected();
             f_communicator_connection = conn;
         }
-        else if(scheme == g_name_communicatord_scheme_cdb)
+        else if(scheme == g_name_communicator_scheme_cdb)
         {
             // TBD: I don't think I'll implement that one since broadcasting
             //      happens in the communicator daemon itself.
@@ -530,7 +530,7 @@ void communicator::unregister_communicator(bool quitting)
 bool communicator::is_connected() const
 {
     return f_communicator_connection != nullptr
-        ? std::dynamic_pointer_cast<communicatord_connection>(f_communicator_connection)->is_connected()
+        ? std::dynamic_pointer_cast<communicator_connection>(f_communicator_connection)->is_connected()
         : false;
 }
 
@@ -550,11 +550,11 @@ bool communicator::is_connected() const
 void request_failure(ed::message & msg)
 {
     msg.add_parameter(
-          communicatord::g_name_communicatord_param_transmission_report
-        , communicatord::g_name_communicatord_value_failure);
+          ::communicator::g_name_communicator_param_transmission_report
+        , ::communicator::g_name_communicator_value_failure);
 }
 
 
 
-} // namespace communicatord
+} // namespace communicator
 // vim: ts=4 sw=4 et

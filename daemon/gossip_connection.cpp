@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -37,9 +37,9 @@
 #include    "gossip_connection.h"
 
 
-// communicatord
+// communicator
 //
-#include    <communicatord/names.h>
+#include    <communicator/names.h>
 
 
 // snaplogger
@@ -95,7 +95,7 @@ std::int64_t    g_max_gossip_timeout = gossip_connection::MAX_TIMEOUT;
  *
  * This object is actually a timer. Each time we get a tick
  * (i.e. process_timeout() callback gets called), a connection
- * is attempted against the remote communicatord daemon
+ * is attempted against the remote communicator daemon
  * specified by the addr and port parameters.
  *
  * The addr and port are both mandatory to this constructor.
@@ -122,7 +122,7 @@ gossip_connection::gossip_connection(
     , f_remote_communicators(rcs)
 {
     std::string const addr_str(address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
-    set_name(communicatord::g_name_communicatord_connection_gossip + (": " + addr_str));
+    set_name(communicator::g_name_communicator_connection_gossip + (": " + addr_str));
 }
 
 
@@ -130,7 +130,7 @@ gossip_connection::gossip_connection(
  *
  * We do not really have anything to do when a timeout happens. The
  * connection attempts are automatically done by the permanent
- * connection in the communicatord library.
+ * connection in the communicator library.
  *
  * However, we want to increase the delay between attempts. For that,
  * we use this function and double the delay on each timeout until
@@ -178,7 +178,7 @@ void gossip_connection::process_message(ed::message & msg)
         << SNAP_LOG_SEND;
 
     std::string const & command(msg.get_command());
-    if(command == communicatord::g_name_communicatord_cmd_received)
+    if(command == communicator::g_name_communicator_cmd_received)
     {
         // we got confirmation that the GOSSIP went across
         //
@@ -248,7 +248,7 @@ void gossip_connection::process_connected()
     // (each time we reconnect!)
     //
     ed::message gossip;
-    gossip.set_command(communicatord::g_name_communicatord_cmd_gossip);
+    gossip.set_command(communicator::g_name_communicator_cmd_gossip);
     gossip.add_parameter(
               "my_address"
             , f_remote_communicators->get_connection_address().to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));

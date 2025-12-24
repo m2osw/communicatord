@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -17,17 +17,17 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 /** \file
- * \brief Verify some of the communicatord client implementation.
+ * \brief Verify some of the communicator client implementation.
  *
- * This test file implements verifications of the communicatord client
+ * This test file implements verification of the communicator client
  * class.
  */
 
-// communicatord
+// communicator
 //
-#include    <communicatord/communicator.h>
-#include    <communicatord/exception.h>
-#include    <communicatord/version.h>
+#include    <communicator/communicator.h>
+#include    <communicator/exception.h>
+#include    <communicator/version.h>
 
 
 // eventdispatcher
@@ -85,24 +85,24 @@ advgetopt::group_description const g_group_descriptions[] =
 
 //constexpr char const * const g_configuration_files[] =
 //{
-//    "/etc/communicatord/communicatord.conf",
+//    "/etc/communicator/communicatord.conf",
 //    nullptr
 //};
 
 
 advgetopt::options_environment const g_options_environment =
 {
-    .f_project_name = "communicatord",
-    .f_group_name = "communicatord",
+    .f_project_name = "communicator",
+    .f_group_name = "communicator",
     .f_options = g_options,
-    .f_environment_variable_name = "COMMUNICATORD_OPTIONS",
+    .f_environment_variable_name = "COMMUNICATOR_OPTIONS",
     //.f_configuration_files = g_configuration_files,
     .f_environment_flags = advgetopt::GETOPT_ENVIRONMENT_FLAG_SYSTEM_PARAMETERS
                          | advgetopt::GETOPT_ENVIRONMENT_FLAG_PROCESS_SYSTEM_PARAMETERS,
     .f_help_header = "Usage: %p [-<opt>]\n"
                      "where -<opt> is one or more of:",
     .f_help_footer = "%c",
-    .f_version = COMMUNICATORD_VERSION_STRING,
+    .f_version = COMMUNICATOR_VERSION_STRING,
     .f_license = "GNU GPL v3",
     .f_copyright = "Copyright Notice",
     .f_groups = g_group_descriptions,
@@ -130,7 +130,7 @@ addr::addr get_address()
 // extension instead of a standalone client
 //
 class test_messenger
-    : public communicatord::communicator
+    : public communicator::communicator
     , public ed::manage_message_definition_paths
 {
 public:
@@ -178,14 +178,14 @@ public:
 
     void finish_init()
     {
-        process_communicatord_options();
+        process_communicator_options();
 
         // that function cannot be called again
         //
         CATCH_REQUIRE_THROWS_MATCHES(
-              process_communicatord_options()
-            , communicatord::logic_error
-            , Catch::Matchers::ExceptionMessage("logic_error: process_communicatord_options() called twice."));
+              process_communicator_options()
+            , ::communicator::logic_error
+            , Catch::Matchers::ExceptionMessage("logic_error: process_communicator_options() called twice."));
 
         CATCH_REQUIRE(service_name() == "test_communicator_client");
 
@@ -224,7 +224,7 @@ std::cerr << "--- got DATA message: " << msg << "...\n";
         CATCH_REQUIRE(msg.get_server() == "communicatord");
         CATCH_REQUIRE(msg.get_service() == "communicator_test");
         CATCH_REQUIRE(msg.has_parameter("filename"));
-        CATCH_REQUIRE(msg.get_parameter("filename") == "/var/log/communicatord/communicatord.log");
+        CATCH_REQUIRE(msg.get_parameter("filename") == "/var/log/communicator/communicatord.log");
 
         //std::string const data(msg.get_parameter("data"));
         //std::int64_t const size(msg.get_integer_parameter("size"));
@@ -345,12 +345,12 @@ CATCH_TEST_CASE("communicator", "[client]")
     CATCH_START_SECTION("communicator: verify default strings")
     {
         std::stringstream port_str;
-        port_str << communicatord::LOCAL_PORT;
-        CATCH_REQUIRE(port_str.str() == std::string(communicatord::g_communicatord_default_port));
+        port_str << communicator::LOCAL_PORT;
+        CATCH_REQUIRE(port_str.str() == std::string(communicator::g_communicator_default_port));
 
         std::stringstream ip_port;
-        ip_port << communicatord::g_communicatord_default_ip << ":" << communicatord::LOCAL_PORT;
-        CATCH_REQUIRE(ip_port.str() == std::string(communicatord::g_communicatord_default_ip_port));
+        ip_port << communicator::g_communicator_default_ip << ":" << communicator::LOCAL_PORT;
+        CATCH_REQUIRE(ip_port.str() == std::string(communicator::g_communicator_default_ip_port));
     }
     CATCH_END_SECTION()
 
@@ -358,7 +358,7 @@ CATCH_TEST_CASE("communicator", "[client]")
     {
         ed::message msg;
         CATCH_REQUIRE_FALSE(msg.has_parameter("transmission_report"));
-        communicatord::request_failure(msg);
+        communicator::request_failure(msg);
         CATCH_REQUIRE(msg.has_parameter("transmission_report"));
         CATCH_REQUIRE(msg.get_parameter("transmission_report") == "failure");
     }
@@ -372,9 +372,9 @@ CATCH_TEST_CASE("communicator_client_connection", "[client]")
     {
         advgetopt::getopt opts(g_options_environment);
         CATCH_REQUIRE_THROWS_MATCHES(
-              std::make_shared<communicatord::communicator>(opts, "")
-            , communicatord::invalid_name
-            , Catch::Matchers::ExceptionMessage("communicatord_exception: the service_name parameter of the communicator constructor cannot be an empty string."));
+              std::make_shared<communicator::communicator>(opts, "")
+            , communicator::invalid_name
+            , Catch::Matchers::ExceptionMessage("communicator_exception: the service_name parameter of the communicator constructor cannot be an empty string."));
     }
     CATCH_END_SECTION()
 

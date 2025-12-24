@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@
 /** \file
  * \brief Base declaration for all the connections.
  *
- * The communicatord daemon has to deal with many connections. This
+ * The communicator daemon has to deal with many connections. This
  * base handles some basic aspects of each connection so we do not have
  * to specialize the code everywhere.
  *
@@ -55,9 +55,9 @@
 #include    "base_connection.h"
 
 
-// communicatord
+// communicator
 //
-#include    <communicatord/exception.h>
+#include    <communicator/exception.h>
 
 
 // snapdev
@@ -83,13 +83,13 @@ namespace communicator_daemon
  * The constructor saves the communicator server pointer
  * so one can access it from any derived version.
  *
- * \param[in] cs  The address to the communicator server.
+ * \param[in] s  The address to the communicator server.
  * \param[in] is_udp  The connection is over UDP (opposed to TCP).
  */
 base_connection::base_connection(
-          server::pointer_t cs
+          communicatord * s
         , bool is_udp)
-    : f_server(cs)
+    : f_server(s)
     , f_is_udp(is_udp)
 {
 }
@@ -501,9 +501,7 @@ bool base_connection::is_remote() const
  * represents a UDP (datagram based) connection.
  *
  * At this time, we only have one UDP connection recorded here. The connection
- * managed by the f_logrotate object is not added to the communicatord
- * system (it does not even derive from the base_connection; although we may
- * stop using that sub-object because the ping class is probably enough).
+ * used to receive "signals".
  *
  * \return true if the connection is a datagram based connection.
  */
@@ -521,7 +519,7 @@ bool base_connection::is_udp() const
  * process the request.
  *
  * \param[in] wants_loadavg  Whether this connection wants
- *    (REGISTERFORLOADAVG) or does not want (UNREGISTERFORLOADAVG)
+ *    (REGISTER_FOR_LOADAVG) or does not want (UNREGISTER_FOR_LOADAVG)
  *    to receive LOADAVG messages from this communicatord.
  */
 void base_connection::set_wants_loadavg(bool wants_loadavg)
@@ -533,7 +531,7 @@ void base_connection::set_wants_loadavg(bool wants_loadavg)
 /** \brief Check whether this connection wants LOADAVG messages.
  *
  * This function returns true if the connection last sent us a
- * REGISTERFORLOADAVG message.
+ * REGISTER_FOR_LOADAVG message.
  *
  * \return true if the LOADAVG should be sent to this connection.
  */
@@ -548,12 +546,12 @@ bool base_connection::send_message_to_connection(ed::message & msg, bool cache)
     ed::connection * conn(dynamic_cast<ed::connection *>(this));
     if(conn == nullptr)
     {
-        throw communicatord::logic_error("somehow a dynamic_cast<ed::connection *> on our base_connection failed.");
+        throw communicator::logic_error("somehow a dynamic_cast<ed::connection *> on our base_connection failed.");
     }
     ed::connection_with_send_message::pointer_t conn_msg(std::dynamic_pointer_cast<ed::connection_with_send_message>(conn->shared_from_this()));
     if(conn_msg == nullptr)
     {
-        throw communicatord::logic_error("std::dynamic_pointer_cast<ed::connection_with_send_message>() on our ed::connection failed.");
+        throw communicator::logic_error("std::dynamic_pointer_cast<ed::connection_with_send_message>() on our ed::connection failed.");
     }
     return conn_msg->send_message(msg, cache);
 }

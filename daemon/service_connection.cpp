@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -31,9 +31,9 @@
 
 
 
-// communicatord
+// communicator
 //
-#include    <communicatord/names.h>
+#include    <communicator/names.h>
 
 
 // last include
@@ -44,11 +44,10 @@
 
 namespace communicator_daemon
 {
-
-
-
 namespace
 {
+
+
 
 struct hits_t
 {
@@ -57,6 +56,8 @@ struct hits_t
 };
 
 std::map<addr::addr, hits_t>    g_blocked_ips = {};
+
+
 
 } // no name namespace
 
@@ -78,7 +79,7 @@ std::map<addr::addr, hits_t>    g_blocked_ips = {};
  * The constructor of the service connection expects a socket that
  * was just accept()'ed.
  *
- * The communicatord daemon listens on to two different ports
+ * The communicator daemon listens on to two different ports
  * and two different addresses on those ports:
  *
  * \li TCP 127.0.0.1:4040 -- this address is expected to be used by all the
@@ -98,18 +99,18 @@ std::map<addr::addr, hits_t>    g_blocked_ips = {};
  * The connections happen on 127.0.0.1 are fully trusted. Connections
  * happening on 0.0.0.0 are generally viewed as tainted.
  *
- * \param[in] cs  The communicator server (i.e. parent)
+ * \param[in] s  The communicator server (i.e. parent).
  * \param[in] client  The socket that was just created by the accept()
  *                    command.
  * \param[in] server_name  The name of the server we are running on
- *                         (i.e. generally your hostname.)
+ *                         (i.e. generally your hostname).
  */
 service_connection::service_connection(
-            server::pointer_t cs
+            communicatord * s
           , ed::tcp_bio_client::pointer_t client
           , std::string const & server_name)
     : tcp_server_client_message_connection(client)
-    , base_connection(cs, false)
+    , base_connection(s, false)
     , f_server_name(server_name)
     , f_address(client->get_remote_address())  // peer address:port (IP of computer on the other side)
 {
@@ -153,7 +154,7 @@ service_connection::~service_connection()
     // make sure that if we had a connection understanding STATUS
     // we do not send that status
     //
-    remove_command(communicatord::g_name_communicatord_cmd_status);
+    remove_command(communicator::g_name_communicator_cmd_status);
 
     // now ask the server to send a new STATUS to all connections
     // that understand that message; we pass our pointer since we
@@ -259,9 +260,9 @@ void service_connection::process_hup()
         //       process_invalid(), process_error(), process_timeout()?
         //
         ed::message hangup;
-        hangup.set_command(communicatord::g_name_communicatord_cmd_hangup);
-        hangup.set_service(communicatord::g_name_communicatord_service_local_broadcast);
-        hangup.add_parameter(communicatord::g_name_communicatord_param_server_name, get_server_name());
+        hangup.set_command(communicator::g_name_communicator_cmd_hangup);
+        hangup.set_service(communicator::g_name_communicator_service_local_broadcast);
+        hangup.add_parameter(communicator::g_name_communicator_param_server_name, get_server_name());
         f_server->broadcast_message(hangup);
 
         f_server->cluster_status(shared_from_this());
@@ -380,16 +381,16 @@ void service_connection::block_ip()
         // send a block to anyone listening (i.e. ipwall services everywhere)
         //
         ed::message block;
-        block.set_command(communicatord::g_name_communicatord_cmd_block);
-        block.set_service(communicatord::g_name_communicatord_service_public_broadcast);
+        block.set_command(communicator::g_name_communicator_cmd_block);
+        block.set_service(communicator::g_name_communicator_service_public_broadcast);
 
         // TBD: these parameter names are really part of the iplock, which
         //      depends on the communicatord (through the fluid-settings)
         //
-        block.add_parameter(communicatord::g_name_communicatord_param_uri, a.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS));
-        block.add_parameter(communicatord::g_name_communicatord_param_period, "1h");
-        block.add_parameter(communicatord::g_name_communicatord_param_profile, "system-login-attempts");
-        block.add_parameter(communicatord::g_name_communicatord_param_reason, "Three or more attempts at connecting to communicator daemon with the wrong credentials");
+        block.add_parameter(communicator::g_name_communicator_param_uri, a.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS));
+        block.add_parameter(communicator::g_name_communicator_param_period, "1h");
+        block.add_parameter(communicator::g_name_communicator_param_profile, "system-login-attempts");
+        block.add_parameter(communicator::g_name_communicator_param_reason, "Three or more attempts at connecting to communicator daemon with the wrong credentials");
         f_server->broadcast_message(block);
     }
 }

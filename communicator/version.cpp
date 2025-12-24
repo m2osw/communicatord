@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -17,7 +17,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 /** \file
- * \brief The version of the communicatord at compile time.
+ * \brief The version of the communicator at compile time.
  *
  * This file records the communicator library version at compile time.
  *
@@ -28,7 +28,7 @@
 
 // self
 //
-#include    "communicatord/version.h"
+#include    "communicator/version.h"
 
 
 // last include
@@ -37,7 +37,7 @@
 
 
 
-namespace communicatord
+namespace communicator
 {
 
 
@@ -52,7 +52,7 @@ namespace communicatord
  */
 int get_major_version()
 {
-    return COMMUNICATORD_VERSION_MAJOR;
+    return COMMUNICATOR_VERSION_MAJOR;
 }
 
 
@@ -65,7 +65,7 @@ int get_major_version()
  */
 int get_release_version()
 {
-    return COMMUNICATORD_VERSION_MINOR;
+    return COMMUNICATOR_VERSION_MINOR;
 }
 
 
@@ -78,7 +78,7 @@ int get_release_version()
  */
 int get_patch_version()
 {
-    return COMMUNICATORD_VERSION_PATCH;
+    return COMMUNICATOR_VERSION_PATCH;
 }
 
 
@@ -97,9 +97,9 @@ int get_patch_version()
  */
 char const * get_version_string()
 {
-    return COMMUNICATORD_VERSION_STRING;
+    return COMMUNICATOR_VERSION_STRING;
 }
 
 
-} // namespace communicatord
+} // namespace communicator
 // vim: ts=4 sw=4 et

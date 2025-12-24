@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -24,10 +24,9 @@
  */
 
 
-
 // self
 //
-#include    "server.h"
+#include    "communicatord.h"
 
 
 // eventdispatcher
@@ -40,21 +39,27 @@ namespace communicator_daemon
 {
 
 
+
 class unix_listener
     : public ed::local_stream_server_connection
 {
 public:
                         unix_listener(
-                              server::pointer_t cs
+                              communicatord * s
                             , addr::addr_unix const & address
                             , int max_connections
                             , std::string const & server_name);
+                        unix_listener(unix_listener const &) = delete;
+    virtual             ~unix_listener();
+
+    unix_listener &     operator = (unix_listener const &) = delete;
 
     // ed::local_stream_server_connection
+    //
     virtual void        process_accept() override;
 
 private:
-    server::pointer_t   f_server = server::pointer_t();
+    communicatord *     f_server = nullptr;
     std::string const   f_server_name;
 };
 

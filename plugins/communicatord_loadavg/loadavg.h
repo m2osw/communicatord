@@ -21,16 +21,26 @@
 //
 #include    "load_timer.h"
 
+#include    "../../daemon/base_connection.h"
+#include    "../../daemon/communicatord.h"
+
+
+// eventdispatcher
+//
+#include    <eventdispatcher/dispatcher_match.h>
+
 
 // serverplugins
 //
+#include    <serverplugins/collection.h>
+#include    <serverplugins/factory.h>
 #include    <serverplugins/plugin.h>
 
 
 
 namespace communicator_daemon
 {
-namespace apt
+namespace loadavg
 {
 
 
@@ -48,17 +58,28 @@ public:
     //
     virtual void                    bootstrap() override;
 
-    // server signal
+    // signals
     //
-    void                            on_initilization(server * s);
-    void                            on_terminate(server * s);
+    void                            on_initialize(advgetopt::getopt & opts);
+    void                            on_terminate();
+    void                            on_new_connection(base_connection::pointer_t conn);
 
     void                            process_load_balancing();
 
+    void                            msg_listen_loadavg(ed::message & msg);
+    void                            msg_save_loadavg(ed::message & msg);
+    void                            msg_register_for_loadavg(ed::message & msg);
+    void                            msg_unregister_from_loadavg(ed::message & msg);
+
 private:
+    void                            register_for_loadavg(std::string const & ip);
+
+    ed::communicator::pointer_t     f_communicator = ed::communicator::pointer_t();
     load_timer::pointer_t           f_loadavg_timer = load_timer::pointer_t();    // a 1 second timer to calculate load (used to load balance)
     ed::dispatcher_match::tag_t     f_tag = ed::dispatcher_match::DISPATCHER_MATCH_NO_TAG;
     advgetopt::string_set_t         f_registered_neighbors_for_loadavg = advgetopt::string_set_t();
+    int                             f_number_of_processors = 1;
+    float                           f_last_loadavg = 0.0f;
 };
 
 

@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -30,10 +30,10 @@
 
 
 
-// communicatord
+// communicator
 //
-#include    <communicatord/flags.h>
-#include    <communicatord/names.h>
+#include    <communicator/flags.h>
+#include    <communicator/names.h>
 
 
 // libaddr
@@ -63,7 +63,7 @@ namespace communicator_daemon
 
 
 /** \class remote_connection
- * \brief Describe a remove communicatord by IP address, etc.
+ * \brief Define a remote communicatord by IP address, etc.
  *
  * This class defines a communicatord server. Mainly we include
  * the IP address of the server to connect to.
@@ -87,12 +87,12 @@ namespace communicator_daemon
  * is lost, a communicatord returns a REFUSE message to our
  * CONNECT message, and other similar errors.
  *
- * \param[in] cs  The communicator server shared pointer.
+ * \param[in] s  The communicator server shared pointer.
  * \param[in] address  The address to connect to.
  * \param[in] secure  Whether to create a secure connection (true) or not.
  */
 remote_connection::remote_connection(
-              server::pointer_t cs
+              communicatord * s
             , addr::addr const & address
             , bool secure)
     : tcp_client_permanent_message_connection(
@@ -101,11 +101,11 @@ remote_connection::remote_connection(
                 ? ed::mode_t::MODE_SECURE
                 : ed::mode_t::MODE_PLAIN)
             , REMOTE_CONNECTION_DEFAULT_TIMEOUT)
-    , base_connection(cs, false)
+    , base_connection(s, false)
     , f_address(address)
 {
     std::string const addr_str(address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT));
-    set_name(communicatord::g_name_communicatord_connection_remote_communicator_out + (": " + addr_str));
+    set_name(communicator::g_name_communicator_connection_remote_communicator_out + (": " + addr_str));
 }
 
 
@@ -161,9 +161,9 @@ void remote_connection::process_connection_failed(std::string const & error_mess
         f_connected = false;
 
         ed::message hangup;
-        hangup.set_command(communicatord::g_name_communicatord_cmd_hangup);
-        hangup.set_service(communicatord::g_name_communicatord_service_local_broadcast);
-        hangup.add_parameter(communicatord::g_name_communicatord_param_server_name, f_server_name);
+        hangup.set_command(communicator::g_name_communicator_cmd_hangup);
+        hangup.set_service(communicator::g_name_communicator_service_local_broadcast);
+        hangup.add_parameter(communicator::g_name_communicator_param_server_name, f_server_name);
         f_server->broadcast_message(hangup);
     }
 
@@ -230,7 +230,7 @@ void remote_connection::process_connection_failed(std::string const & error_mess
               " fails connecting. If not, please remove that IP address"
               " from the list of neighbors AND THE FIREWALL if it is there too.";
 
-        communicatord::flag::pointer_t flag(COMMUNICATORD_FLAG_UP(
+        communicator::flag::pointer_t flag(COMMUNICATOR_FLAG_UP(
                       "communicatord"
                     , "remote-connection"
                     , "connection-failed"
@@ -263,7 +263,7 @@ void remote_connection::process_connected()
         f_failures = 0;
         f_flagged = false;
 
-        communicatord::flag::pointer_t flag(COMMUNICATORD_FLAG_DOWN(
+        communicator::flag::pointer_t flag(COMMUNICATOR_FLAG_DOWN(
                            "communicatord"
                          , "remote-connection"
                          , "connection-failed")

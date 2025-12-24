@@ -1,6 +1,6 @@
 // Copyright (c) 2011-2025  Made to Order Software Corp.  All Rights Reserved
 //
-// https://snapwebsites.org/project/communicatord
+// https://snapwebsites.org/project/communicator
 // contact@m2osw.com
 //
 // This program is free software: you can redistribute it and/or modify
@@ -54,6 +54,10 @@ public:
     typedef std::shared_ptr<load_timer>     pointer_t;
 
                         load_timer(loadavg * l);
+                        load_timer(load_timer const &) = delete;
+    virtual             ~load_timer() override;
+
+    load_timer          operator = (load_timer const &) = delete;
 
     // ed::timer implementation
     //
