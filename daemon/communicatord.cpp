@@ -45,7 +45,6 @@
 
 // communicator
 //
-#include    <communicator/communicator.h>
 #include    <communicator/exception.h>
 #include    <communicator/flags.h>
 #include    <communicator/loadavg.h>
@@ -362,16 +361,11 @@ constexpr char const * const g_configuration_files[] =
 #pragma GCC diagnostic ignored "-Wpedantic"
 advgetopt::options_environment const g_options_environment =
 {
-    .f_project_name = "communicator",
-    .f_group_name = "communicatord",
+    .f_project_name = "communicatord",
+    .f_group_name = "communicator",
     .f_options = g_options,
-    .f_options_files_directory = nullptr,
     .f_environment_variable_name = "COMMUNICATORD",
-    .f_environment_variable_intro = nullptr,
-    .f_section_variables_name = nullptr,
     .f_configuration_files = g_configuration_files,
-    .f_configuration_filename = nullptr,
-    .f_configuration_directories = nullptr,
     .f_environment_flags = advgetopt::GETOPT_ENVIRONMENT_FLAG_PROCESS_SYSTEM_PARAMETERS,
     .f_help_header = "Usage: %p [-<opt>]\n"
                      "where -<opt> is one or more of:",
@@ -381,8 +375,6 @@ advgetopt::options_environment const g_options_environment =
     .f_copyright = "Copyright (c) 2012-"
                    SNAPDEV_STRINGIZE(UTC_BUILD_YEAR)
                    "  Made to Order Software Corporation",
-    .f_build_date = UTC_BUILD_DATE,
-    .f_build_time = UTC_BUILD_TIME,
     .f_groups = g_group_descriptions
 };
 #pragma GCC diagnostic pop
@@ -501,6 +493,67 @@ communicatord::~communicatord()
  */
 int communicatord::init()
 {
+    // WARNING: the order of initialization is generally important
+    //
+    //          for example, the f_communicator is required to call
+    //          the init_interrupt() function
+    //
+    f_communicator = ed::communicator::instance();
+
+    init_server_name();
+    init_server_ownership();
+
+    if(!init_max_connections())
+    {
+        return 1;
+    }
+
+    init_max_gossip_timeout();
+    load_list_of_local_services();
+    init_interrupt();
+
+    if(!init_local_tcp_listener())
+    {
+        return 1;
+    }
+
+    if(!init_unix_listener())
+    {
+        return 1;
+    }
+
+    if(!init_plain_remote_listener())
+    {
+        return 1;
+    }
+
+    if(!init_secure_remote_listener())
+    {
+        return 1;
+    }
+
+    init_ping_listener();
+
+    if(!init_connection_address())
+    {
+        return 1;
+    }
+
+    init_neighbors();
+    load_plugins();
+
+    // if we are in a one computer environment this call would never happen
+    // unless someone sends us a CLUSTER_STATUS, but that does not have the
+    // exact same effect
+    //
+    cluster_status(nullptr);
+
+    return 0;
+}
+
+
+void communicatord::init_server_name()
+{
     // keep a copy of the server name handy
     //
     if(f_opts.is_defined("server-name"))
@@ -517,6 +570,7 @@ int communicatord::init()
                             { ".", "" },
                           });
     }
+
     try
     {
         ed::verify_message_name(f_server_name, true);
@@ -526,468 +580,606 @@ int communicatord::init()
         SNAP_LOG_RECOVERABLE_ERROR
             << "\""
             << f_server_name
-            << "\" is not a valid server name (as far as communicatord is concerned."
+            << "\" is not a valid server name (as far as communicatord is concerned)."
                " Please consider defining a valid name in"
                " /etc/communicator/communicator.d/50-communicatord.conf."
                " For now, using \"communicatord\" as a default."
             << SNAP_LOG_SEND;
         f_server_name = "communicatord";
     }
+
     SNAP_LOG_INFO
         << "server name is \""
         << f_server_name
         << "\"."
         << SNAP_LOG_SEND;
+}
 
-    // check a user defined maximum number of connections
-    // by default this is set to COMMUNICATORD_MAX_CONNECTIONS,
-    // which at this time is 100
-    //
+
+void communicatord::init_server_ownership()
+{
+    f_user_name = f_opts.get_string("user-name");
+    f_group_name = f_opts.get_string("group-name");
+}
+
+
+/** \brief Define the maximum number of connections.
+ *
+ * This function loads two numbers representing the maximum number of
+ * connections the communicatord allows total and the number of pending
+ * connections that each listener can have before dropping additional
+ * requests.
+ *
+ * The maximum number of connections is set to COMMUNICATORD_MAX_CONNECTIONS
+ * by default. The current value is 100. If you have more computers than
+ * that in your cluster, then you will have to increase this number.
+ *
+ * The number of pending connections is required to be between 5 and 1,000.
+ * The default is 25.
+ *
+ * \note
+ * From my tests, on Linux the maximum number of pending connections does
+ * not seem to be changeable. The system uses its own maximum. I would have
+ * to write a test where the listen() call does not happen at all to see
+ * what the current number is and whether changing it has any effect.
+ *
+ * \return false if the initialization fails.
+ */
+bool communicatord::init_max_connections()
+{
     f_max_connections = f_opts.get_long("max-connections");
 
-    // TODO: we need to move that to the plugin
-    //
-    communicator::set_loadavg_path(f_opts.get_string("data-path"));
-
-    // read the list of available services
-    //
-    {
-        std::string path_to_services(f_opts.get_string("services"));
-        path_to_services += "/*.service";
-        typedef std::set<std::string> service_files_t;
-        snapdev::glob_to_list<service_files_t> dir;
-        if(dir.read_path<snapdev::glob_to_list_flag_t::GLOB_FLAG_NO_ESCAPE>(path_to_services))
-        {
-            // we have some local services (note that communicatord is
-            // not added as a local service)
-            //
-            // at the moment we do not load those files, these could include
-            // data such as the service description
-            //
-            for(auto const & p : dir)
-            {
-                std::string const service_name(snapdev::pathinfo::basename(p, ".service"));
-                f_local_services_list.insert(service_name);
-
-                SNAP_LOG_DEBUG
-                    << "Known local service: \""
-                    << service_name
-                    << "\"."
-                    << SNAP_LOG_SEND;
-            }
-        }
-        else
-        {
-            SNAP_LOG_ERROR
-                << "search of services failed: "
-                << dir.get_last_error_message()
-                << SNAP_LOG_SEND;
-        }
-
-        // the list of local services cannot (currently) change while
-        // communicatord is running so generate the corresponding
-        // string once
-        //
-        f_local_services = snapdev::join_strings(f_local_services_list, ",");
-    }
-
-    f_communicator = ed::communicator::instance();
-
-    // capture Ctrl-C (SIGINT)
-    //
-    ed::connection::pointer_t ctrl_c(std::make_shared<interrupt>(this));
-    f_communicator->add_connection(ctrl_c);
-    f_interrupt = ctrl_c;
-
-    int const max_pending_connections(f_opts.get_long("max-pending-connections"));
-    if(max_pending_connections < 5
-    || max_pending_connections > 1000)
+    f_max_pending_connections = f_opts.get_long("max-pending-connections");
+    if(f_max_pending_connections < 5
+    || f_max_pending_connections > 1000)
     {
         SNAP_LOG_FATAL
             << "the --max-pending-connections option must be a valid number between 5 and 1000. "
-            << max_pending_connections
+            << f_max_pending_connections
             << " is not valid."
             << SNAP_LOG_SEND;
-        return 1;
+        return false;
     }
 
-    // create up to four listeners
-    //
-    // * TCP local (required) -- a local TCP/IP connection on IP 127.0.0.1
-    //   for local services to connect to (now the Unix connection is
-    //   preferred for security reasons)
-    //
-    // * Unix (optional) -- a local Unix stream connection for local services
-    //
-    // * TCP private (optional) -- a LAN based TCP/IP connection on your
-    //   LAN network other communicatord servers connect to this connection
-    //
-    // * TCP secure (optional) -- a public TCP/IP connection on the Internet
-    //   to allow other communicatord servers to connect from anywhere
+    return true;
+}
 
-    // TCP LOCAL
+
+void communicatord::init_max_gossip_timeout()
+{
+    if(!f_opts.is_defined("max-gossip-timeout"))
     {
-        addr::addr local_listen(addr::string_to_addr(
-                  f_opts.get_string("local-listen")
-                , "127.0.0.1"
-                , communicator::LOCAL_PORT
-                , "tcp"));
-        if(local_listen.get_network_type() != addr::network_type_t::NETWORK_TYPE_LOOPBACK)
-        {
-            SNAP_LOG_FATAL
-                << "The --local-listen option must be a loopback IP address. "
-                << f_opts.get_string("local-listen")
-                << " is not acceptable."
-                << SNAP_LOG_SEND;
-            return 1;
-        }
+        return;
+    }
 
-        // make this listener the local listener
-        //
-        f_local_listener = std::make_shared<listener>(
-                                  this
-                                , local_listen
-                                , std::string()
-                                , std::string()
-                                , max_pending_connections
-                                , true
-                                , f_server_name);
-        f_local_listener->set_name("communicator_local_listener");
-        f_communicator->add_connection(f_local_listener);
-
-        SNAP_LOG_CONFIGURATION
-            << "listening to local connection \""
-            << local_listen.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT)
-            << "\"."
+    double timeout(0.0);
+    if(!advgetopt::validator_duration::convert_string(
+                  f_opts.get_string("max-gossip-timeout")
+                , advgetopt::validator_duration::VALIDATOR_DURATION_DEFAULT_FLAGS
+                , timeout))
+    {
+        SNAP_LOG_CONFIGURATION_WARNING
+            << "the --max-gossip-timeout does not represent a valid duration."
             << SNAP_LOG_SEND;
+        return;
     }
 
-    // UNIX
-    //
-    if(f_opts.is_defined("unix-listen"))
+    if(timeout <= 0.0)
     {
-        addr::addr_unix unix_listen(addr::addr_unix(f_opts.get_string("unix-listen")));
-        unix_listen.set_scheme("cd");
-
-        // let users of the communicator-user group access this socket
-        //
-        unix_listen.set_mode(S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
-        unix_listen.set_group(f_opts.get_string("unix-group"));
-
-        f_unix_listener = std::make_shared<unix_listener>(
-                  this
-                , unix_listen
-                , max_pending_connections
-                , f_server_name);
-        f_unix_listener->set_name("communicator_unix_listener");
-        f_communicator->add_connection(f_unix_listener);
-
-        SNAP_LOG_CONFIGURATION
-            << "listening to Unix socket \""
-            << unix_listen.to_string()
-            << "\"."
+        SNAP_LOG_CONFIGURATION_WARNING
+            << "the --max-gossip-timeout duration must be a positive number."
             << SNAP_LOG_SEND;
+        return;
     }
 
-    // PLAIN REMOTE
-    //
-    int default_remote_port(communicator::REMOTE_PORT);
-    if(f_opts.is_defined("remote-listen"))
+    gossip_connection::set_max_gossip_timeout(timeout * 1'000'000LL);
+}
+
+
+/** \brief Read the list of available local services.
+ *
+ * Whenever an service is installed on a computer, a .service file is
+ * created in the "path to services" (`/usr/share/communicator/services`
+ * by default). Those files include the name of the services that project
+ * includes.
+ *
+ * This allows the communicatord to know of local services even if they
+ * are not started ahead of time.
+ */
+void communicatord::load_list_of_local_services()
+{
+    std::string path_to_services(f_opts.get_string("services"));
+    path_to_services += "/*.service";
+    typedef std::set<std::string> service_files_t;
+    snapdev::glob_to_list<service_files_t> dir;
+    if(dir.read_path<snapdev::glob_to_list_flag_t::GLOB_FLAG_NO_ESCAPE>(path_to_services))
     {
-        std::string const listen_str(f_opts.get_string("remote-listen"));
-        addr::addr listen_addr(addr::string_to_addr(
-                      listen_str
-                    , "0.0.0.0"
-                    , communicator::REMOTE_PORT
-                    , "tcp"));
-
-        if(listen_addr.is_default())
-        {
-            // this is a fatal error!
-            //
-            SNAP_LOG_FATAL
-                << "the communicatord \"listen="
-                << listen_str
-                << "\" parameter is the default IP address."
-                   " For security reasons, we do not allow such an IP for the plain"
-                   " remote connection. You may use that address in the secure"
-                   " connection instead."
-                << SNAP_LOG_SEND;
-
-            //communicator::flag::pointer_t flag(COMMUNICATOR_FLAG_UP(
-            //              "communicator"
-            //            , "cluster"
-            //            , "no-cluster"
-            //            , ss.str()));
-            //flag->set_priority(82);
-            //flag->add_tag("initialization");
-            //flag->add_tag("network");
-            //flag->save();
-
-            return 1;
-        }
-
-        // make this listener the remote listener, however, if the IP
-        // address is 127.0.0.1 we skip on this one, we do not need
-        // two listeners on the local IP address (i.e. the TCP LOCAL is
-        // already listening on that IP)
+        // we have some local services (note that communicatord is
+        // not added as a local service)
         //
-        if(listen_addr.get_network_type() == addr::network_type_t::NETWORK_TYPE_LOOPBACK)
-        {
-            SNAP_LOG_CONFIGURATION
-                << "ignoring the \"listen=...\" parameter since it is set to the loopback."
-                << SNAP_LOG_SEND;
-        }
-        else
-        {
-            if(listen_addr.get_network_type() != addr::network_type_t::NETWORK_TYPE_PRIVATE)
-            {
-                // this is a fatal error!
-                //
-                SNAP_LOG_FATAL
-                    << "the communicatord \"listen="
-                    << listen_str
-                    << "\" parameter is not a private IP address."
-                       " For security reasons, the PLAIN REMOTE connection is"
-                       " not allowed to use a public IP address. If you need"
-                       " that IP address, consider setting up the"
-                       " --secure-listen option instead."
-                    << SNAP_LOG_SEND;
-
-                return 1;
-            }
-
-            default_remote_port = listen_addr.get_port();
-
-            f_public_ip = listen_addr.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT);
-            f_remote_listener = std::make_shared<listener>(
-                      this
-                    , listen_addr
-                    , std::string()
-                    , std::string()
-                    , max_pending_connections
-                    , false
-                    , f_server_name);
-            f_remote_listener->set_name("communicator_remote_listener");
-            f_communicator->add_connection(f_remote_listener);
-
-            SNAP_LOG_CONFIGURATION
-                << "listening to plain remote connection \""
-                << f_public_ip
-                << "\"."
-                << SNAP_LOG_SEND;
-        }
-    }
-
-    // SECURE REMOTE
-    //
-    std::string const certificate(f_opts.get_string("certificate"));
-    std::string const private_key(f_opts.get_string("private-key"));
-    if(!certificate.empty()
-    && !private_key.empty()
-    && f_opts.is_defined("secure-listen"))
-    {
-        std::string const secure_listen(f_opts.get_string("secure-listen"));
-        edhttp::uri u;
-        u.set_port(communicator::SECURE_PORT);
-        if(!u.set_uri(secure_listen, false, true))
-        {
-            SNAP_LOG_ERROR
-                << "the \"secure_listen=...\" parameter \""
-                << secure_listen
-                << "\" is not a valid URI: "
-                << u.get_last_error_message()
-                << SNAP_LOG_SEND;
-            stop(false);
-            return 1;
-        }
-        if(u.scheme() != communicator::g_name_communicator_scheme_cds)
-        {
-            SNAP_LOG_RECOVERABLE_ERROR
-                << "the \"secure_listen=...\" parameter must have an address with the scheme set to \"cds\" not \""
-                << u.scheme()
-                << "\". \""
-                << secure_listen
-                << "\" is not supported."
-                << SNAP_LOG_SEND;
-        }
-
-        //std::string::size_type const pos(secure_listen.find('@'));
-        //if(pos == std::string::npos)
-        //{
-        //    SNAP_LOG_FATAL
-        //        << "the --secure-listen parameter must include a user name, a password, an IP address, and optionally a port."
-        //        << SNAP_LOG_SEND;
-        //    return 1;
-        //}
-        //std::string user_password(secure_listen.substr(0, pos));
-        //std::string::size_type const colon(user_password.find(':'));
-        //if(colon == std::string::npos)
-        //{
-        //    SNAP_LOG_FATAL
-        //        << "the user and password of the --secure-listen parameter must separated by a colon."
-        //        << SNAP_LOG_SEND;
-        //    return 1;
-        //}
-        //std::string const username(user_password.substr(0, colon));
-        //std::string const password(user_password.substr(colon + 1));
-        //if(username.empty()
-        //|| password.empty())
-        //{
-        //    SNAP_LOG_FATAL
-        //        << "the user and password of the --secure-listen parameter cannot be empty."
-        //        << SNAP_LOG_SEND;
-        //    return 1;
-        //}
-        //std::string const ip_port(secure_listen.substr(pos + 1));
-
-        std::string const username(u.get_username());
-        std::string const password(u.get_password());
-        if(username.empty())
-        {
-            SNAP_LOG_ERROR
-                << "the \"secure_listen=...\" parameter must include a non-empty username."
-                << SNAP_LOG_SEND;
-            return 1;
-        }
-        if(password.empty())
-        {
-            SNAP_LOG_ERROR
-                << "the \"secure_listen=...\" parameter must include a non-empty password."
-                << SNAP_LOG_SEND;
-            return 1;
-        }
-
-        addr::addr_range::vector_t const & ranges(u.address_ranges());
-        if(ranges.size() != 1
-        || ranges[0].size() != 1
-        || !ranges[0].has_from())
-        {
-            SNAP_LOG_ERROR
-                << "the \"secure_listen=...\" parameter must have an address with the scheme set to \"rfs\". \""
-                << secure_listen
-                << "\" is not supported."
-                << SNAP_LOG_SEND;
-            stop(false);
-            return 1;
-        }
-
-        //addr::addr const a(addr::string_to_addr(
-        //          ip_port
-        //        , "0.0.0.0"
-        //        , communicator::SECURE_PORT
-        //        , "tcp"));
-        addr::addr const a(ranges[0].get_from());
-
-        // this listener is the secure listener so it is expected to use
-        // a public or at least a private IP address
+        // at the moment we do not load those files, these could include
+        // data such as the service description
         //
-        if(a.get_network_type() == addr::network_type_t::NETWORK_TYPE_PUBLIC
-        || a.get_network_type() == addr::network_type_t::NETWORK_TYPE_PRIVATE
-        || a.get_network_type() == addr::network_type_t::NETWORK_TYPE_ANY)
+        for(auto const & p : dir)
         {
-            f_secure_ip = a.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT);
-            listener::pointer_t sl(std::make_shared<listener>(
-                      this
-                    , a
-                    , certificate
-                    , private_key
-                    , max_pending_connections
-                    , false
-                    , f_server_name));
-            sl->set_name("communicator_secure_listener");
-            sl->set_username(username);
-            sl->set_password(password);
-            f_communicator->add_connection(sl);
-            f_secure_listener = sl;
+            std::string const service_name(snapdev::pathinfo::basename(p, ".service"));
+            f_local_services_list.insert(service_name);
 
-            SNAP_LOG_CONFIGURATION
-                << "listening to public secure connection \""
-                << f_secure_ip
+            SNAP_LOG_DEBUG
+                << "Known local service: \""
+                << service_name
                 << "\"."
-                << SNAP_LOG_SEND;
-        }
-        else
-        {
-            SNAP_LOG_WARNING
-                << "remote \"secure_listen\" parameter is \""
-                << secure_listen
-                << "\" (not public or private) so it is ignored and no secure remote connections will be possible."
                 << SNAP_LOG_SEND;
         }
     }
     else
     {
-        SNAP_LOG_INFO
-            << "no certificate, private key, or secure-listen was defined, no secure connection will be possible."
+        SNAP_LOG_ERROR
+            << "search of services failed: "
+            << dir.get_last_error_message()
             << SNAP_LOG_SEND;
     }
 
-    {
-        addr::addr signal_address(addr::string_to_addr(
-                          f_opts.get_string("signal")
-                        , "127.0.0.1"
-                        , communicator::UDP_PORT
-                        , "udp"));
+    // the list of local services cannot (currently) change while
+    // communicatord is running so generate the corresponding
+    // string once
+    //
+    f_local_services = snapdev::join_strings(f_local_services_list, ",");
+}
 
-        ping::pointer_t p(std::make_shared<ping>(this, signal_address));
-        if(f_opts.is_defined("signal-secret"))
-        {
-            p->set_secret_code(f_opts.get_string("signal-secret"));
-        }
-        p->set_name("communicator_messenger_udp");
-        f_ping = p;
-        if(!f_communicator->add_connection(f_ping))
-        {
-            SNAP_LOG_NOTICE
-                << "adding the ping signal UDP listener to ed::communicator failed."
-                << SNAP_LOG_SEND;
-        }
-        else
-        {
-            SNAP_LOG_CONFIGURATION
-                << "listening to UDP connection \""
-                << signal_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS)
-                << "\"."
-                << SNAP_LOG_SEND;
-        }
+
+void communicatord::init_interrupt()
+{
+    // capture Ctrl-C (SIGINT)
+    //
+    ed::connection::pointer_t ctrl_c(std::make_shared<interrupt>(this));
+    f_communicator->add_connection(ctrl_c);
+    f_interrupt = ctrl_c;
+}
+
+
+/** \brief Create the local TCP listener
+ *
+ * The local TCP listener is required. It opens a port on IP 127.0.0.1
+ * for local services to connect to.
+ *
+ * \note
+ * Now the Unix connection is preferred for security reasons.
+ *
+ * \return false if the initialization failed.
+ */
+bool communicatord::init_local_tcp_listener()
+{
+    std::string const listen_str(f_opts.get_string("local-listen"));
+    addr::addr local_listen(addr::string_to_addr(
+              listen_str
+            , "127.0.0.1"
+            , communicator::LOCAL_PORT
+            , "tcp"));
+    if(local_listen.get_network_type() != addr::network_type_t::NETWORK_TYPE_LOOPBACK)
+    {
+        SNAP_LOG_FATAL
+            << "The --local-listen option must be a loopback IP address. "
+            << listen_str
+            << " is not acceptable."
+            << SNAP_LOG_SEND;
+        return false;
     }
 
-    // transform the --my-address to an addr::addr object
+    // make this listener the local listener
     //
-    // note that the default port is not important if the listen_addr is not
-    // set because then no remote communicatord can connect to this system
-    // via this address (instead, we may be able to use the secure address?)
+    listener::pointer_t c(std::make_shared<listener>(
+                              this
+                            , local_listen
+                            , std::string()
+                            , std::string()
+                            , f_max_pending_connections
+                            , true
+                            , f_server_name));
+    c->set_name("communicator_local_listener");
+    if(!f_communicator->add_connection(c))
+    {
+        SNAP_LOG_FATAL
+            << "The local TCP listener could not be added to ed::communicator."
+            << SNAP_LOG_SEND;
+        return false;
+    }
+
+    f_local_listener = c;
+
+    SNAP_LOG_CONFIGURATION
+        << "listening to local connection \""
+        << local_listen.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT)
+        << "\"."
+        << SNAP_LOG_SEND;
+
+    return true;
+}
+
+
+/** \brief Initialize a Unix listener.
+ *
+ * This function checks whether a Unix socket filename was defined on
+ * the command line. If so, then it creates that socket and starts
+ * listening to it.
+ *
+ * This is the best and safest way to connect to the communicator
+ * from local services.
+ */
+bool communicatord::init_unix_listener()
+{
+    if(!f_opts.is_defined("unix-listen"))
+    {
+        return true;
+    }
+
+    addr::addr_unix unix_listen(addr::addr_unix(f_opts.get_string("unix-listen")));
+    unix_listen.set_scheme("cd");
+
+    // let users of the communicator-user group access this socket
     //
+    unix_listen.set_mode(S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+    unix_listen.set_group(f_opts.get_string("unix-group"));
+
+    f_unix_listener = std::make_shared<unix_listener>(
+              this
+            , unix_listen
+            , f_max_pending_connections
+            , f_server_name);
+    f_unix_listener->set_name("communicator_unix_listener");
+    if(!f_communicator->add_connection(f_unix_listener))
+    {
+        SNAP_LOG_FATAL
+            << "The Unix listener could not be added to ed::communicator."
+            << SNAP_LOG_SEND;
+        return false;
+    }
+
+    SNAP_LOG_CONFIGURATION
+        << "listening to Unix socket \""
+        << unix_listen.to_string()
+        << "\"."
+        << SNAP_LOG_SEND;
+
+    return true;
+}
+
+
+/** \brief Initialize a plain (non-encrypted) listener.
+ *
+ * This TCP listener expects connections from other communicatord
+ * services running on your LAN (i.e. local network).
+ *
+ * The connections created on this port are not encrypted. This means
+ * it should only be used on a LAN and not between clusters where the
+ * data travels over the Internet.
+ *
+ * Local services never use this port to connect. Instead, they use
+ * the local TCP listener or the Unix socket.
+ */
+bool communicatord::init_plain_remote_listener()
+{
+    if(!f_opts.is_defined("remote-listen"))
+    {
+        return true;
+    }
+
+    std::string const listen_str(f_opts.get_string("remote-listen"));
+    addr::addr listen_addr(addr::string_to_addr(
+                  listen_str
+                , "0.0.0.0"
+                , communicator::REMOTE_PORT
+                , "tcp"));
+
+    // we do not allow 0.0.0.0 as the remote listener IP address
+    //
+    if(listen_addr.is_default())
+    {
+        SNAP_LOG_FATAL
+            << "the communicatord \"remote-listen="
+            << listen_str
+            << "\" parameter is the default IP address."
+               " For security reasons, we do not allow such an IP for the plain"
+               " remote connection. You may use that address in the secure"
+               " connection instead."
+            << SNAP_LOG_SEND;
+        return false;
+    }
+
+    // make this listener the remote listener, however, if the IP
+    // address is 127.0.0.1 we skip on this one, we do not need
+    // two listeners on the local IP address (i.e. the TCP LOCAL is
+    // already listening on that IP)
+    //
+    if(listen_addr.get_network_type() == addr::network_type_t::NETWORK_TYPE_LOOPBACK)
+    {
+        SNAP_LOG_RECOVERABLE_ERROR
+            << "ignoring the \"remote-listen=...\" parameter since it is set to a loopback address."
+            << SNAP_LOG_SEND;
+        return true;
+    }
+
+    // similarly, we want the IP to represent a private network
+    //
+    // note that LOOPBACK is a private network hence the test above
+    //
+    if(listen_addr.get_network_type() != addr::network_type_t::NETWORK_TYPE_PRIVATE)
+    {
+        SNAP_LOG_FATAL
+            << "the communicatord \"remote-listen="
+            << listen_str
+            << "\" parameter is not a private IP address."
+               " For security reasons, the PLAIN REMOTE connection is"
+               " not allowed to use a public IP address. If you need"
+               " that IP address, consider setting up the"
+               " --secure-listen option instead."
+            << SNAP_LOG_SEND;
+        return false;
+    }
+
+    listener::pointer_t c(std::make_shared<listener>(
+              this
+            , listen_addr
+            , std::string()
+            , std::string()
+            , f_max_pending_connections
+            , false
+            , f_server_name));
+    c->set_name("communicator_remote_listener");
+    if(!f_communicator->add_connection(c))
+    {
+        SNAP_LOG_FATAL
+            << "The remote TCP listener could not be added to ed::communicator."
+            << SNAP_LOG_SEND;
+        return false;
+    }
+
+    f_remote_listener = c;
+    f_public_ip = listen_addr.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT);
+    f_default_remote_port = listen_addr.get_port();
+
+    SNAP_LOG_CONFIGURATION
+        << "listening to plain remote connection \""
+        << f_public_ip
+        << "\"."
+        << SNAP_LOG_SEND;
+
+    return true;
+}
+
+
+/** \brief Create a secure TCP listener.
+ *
+ * This TCP listener allows other communicatord to connect to this
+ * communicatord securely (using TLS).
+ *
+ * This is used to connect multiple separate clusters (separate as in
+ * different data centers).
+ *
+ * \return false if an error occurred.
+ */
+bool communicatord::init_secure_remote_listener()
+{
+    // this is optional, but we tell the administrator exactly why
+    // it fails in case they are trying to make it all work
+    //
+    std::string const certificate(f_opts.get_string("certificate"));
+    if(certificate.empty())
+    {
+        SNAP_LOG_CONFIGURATION
+            << "no certificate was defined, no secure connection is possible."
+            << SNAP_LOG_SEND;
+        return true;
+    }
+
+    std::string const private_key(f_opts.get_string("private-key"));
+    if(private_key.empty())
+    {
+        SNAP_LOG_CONFIGURATION
+            << "no private key was defined, no secure connection is possible."
+            << SNAP_LOG_SEND;
+        return true;
+    }
+
+    if(!f_opts.is_defined("secure-listen"))
+    {
+        SNAP_LOG_CONFIGURATION
+            << "no --secure-listen address was defined, no secure connection is possible."
+            << SNAP_LOG_SEND;
+        return true;
+    }
+
+    // the parameters are there, try to create the listener
+    //
+    // first verify that it is a valid URI
+    //
+    std::string const secure_listen(f_opts.get_string("secure-listen"));
+    edhttp::uri u;
+    u.set_port(communicator::SECURE_PORT); // default port in case it's not specified by the user
+    if(!u.set_uri(secure_listen, false, true))
+    {
+        SNAP_LOG_ERROR
+            << "the \"secure_listen=...\" parameter \""
+            << secure_listen
+            << "\" is not a valid URI: "
+            << u.get_last_error_message()
+            << SNAP_LOG_SEND_SECURELY;
+        return false;
+    }
+
+    // make sure the scheme is correct (although really we ignore wrong ones)
+    //
+    if(u.scheme() != communicator::g_name_communicator_scheme_cds)
+    {
+        SNAP_LOG_RECOVERABLE_ERROR
+            << "the \"secure_listen=...\" parameter must have an address with the scheme set to \"cds\" not \""
+            << u.scheme()
+            << "\". \""
+            << secure_listen
+            << "\" is not supported."
+            << SNAP_LOG_SEND_SECURELY;
+    }
+
+    // make sure we have a username and password
+    //
+    std::string const username(u.get_username());
+    std::string const password(u.get_password());
+    if(username.empty())
+    {
+        SNAP_LOG_ERROR
+            << "the \"secure_listen=...\" parameter must include a non-empty username."
+            << SNAP_LOG_SEND;
+        return false;
+    }
+    if(password.empty())
+    {
+        SNAP_LOG_ERROR
+            << "the \"secure_listen=...\" parameter must include a non-empty password."
+            << SNAP_LOG_SEND;
+        return false;
+    }
+
+    // make sure the address is unique
+    //
+    addr::addr_range::vector_t const & ranges(u.address_ranges());
+    if(ranges.size() != 1
+    || ranges[0].size() != 1
+    || !ranges[0].has_from())
+    {
+        SNAP_LOG_ERROR
+            << "the \"secure_listen=...\" parameter must resolved into a single address. \""
+            << secure_listen
+            << "\" is not supported."
+            << SNAP_LOG_SEND_SECURELY;
+        return false;
+    }
+
+    addr::addr const a(ranges[0].get_from());
+
+    // this listener is the secure listener so it is expected to use
+    // a public or at least a private IP address
+    //
+    if(a.get_network_type() != addr::network_type_t::NETWORK_TYPE_PUBLIC
+    && a.get_network_type() != addr::network_type_t::NETWORK_TYPE_PRIVATE
+    && a.get_network_type() != addr::network_type_t::NETWORK_TYPE_ANY)
+    {
+        SNAP_LOG_RECOVERABLE_ERROR
+            << "remote \"secure_listen\" parameter is \""
+            << secure_listen
+            << "\" (not public or private) so it is ignored and no secure remote connections is possible."
+            << SNAP_LOG_SEND_SECURELY;
+        return true;
+    }
+
+    listener::pointer_t c(std::make_shared<listener>(
+              this
+            , a
+            , certificate
+            , private_key
+            , f_max_pending_connections
+            , false
+            , f_server_name));
+    c->set_name("communicator_secure_listener");
+    c->set_username(username);
+    c->set_password(password);
+    if(!f_communicator->add_connection(c))
+    {
+        SNAP_LOG_FATAL
+            << "The secure TCP listener could not be added to ed::communicator."
+            << SNAP_LOG_SEND;
+        return false;
+    }
+
+    f_secure_listener = c;
+    f_secure_ip = a.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT);
+
+    // if the local network (private) connection is non-existent, then
+    // use the secure port as the default remote port
+    //
+    if(f_remote_listener == nullptr)
+    {
+        f_default_remote_port = a.get_port();
+    }
+
+    SNAP_LOG_CONFIGURATION
+        << "listening to public secure connection \""
+        << f_secure_ip
+        << "\"."
+        << SNAP_LOG_SEND;
+
+    return true;
+}
+
+
+void communicatord::init_ping_listener()
+{
+    addr::addr signal_address(addr::string_to_addr(
+                      f_opts.get_string("signal")
+                    , "127.0.0.1"
+                    , communicator::UDP_PORT
+                    , "udp"));
+
+    ping::pointer_t p(std::make_shared<ping>(this, signal_address));
+    if(f_opts.is_defined("signal_secret"))
+    {
+        p->set_secret_code(f_opts.get_string("signal_secret"));
+    }
+    p->set_name("communicator_messenger_udp");
+    if(!f_communicator->add_connection(f_ping))
+    {
+        SNAP_LOG_CONFIGURATION_WARNING
+            << "adding the ping signal UDP listener to ed::communicator failed."
+            << SNAP_LOG_SEND;
+        return;
+    }
+    f_ping = p;
+
+    SNAP_LOG_CONFIGURATION
+        << "listening to UDP connection \""
+        << signal_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS)
+        << "\"."
+        << SNAP_LOG_SEND;
+}
+
+
+/** \brief Transform the --my-address to an addr::addr object.
+ *
+ * The default port is not considered important. It uses the plain
+ * remote port by default. If the plain remote address is specified
+ * (`--remote-listen`) then the port defined in that address is used.
+ *
+ * Note that if the `--remote-listen` is not specified but there is
+ * a `--secure-remote-listen`, then the secure port is used as the
+ * default remote port.
+ *
+ * This address represents the address a remote communicatord service
+ * can use to connect to this communicatord.
+ *
+ * \return false if the address is not considered valid.
+ */
+bool communicatord::init_connection_address()
+{
     f_connection_address = addr::addr(addr::string_to_addr(
-                  f_opts.get_string("my-address")
+                  f_opts.get_string("my_address")
                 , std::string()
-                , default_remote_port
+                , f_default_remote_port
                 , "tcp"));
     if(addr::find_addr_interface(f_connection_address, false) == nullptr)
     {
-        std::string msg("my-address \"");
-        msg += f_connection_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS);
-        msg += "\" not found on this computer. Did you copy the configuration file and forgot to change that variable?";
         SNAP_LOG_FATAL
-            << msg
+            << "the specified address, \"--my-address "
+            << f_connection_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS)
+            << "\", was not found on this computer. Did you copy the configuration file and forgot to change that variable?"
             << SNAP_LOG_SEND;
-        throw communicator::address_missing(msg);
+        return false;
     }
 
-    if(f_opts.is_defined("max-gossip-timeout"))
-    {
-        double timeout(0.0);
-        if(advgetopt::validator_duration::convert_string(
-                      f_opts.get_string("max-gossip-timeout")
-                    , advgetopt::validator_duration::VALIDATOR_DURATION_DEFAULT_FLAGS
-                    , timeout)
-        && timeout > 0.0)
-        {
-            gossip_connection::set_max_gossip_timeout(timeout * 1'000'000LL);
-        }
-    }
+    return true;
+}
 
+
+void communicatord::init_neighbors()
+{
     f_remote_communicators = std::make_shared<remote_communicators>(
                                           this
                                         , f_connection_address);
@@ -1003,19 +1195,6 @@ int communicatord::init()
         f_explicit_neighbors = canonicalize_neighbors(f_opts.get_string("neighbors"));
         add_neighbors(f_explicit_neighbors);
     }
-
-    f_user_name = f_opts.get_string("user-name");
-    f_group_name = f_opts.get_string("group-name");
-
-    load_plugins();
-
-    // if we are in a one computer environment this call would never happen
-    // unless someone sends us a CLUSTER_STATUS, but that does not have the
-    // exact same effect
-    //
-    cluster_status(nullptr);
-
-    return 0;
 }
 
 
@@ -4355,7 +4534,7 @@ void communicatord::stop(bool quitting)
     f_secure_listener.reset();
 
     f_communicator->remove_connection(f_unix_listener);     // Unix Stream
-    f_unix_listener.reset();
+    //f_unix_listener.reset();
 
     f_communicator->remove_connection(f_ping);              // UDP/IP
     f_ping.reset();

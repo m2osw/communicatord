@@ -30,6 +30,11 @@
 #include    "utils.h"
 
 
+// communicator
+//
+#include    <communicator/communicator.h>
+
+
 // eventdispatcher
 //
 #include    <eventdispatcher/connection.h>
@@ -143,6 +148,19 @@ public:
 
 private:
     int                         init();
+    void                        init_server_name();
+    void                        init_server_ownership();
+    bool                        init_max_connections();
+    void                        init_max_gossip_timeout();
+    void                        load_list_of_local_services();
+    void                        init_interrupt();
+    bool                        init_local_tcp_listener();
+    bool                        init_unix_listener();
+    bool                        init_plain_remote_listener();
+    bool                        init_secure_remote_listener();
+    void                        init_ping_listener();
+    bool                        init_connection_address();
+    void                        init_neighbors();
     void                        load_plugins();
     void                        drop_privileges();
     void                        refresh_heard_of();
@@ -178,7 +196,9 @@ private:
     std::shared_ptr<remote_communicators>
                                     f_remote_communicators = std::shared_ptr<remote_communicators>();
     std::size_t                     f_max_connections = COMMUNICATORD_MAX_CONNECTIONS;
+    std::size_t                     f_max_pending_connections = COMMUNICATORD_MAX_CONNECTIONS;
     std::size_t                     f_total_count_sent = 0; // f_all_neighbors.size() sent along CLUSTERUP/DOWN/COMPLETE/INCOMPLETE
+    int                             f_default_remote_port = communicator::REMOTE_PORT;
     bool                            f_shutdown = false;
     bool                            f_debug_all_messages = false;
     bool                            f_force_restart = false;

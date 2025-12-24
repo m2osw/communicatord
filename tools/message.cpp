@@ -245,19 +245,12 @@ char const * const g_configuration_directories[] =
 };
 
 
-// until we have C++20, remove warnings this way
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
 advgetopt::options_environment const g_command_line_options_environment =
 {
     .f_project_name = "message",
-    .f_group_name = nullptr,
+    .f_group_name = "communicator",
     .f_options = g_command_line_options,
-    .f_options_files_directory = nullptr,
     .f_environment_variable_name = "MESSAGE",
-    .f_environment_variable_intro = nullptr,
-    .f_section_variables_name = nullptr,
-    .f_configuration_files = nullptr,
     .f_configuration_filename = "message.conf",
     .f_configuration_directories = g_configuration_directories,
     .f_environment_flags = advgetopt::GETOPT_ENVIRONMENT_FLAG_PROCESS_SYSTEM_PARAMETERS,
@@ -269,11 +262,8 @@ advgetopt::options_environment const g_command_line_options_environment =
     .f_copyright = "Copyright (c) 2013-"
                    SNAPDEV_STRINGIZE(UTC_BUILD_YEAR)
                    " by Made to Order Software Corporation -- All Rights Reserved",
-    .f_build_date = UTC_BUILD_DATE,
-    .f_build_time = UTC_BUILD_TIME,
     .f_groups = g_group_descriptions,
 };
-#pragma GCC diagnostic pop
 
 
 

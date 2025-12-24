@@ -10,7 +10,7 @@ while test -n "$1"
 do
     case "$1" in
     "-h"|"--help")
-        echo "Usage: $0 [-h|--help] [-n|--tries <count>] [-s|--sleep <seconds>]"
+        echo "Usage: `basename $0` [-h|--help] [-n|--tries <count>] [-s|--sleep <seconds>]"
         echo "where options are:"
         echo "  -h | --help           print this help screen"
         echo "  -n | --tries=<count>  defines the number of times to check"

@@ -144,6 +144,8 @@ void loadavg::on_initialize(advgetopt::getopt & opts)
 
     f_number_of_processors = std::max(1U, std::thread::hardware_concurrency());
 
+    communicator::set_loadavg_path(opts.get_string("data-path"));
+
     if(f_tag != ed::dispatcher_match::DISPATCHER_MATCH_NO_TAG)
     {
         throw communicator::logic_error("plugin already initialized.");

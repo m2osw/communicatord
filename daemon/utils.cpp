@@ -216,7 +216,7 @@ std::string canonicalize_neighbors(std::string const & neighbors)
         {
             // emit errors on invalid IP:port info and go on
             //
-            SNAP_LOG_ERROR
+            SNAP_LOG_RECOVERABLE_ERROR
                 << "invalid neighbor address \""
                 << a.get_from()
                 << '-'

@@ -4,7 +4,11 @@
   moved to the advgetopt library so we can just load a set of .ini files
   from a folder and voilà)
 
+* Remove debug code (I have many logs that are really just debug).
+
 * Use bare pointers for child connections
+
+  **NOTE:** this is done, just not tested 100%.
 
   Look into the daemon to replace the shared pointers within children with
   bare pointers. At the moment, some destructors do not get called properly
@@ -17,9 +21,6 @@
 
   i.e. right now, if we quit because of an exception, we do not do a good
   job at cleaning up the server.
-
-* Look at configuration paths, I think many are "unexpected" (i.e. still
-  use "communicatord.d" for example, when it should be "communicator.d")
 
 * Properly test password usage and requirements
 
