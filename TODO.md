@@ -1,9 +1,4 @@
 
-* Add support to easily allow additional command line options for plugins
-  (i.e. through .ini files as done in the sitter; code that needs to be
-  moved to the advgetopt library so we can just load a set of .ini files
-  from a folder and voilà)
-
 * Remove debug code (I have many logs that are really just debug).
 
 * Use bare pointers for child connections

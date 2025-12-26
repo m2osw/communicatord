@@ -93,6 +93,21 @@ install(
         sbin
 )
 
+# for plugins, we also need some of the headers
+install(
+    FILES
+        base_connection.h
+        cache.h
+        communicatord.h
+        remote_connection.h
+        service_connection.h
+        unix_connection.h
+        utils.h
+
+    DESTINATION
+        include/communicator/plugins
+)
+
 
 ##
 ## testcommunicatordaemon

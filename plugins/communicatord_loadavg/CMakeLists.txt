@@ -35,7 +35,7 @@ install(
         ${PROJECT_NAME}
 
     LIBRARY DESTINATION
-        ${PLUGIN_INSTALL_DIR}
+        ${PLUGINS_INSTALL_DIR}
 )
 
 install(

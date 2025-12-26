@@ -35,7 +35,7 @@ install(
         ${PROJECT_NAME}
 
     LIBRARY DESTINATION
-        ${PLUGIN_INSTALL_DIR}
+        ${PLUGINS_INSTALL_DIR}
 )
 
 install(
@@ -47,6 +47,14 @@ install(
 
     FILES_MATCHING PATTERN
         "*.h"
+)
+
+install(
+    FILES
+        communicator-check-clock.ini
+
+    DESTINATION
+        share/communicator/options
 )
 
 # vim: ts=4 sw=4 et

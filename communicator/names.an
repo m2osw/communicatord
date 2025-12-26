@@ -39,10 +39,12 @@ cmd_unreachable=UNREACHABLE
 cmd_unregister=UNREGISTER
 cmd_unregister_from_loadavg=UNREGISTER_FROM_LOADAVG
 
-# the ipwall status is required by communicator and prinbee daemons which
-# both are dependencies of iplock so define the name here
-cmd_ipwall_get_status=IPWALL_GET_STATUS
-cmd_ipwall_current_status=IPWALL_CURRENT_STATUS
+# the iplock status is required by communicator and prinbee daemons which
+# both are dependencies of iplock so define the names here; these messages
+# are received/sent by the wait_on_firewall plugin
+#
+cmd_iplock_current_status=IPLOCK_CURRENT_STATUS
+cmd_iplock_get_status=IPLOCK_GET_STATUS
 
 config_local_listen=local_listen
 config_signal_secret=signal_secret
@@ -63,6 +65,7 @@ param_date=date
 param_destination_service=destination_service
 param_down_since=down_since
 param_error=error
+param_firewall_status=firewall_status
 param_function=function
 param_heard_of=heard_of
 param_hostname=hostname
@@ -102,6 +105,7 @@ param_username=username
 param_version=version
 param_who=who
 
+value_active=active
 value_cached=cached
 value_checking=checking
 value_down=down

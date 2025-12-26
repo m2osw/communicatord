@@ -301,13 +301,14 @@ const advgetopt::option g_options[] =
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
         , advgetopt::Help("a secret key used to verify that UDP packets are acceptable.")
     ),
-    advgetopt::define_option(
-          advgetopt::Name("timedate-wait-command")
-        , advgetopt::Flags(advgetopt::all_flags<
-              advgetopt::GETOPT_FLAG_REQUIRED
-            , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
-        , advgetopt::Help("the path and filename to the timedate-wait command used to check the timedatectl service.")
-    ),
+    // moved the to the check-clock plugin (see the communicatord-check-clock.ini file)
+    //advgetopt::define_option(
+    //      advgetopt::Name("timedate-wait-command")
+    //    , advgetopt::Flags(advgetopt::all_flags<
+    //          advgetopt::GETOPT_FLAG_REQUIRED
+    //        , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
+    //    , advgetopt::Help("the path and filename to the timedate-wait command used to check the timedatectl service.")
+    //),
     advgetopt::define_option(
           advgetopt::Name("unix-group")
         , advgetopt::Flags(advgetopt::all_flags<
@@ -356,14 +357,12 @@ constexpr char const * const g_configuration_files[] =
     nullptr
 };
 
-// TODO: once we have stdc++20, remove all defaults & pragma
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
 advgetopt::options_environment const g_options_environment =
 {
     .f_project_name = "communicatord",
     .f_group_name = "communicator",
     .f_options = g_options,
+    .f_options_files_directory = "/usr/share/communicator/options/",
     .f_environment_variable_name = "COMMUNICATORD",
     .f_configuration_files = g_configuration_files,
     .f_environment_flags = advgetopt::GETOPT_ENVIRONMENT_FLAG_PROCESS_SYSTEM_PARAMETERS,
@@ -377,9 +376,6 @@ advgetopt::options_environment const g_options_environment =
                    "  Made to Order Software Corporation",
     .f_groups = g_group_descriptions
 };
-#pragma GCC diagnostic pop
-
-
 
 
 

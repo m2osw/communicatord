@@ -23,7 +23,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 
 # We need a common place to install the plugins
-set(PLUGIN_INSTALL_DIR lib/communicator/plugins)
+set(PLUGINS_INSTALL_DIR lib/communicator/plugins)
 
 
 # Keep the plugins in alphabetical order for ease of management

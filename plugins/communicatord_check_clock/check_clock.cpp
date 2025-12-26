@@ -105,6 +105,8 @@ void check_clock::bootstrap()
  *
  * This allows other services and communicators to receive the check_clock
  * information from the computer running this communicator daemon.
+ *
+ * \param[in] opts  A set of command line options.
  */
 void check_clock::on_initialize(advgetopt::getopt & opts)
 {

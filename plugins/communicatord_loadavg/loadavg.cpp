@@ -131,11 +131,11 @@ void loadavg::bootstrap()
  * But since that would be useful for all that have plugins, we want
  * that to be moved to the serverplugins instead of copy/pasting that
  * everywhere.
+ *
+ * \param[in] opts  A set of command line options.
  */
 void loadavg::on_initialize(advgetopt::getopt & opts)
 {
-    snapdev::NOT_USED(opts);
-
     SNAP_LOG_DEBUG
         << "loadavg::on_initialization(): processing"
         << SNAP_LOG_SEND;
@@ -144,6 +144,9 @@ void loadavg::on_initialize(advgetopt::getopt & opts)
 
     f_number_of_processors = std::max(1U, std::thread::hardware_concurrency());
 
+    // here we piggy back on an option that the communicatord defines for
+    // itself so no need to have our own definition
+    //
     communicator::set_loadavg_path(opts.get_string("data-path"));
 
     if(f_tag != ed::dispatcher_match::DISPATCHER_MATCH_NO_TAG)

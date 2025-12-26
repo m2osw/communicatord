@@ -60,5 +60,6 @@ find_package_handle_standard_args(
 )
 
 set(COMMUNICATOR_SERVICES_INSTALL_DIR share/communicator/services)
+set(COMMUNICATOR_PLUGINS_INSTALL_DIR lib/communicator/plugins)
 
 # vim: ts=4 sw=4 et
