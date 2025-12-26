@@ -394,7 +394,7 @@ CATCH_TEST_CASE("communicator_client_connection", "[client]")
         addr::addr a(get_address());
         std::vector<std::string> const args = {
             "test-service", // name of command
-            "--communicatord-listen",
+            "--communicator-listen",
             "cd://" + a.to_ipv4or6_string(addr::STRING_IP_ADDRESS_PORT),
             "--path-to-message-definitions",
 
@@ -458,7 +458,7 @@ CATCH_TEST_CASE("communicator_client_connection", "[client]")
         addr::addr a(get_address());
         std::vector<std::string> const args = {
             "test-service", // name of command
-            "--communicatord-listen",
+            "--communicator-listen",
             "cd://" + a.to_ipv4or6_string(addr::STRING_IP_ADDRESS_PORT),
             "--path-to-message-definitions",
 
