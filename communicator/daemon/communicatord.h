@@ -70,11 +70,13 @@ class base_connection;
 class remote_communicators;
 
 
+SERVERPLUGINS_VERSION(communicatord, 1, 0)
+
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
 class communicatord
-    : public std::enable_shared_from_this<communicatord>
-    , public ed::dispatcher_support
+    : public ed::dispatcher_support
     , public ed::connection_with_send_message
     , public serverplugins::server
 {

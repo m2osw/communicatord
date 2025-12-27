@@ -21,8 +21,8 @@
 //
 #include    "load_timer.h"
 
-#include    "../../daemon/base_connection.h"
-#include    "../../daemon/communicatord.h"
+#include    "communicator/daemon/base_connection.h"
+#include    "communicator/daemon/communicatord.h"
 
 
 // eventdispatcher

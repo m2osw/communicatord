@@ -23,9 +23,9 @@
 
 #include    "load_timer.h"
 
-#include    "../../daemon/remote_connection.h"
-#include    "../../daemon/service_connection.h"
-#include    "../../daemon/unix_connection.h"
+#include    "communicator/daemon/remote_connection.h"
+#include    "communicator/daemon/service_connection.h"
+#include    "communicator/daemon/unix_connection.h"
 
 
 // communicator

@@ -17,8 +17,12 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 /** \file
- * \brief Implementation of the ping connection.
+ * \brief Implementation of the "ping" connection.
  *
+ * The ping connection  is actually a UDP connection. It's considered
+ * unconnected, hence the name. It can be used to send a message and
+ * forget about it. Especially, messages that require a reply cannot
+ * use this connection.
  */
 
 // self

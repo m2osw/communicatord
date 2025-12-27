@@ -19,7 +19,7 @@
 
 // self
 //
-#include    "communicatord.h"
+#include    <communicator/daemon/communicatord.h>
 
 
 
@@ -57,6 +57,7 @@ int main(int argc, char * argv[])
     try
     {
         communicator_daemon::communicatord::pointer_t server(std::make_shared<communicator_daemon::communicatord>(argc, argv));
+        server->complete_plugin_initialization();
         return server->run();
     }
     catch(advgetopt::getopt_exit const & e)

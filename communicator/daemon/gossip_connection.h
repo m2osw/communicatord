@@ -28,7 +28,6 @@
 // self
 //
 #include    "remote_communicators.h"
-//#include    "server.h"
 
 
 // eventdispatcher

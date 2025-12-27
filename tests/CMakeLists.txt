@@ -48,8 +48,9 @@ if(SnapCatch2_FOUND AND Reporter_FOUND)
     )
 
     target_link_libraries(${PROJECT_NAME}
-        testcommunicatordaemon
+        communicator
         ${ADVGETOPT_LIBRARIES}
+        ${EVENTDISPATCHER_LIBRARIES}
         ${LIBADDR_LIBRARIES}
         ${LIBEXCEPT_LIBRARIES}
         ${REPORTER_LIBRARIES}

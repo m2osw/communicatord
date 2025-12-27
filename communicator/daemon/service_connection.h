@@ -27,7 +27,6 @@
 // self
 //
 #include    "base_connection.h"
-#include    "communicatord.h"
 
 
 // eventdispatcher

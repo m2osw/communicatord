@@ -17,73 +17,35 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-# We create a shared library used by the unit tests to verify most every
-# algorithm so we keep the list of files in a variable in order to be
-# able to include the same files in the daemon and the test library
-#
-set(COMMUNICATORD_SOURCE_FILES
-    cache.cpp
-    remote_communicators.cpp
-    communicatord.cpp
-    utils.cpp
-
-    # eventdispatcher connections
-
-        # system
-        interrupt.cpp
-
-        # listeners (a.k.a. servers)
-        listener.cpp
-        ping.cpp                # Ping is a UDP listener
-        unix_listener.cpp
-
-        # connections (steam-based pipes that send/receive messages)
-        base_connection.cpp
-        gossip_connection.cpp
-        remote_connection.cpp
-        service_connection.cpp
-        unix_connection.cpp
-
-        # we also have a logrotate UDP listener which specifically handles
-        # LOG messages in regard to the snaplogger
-)
-
-
 ##
 ## communicatord
 ##
-project(communicatordaemon)
+project(communicatord)
 
 add_executable(${PROJECT_NAME}
     main.cpp
-    ${COMMUNICATORD_SOURCE_FILES}
 )
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC
         ${ADVGETOPT_INCLUDE_DIRS}
-        ${CPPTHREAD_INCLUDE_DIRS}
-        ${EDHTTP_INCLUDE_DIRS}
         ${EVENTDISPATCHER_INCLUDE_DIRS}
-        ${LIBADDR_INCLUDE_DIRS}
+        ${SNAPDEV_INCLUDE_DIRS}
         ${LIBEXCEPT_INCLUDE_DIRS}
         ${SERVERPLUGINS_DIRS}
-        ${SNAPLOGGER_INCLUDE_DIRS}
 )
 
 target_link_libraries(${PROJECT_NAME}
     communicator
-    ${ADVGETOPT_LIBRARIES}
-    ${CPPTHREAD_LIBRARIES}
-    ${EDHTTP_LIBRARIES}
+    #${ADVGETOPT_LIBRARIES}
+    #${CPPTHREAD_LIBRARIES}
+    #${EDHTTP_LIBRARIES}
     ${EVENTDISPATCHER_LIBRARIES}
-    ${LIBADDR_LIBRARIES}
+    #${LIBADDR_LIBRARIES}
     ${LIBEXCEPT_LIBRARIES}
-    ${SERVERPLUGINS_LIBRARIES}
-    ${SNAPLOGGER_LIBRARIES}
+    #${SERVERPLUGINS_LIBRARIES}
+    #${SNAPLOGGER_LIBRARIES}
 )
-
-set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "communicatord")
 
 install(
     TARGETS
@@ -94,19 +56,19 @@ install(
 )
 
 # for plugins, we also need some of the headers
-install(
-    FILES
-        base_connection.h
-        cache.h
-        communicatord.h
-        remote_connection.h
-        service_connection.h
-        unix_connection.h
-        utils.h
-
-    DESTINATION
-        include/communicator/plugins
-)
+#install(
+#    FILES
+#        base_connection.h
+#        cache.h
+#        communicatord.h
+#        remote_connection.h
+#        service_connection.h
+#        unix_connection.h
+#        utils.h
+#
+#    DESTINATION
+#        include/communicator/plugins
+#)
 
 
 ##
@@ -115,31 +77,35 @@ install(
 #
 # This is a "library-like" version (i.e. no main() function) used by the tests
 #
-project(testcommunicatordaemon)
-
-add_library(${PROJECT_NAME}
-    ${COMMUNICATORD_SOURCE_FILES}
-)
-
-target_include_directories(${PROJECT_NAME}
-    PUBLIC
-        ${ADVGETOPT_INCLUDE_DIRS}
-        ${EDHTTP_INCLUDE_DIRS}
-        ${EVENTDISPATCHER_INCLUDE_DIRS}
-        ${LIBADDR_INCLUDE_DIRS}
-        ${LIBEXCEPT_INCLUDE_DIRS}
-        ${SNAPLOGGER_INCLUDE_DIRS}
-)
-
-target_link_libraries(${PROJECT_NAME}
-    communicator
-    ${ADVGETOPT_LIBRARIES}
-    ${EDHTTP_LIBRARIES}
-    ${EVENTDISPATCHER_LIBRARIES}
-    ${LIBADDR_LIBRARIES}
-    ${LIBEXCEPT_LIBRARIES}
-    ${SNAPLOGGER_LIBRARIES}
-)
+# -- this is now in the libcommunicator.so file!!! because we need it there
+#    to be accessible by the plugins so no need although maybe at some point
+#    we want to instead consider creating a libcommunicatord.so ...
+#
+#project(testcommunicatordaemon)
+#
+#add_library(${PROJECT_NAME}
+#    ${COMMUNICATORD_SOURCE_FILES}
+#)
+#
+#target_include_directories(${PROJECT_NAME}
+#    PUBLIC
+#        ${ADVGETOPT_INCLUDE_DIRS}
+#        ${EDHTTP_INCLUDE_DIRS}
+#        ${EVENTDISPATCHER_INCLUDE_DIRS}
+#        ${LIBADDR_INCLUDE_DIRS}
+#        ${LIBEXCEPT_INCLUDE_DIRS}
+#        ${SNAPLOGGER_INCLUDE_DIRS}
+#)
+#
+#target_link_libraries(${PROJECT_NAME}
+#    communicator
+#    ${ADVGETOPT_LIBRARIES}
+#    ${EDHTTP_LIBRARIES}
+#    ${EVENTDISPATCHER_LIBRARIES}
+#    ${LIBADDR_LIBRARIES}
+#    ${LIBEXCEPT_LIBRARIES}
+#    ${SNAPLOGGER_LIBRARIES}
+#)
 
 # NOT INSTALLED -- THIS IS JUST FOR OUR UNIT TESTS
 

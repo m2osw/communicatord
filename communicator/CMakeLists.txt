@@ -30,12 +30,38 @@ configure_file(
 )
 
 add_library(${PROJECT_NAME} SHARED
+    # This first list is considered to be part of the library
+    #
     communicator.cpp
     flags.cpp
     loadavg.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/names.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/names.h
     version.cpp
+
+    # The following are parts of the daemon but it has to be in a library
+    # so the daemon can have plugins that access those objects (links
+    # against them)
+    #
+    daemon/cache.cpp
+    daemon/remote_communicators.cpp
+    daemon/communicatord.cpp
+    daemon/utils.cpp
+
+    # system
+    daemon/interrupt.cpp
+
+    # listeners (a.k.a. servers)
+    daemon/listener.cpp
+    daemon/ping.cpp                # Ping is a UDP listener
+    daemon/unix_listener.cpp
+
+    # connections (steam-based pipes that send/receive messages)
+    daemon/base_connection.cpp
+    daemon/gossip_connection.cpp
+    daemon/remote_connection.cpp
+    daemon/service_connection.cpp
+    daemon/unix_connection.cpp
 )
 
 target_include_directories(${PROJECT_NAME}
@@ -82,6 +108,7 @@ install(
         lib
 )
 
+
 install(
     FILES
         communicator.h
@@ -95,5 +122,32 @@ install(
         include/communicator
 )
 
+install(
+    FILES
+        communicator.h
+        exception.h
+        flags.h
+        loadavg.h
+        ${CMAKE_CURRENT_BINARY_DIR}/names.h
+        ${CMAKE_CURRENT_BINARY_DIR}/version.h
+
+    DESTINATION
+        include/communicator
+)
+
+# For plugins and also the daemon/main.cpp
+install(
+    FILES
+        daemon/base_connection.h
+        daemon/cache.h
+        daemon/communicatord.h
+        daemon/remote_connection.h
+        daemon/service_connection.h
+        daemon/unix_connection.h
+        daemon/utils.h
+
+    DESTINATION
+        include/communicator/plugins
+)
 
 # vim: ts=4 sw=4 et

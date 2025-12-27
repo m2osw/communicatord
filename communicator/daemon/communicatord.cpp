@@ -394,6 +394,12 @@ advgetopt::options_environment const g_options_environment =
 
 
 
+SERVERPLUGINS_START_SERVER(communicatord)
+    , ::serverplugins::description("The main server in the communicator daemon.")
+    , ::serverplugins::help_uri("https://snapwebsites.org/help")
+    , ::serverplugins::categorization_tag("server")
+SERVERPLUGINS_END_SERVER(communicatord)
+
 
 /** \brief Construct the server object.
  *
@@ -405,7 +411,7 @@ advgetopt::options_environment const g_options_environment =
  * \param[in] argv  The command line arguments.
  */
 communicatord::communicatord(int argc, char * argv[])
-    : server(serverplugins::get_id("communicatord"))
+    : server(g_communicatord_factory) // factory created above using SERVERPLUGINS_START/END_SERVER() macros
     , f_opts(g_options_environment)
     , f_dispatcher(std::make_shared<ed::dispatcher>(this))
 {
@@ -1196,6 +1202,8 @@ void communicatord::init_neighbors()
 
 void communicatord::load_plugins()
 {
+std::cerr << "ready to load plugins?!\n";
+
     std::string plugin_paths("/usr/local/lib/communicator/plugins:/usr/lib/communicator/plugins");
     if(f_opts.is_defined("communicator-plugin-paths"))
     {
@@ -1205,11 +1213,19 @@ void communicatord::load_plugins()
     serverplugins::paths paths;
     paths.add(plugin_paths);
 
+    // add support for a user specified list instead of loading all available plugins?
+    //
     serverplugins::names names(paths);
-    names.find_plugins("communicator_");
+    names.find_plugins("communicatord_");
+
+serverplugins::names::names_t m(names.map());
+for(auto const & n : m)
+{
+    std::cerr << n.first << " -> " << n.second << "\n";
+}
 
     f_plugins = std::make_shared<serverplugins::collection>(names);
-    f_plugins->load_plugins(shared_from_this());
+    f_plugins->load_plugins(std::static_pointer_cast<serverplugins::server>(shared_from_this()));
 
     initialize(f_opts);
 }

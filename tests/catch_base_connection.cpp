@@ -30,7 +30,7 @@
 
 // communicator daemon
 //
-#include    <daemon/base_connection.h>
+#include    <communicator/daemon/base_connection.h>
 
 
 

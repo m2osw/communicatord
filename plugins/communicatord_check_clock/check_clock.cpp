@@ -23,10 +23,10 @@
 
 //#include    "stable_clock.h"
 
-#include    "../../daemon/base_connection.h"
-#include    "../../daemon/communicatord.h"
-#include    "../../daemon/service_connection.h"
-#include    "../../daemon/unix_connection.h"
+#include    "communicator/daemon/base_connection.h"
+#include    "communicator/daemon/communicatord.h"
+#include    "communicator/daemon/service_connection.h"
+#include    "communicator/daemon/unix_connection.h"
 
 
 // communicator

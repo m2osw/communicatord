@@ -1,6 +1,13 @@
 
 * Remove debug code (I have many logs that are really just debug).
 
+* Look at whether we can separate the daemon from the main library
+
+  I moved the daemon (like in the Sitter) to the library so the plugins
+  can be loaded and linked against some of the daemon's classes. Maybe
+  I should have a separate library instead. So the libcommunicator.so
+  as now and a libcommunicatord.so in the daemon folder.
+
 * Use bare pointers for child connections
 
   **NOTE:** this is done, just not tested 100%.
