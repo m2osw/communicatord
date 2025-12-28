@@ -93,7 +93,7 @@ SERVERPLUGINS_END(check_clock)
  */
 void check_clock::bootstrap()
 {
-    SERVERPLUGINS_LISTEN(check_clock, communicatord, initialize, boost::placeholders::_1);
+    SERVERPLUGINS_LISTEN(check_clock, communicatord, initialize, std::placeholders::_1);
     SERVERPLUGINS_LISTEN0(check_clock, communicatord, terminate);
 }
 

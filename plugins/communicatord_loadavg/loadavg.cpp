@@ -110,9 +110,9 @@ SERVERPLUGINS_END(loadavg)
  */
 void loadavg::bootstrap()
 {
-    SERVERPLUGINS_LISTEN(loadavg, communicatord, initialize, boost::placeholders::_1);
+    SERVERPLUGINS_LISTEN(loadavg, communicatord, initialize, std::placeholders::_1);
     SERVERPLUGINS_LISTEN0(loadavg, communicatord, terminate);
-    SERVERPLUGINS_LISTEN(loadavg, communicatord, new_connection, boost::placeholders::_1);
+    SERVERPLUGINS_LISTEN(loadavg, communicatord, new_connection, std::placeholders::_1);
 }
 
 
