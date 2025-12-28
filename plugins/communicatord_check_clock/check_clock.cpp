@@ -110,7 +110,7 @@ void check_clock::bootstrap()
  */
 void check_clock::on_initialize(advgetopt::getopt & opts)
 {
-    SNAP_LOG_DEBUG
+    SNAP_LOG_CONFIGURATION
         << "check_clock::on_initialization(): processing..."
         << SNAP_LOG_SEND;
 
@@ -145,6 +145,10 @@ void check_clock::on_initialize(advgetopt::getopt & opts)
             << "could not add the check_clock_status connection to ed::communicator"
             << SNAP_LOG_SEND;
     }
+
+    SNAP_LOG_CONFIGURATION
+        << "check_clock::on_initialization(): ready."
+        << SNAP_LOG_SEND;
 }
 
 
@@ -189,7 +193,7 @@ void check_clock::send_clock_status(ed::connection::pointer_t reply_connection)
 {
     ed::message clock_status_msg;
 
-SNAP_LOG_WARNING << "--- send_clock_status() prepare clock status message..." << static_cast<int>(f_clock_status) << SNAP_LOG_SEND;
+SNAP_LOG_WARNING << "--- send_clock_status() prepare clock status message: " << static_cast<int>(f_clock_status) << SNAP_LOG_SEND;
     communicatord::pointer_t s(plugins()->get_server<communicatord>());
     clock_status_msg.set_sent_from_server(s->get_server_name());
     clock_status_msg.set_sent_from_service(communicator::g_name_communicator_service_communicatord);
@@ -227,7 +231,7 @@ SNAP_LOG_WARNING << "--- send_clock_status() prepare clock status message..." <<
 
     }
 
-SNAP_LOG_WARNING << "--- send_clock_status() check connection :" << std::boolalpha << (reply_connection != nullptr) << SNAP_LOG_SEND;
+SNAP_LOG_WARNING << "--- send_clock_status() check connection: " << std::boolalpha << (reply_connection != nullptr) << SNAP_LOG_SEND;
     if(reply_connection != nullptr)
     {
         // reply to a direct CLOCK_STATUS

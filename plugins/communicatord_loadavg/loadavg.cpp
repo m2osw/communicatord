@@ -136,8 +136,8 @@ void loadavg::bootstrap()
  */
 void loadavg::on_initialize(advgetopt::getopt & opts)
 {
-    SNAP_LOG_DEBUG
-        << "loadavg::on_initialization(): processing"
+    SNAP_LOG_CONFIGURATION
+        << "loadavg::on_initialization(): processing..."
         << SNAP_LOG_SEND;
 
     f_communicator = ed::communicator::instance();
@@ -191,6 +191,10 @@ void loadavg::on_initialize(advgetopt::getopt & opts)
             << "could not add the check_clock_status connection to ed::communicator"
             << SNAP_LOG_SEND;
     }
+
+    SNAP_LOG_CONFIGURATION
+        << "loadavg::on_initialization(): ready."
+        << SNAP_LOG_SEND;
 }
 
 

@@ -1202,8 +1202,6 @@ void communicatord::init_neighbors()
 
 void communicatord::load_plugins()
 {
-std::cerr << "ready to load plugins?!\n";
-
     std::string plugin_paths("/usr/local/lib/communicator/plugins:/usr/lib/communicator/plugins");
     if(f_opts.is_defined("communicator-plugin-paths"))
     {
@@ -1217,12 +1215,6 @@ std::cerr << "ready to load plugins?!\n";
     //
     serverplugins::names names(paths);
     names.find_plugins("communicatord_");
-
-serverplugins::names::names_t m(names.map());
-for(auto const & n : m)
-{
-    std::cerr << n.first << " -> " << n.second << "\n";
-}
 
     f_plugins = std::make_shared<serverplugins::collection>(names);
     f_plugins->load_plugins(std::static_pointer_cast<serverplugins::server>(shared_from_this()));
@@ -3901,7 +3893,10 @@ void communicatord::cluster_status(ed::connection::pointer_t reply_connection)
         }
     }
 
-    std::string const new_complete(count == total_count
+    // TODO: I'm not too sure why, but the list of neighbors can be empty
+    //       (i.e. I thought we would be included automatically)
+    //
+    std::string const new_complete(count == total_count || (total_count == 0 && count == 1)
                     ? communicator::g_name_communicator_cmd_cluster_complete
                     : communicator::g_name_communicator_cmd_cluster_incomplete);
     if(new_complete != f_cluster_complete

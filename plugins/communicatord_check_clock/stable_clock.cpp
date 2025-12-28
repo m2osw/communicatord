@@ -19,11 +19,15 @@
 /** \file
  * \brief Implementation of the clock verification process.
  *
- * \todo
- * At this time, we try once for 1 minute. If that fails, the clock will
- * permanently be considered unstable. We want to look at a way to try
- * again and again. Also, we could look at firing a process that would
- * try to restart ntp if installed and crashed.
+ * This timer wakes up once every minute to check the current clock status.
+ * It is expected that once the NTP server is up and running that the clock
+ * is going to be and remain stable. Only we've seen cases where the NTP
+ * service ends up breaking. This process is expected to detect such issues
+ * and report them to interested processes such as prinbee which very
+ * strongly relies on a valid clock.
+ *
+ * The sitter is in charge of trying to restart the NTP if we detect an
+ * issue with it.
  */
 
 // self
