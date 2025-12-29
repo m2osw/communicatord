@@ -416,7 +416,6 @@ communicatord::communicatord(int argc, char * argv[])
     , f_dispatcher(std::make_shared<ed::dispatcher>(this))
 {
     snaplogger::add_logger_options(f_opts);
-    //add_plugin_options(); -- in the sitter, we have additional .ini files we send to each plugin...
     ed::add_message_definition_options(f_opts);
     f_opts.finish_parsing(argc, argv);
     if(!snaplogger::process_logger_options(f_opts, "/etc/communicator/logger"))
@@ -477,7 +476,7 @@ communicatord::~communicatord()
 
 /** \brief Initialize the server.
  *
- * This function is used to initialize the connetions object. This means
+ * This function is used to initialize the connection objects. This means
  * setting up a few parameters such as the nice level of the application
  * and priority scheme for listening to events.
  *
@@ -1127,7 +1126,7 @@ void communicatord::init_ping_listener()
         p->set_secret_code(f_opts.get_string("signal_secret"));
     }
     p->set_name("communicator_messenger_udp");
-    if(!f_communicator->add_connection(f_ping))
+    if(!f_communicator->add_connection(p))
     {
         SNAP_LOG_CONFIGURATION_WARNING
             << "adding the ping signal UDP listener to ed::communicator failed."
@@ -1138,7 +1137,7 @@ void communicatord::init_ping_listener()
 
     SNAP_LOG_CONFIGURATION
         << "listening to UDP connection \""
-        << signal_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS)
+        << signal_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT)
         << "\"."
         << SNAP_LOG_SEND;
 }
@@ -1170,7 +1169,7 @@ bool communicatord::init_connection_address()
     {
         SNAP_LOG_FATAL
             << "the specified address, \"--my-address "
-            << f_connection_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS)
+            << f_connection_address.to_ipv4or6_string(addr::STRING_IP_BRACKET_ADDRESS | addr::STRING_IP_PORT)
             << "\", was not found on this computer. Did you copy the configuration file and forgot to change that variable?"
             << SNAP_LOG_SEND;
         return false;
