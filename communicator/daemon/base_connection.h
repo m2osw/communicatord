@@ -66,6 +66,7 @@ public:
 
     base_connection &           operator = (base_connection const &) = delete;
 
+    std::string                 get_connection_name() const;
     void                        connection_started();
     time_t                      get_connection_started() const;
     void                        connection_ended();

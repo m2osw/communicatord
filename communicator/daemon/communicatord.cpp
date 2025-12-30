@@ -1689,9 +1689,7 @@ SNAP_LOG_ERROR
             try_remote = remote_servers;
         }
 SNAP_LOG_ERROR
-<< "---[forward]--- local did not work -- try remote? [no name"
-//<< nc->get_name()
-<< "] -> " << std::boolalpha << try_remote
+<< "---[forward]--- local did not work -- try remote? " << std::boolalpha << try_remote
 << SNAP_LOG_SEND;
         if(try_remote)
         {
@@ -1717,6 +1715,9 @@ SNAP_LOG_ERROR
             connection_type_t const type(base_conn->get_connection_type());
             if(type == connection_type_t::CONNECTION_TYPE_REMOTE)
             {
+SNAP_LOG_ERROR
+<< "---[forward]--- register remote connection " << base_conn->get_connection_name()
+<< SNAP_LOG_SEND;
                 accepting_remote_connections.push_back(base_conn);
             }
         }
@@ -3410,16 +3411,18 @@ SNAP_LOG_WARNING
             unix_connection::pointer_t unix_conn(std::dynamic_pointer_cast<unix_connection>(nc));
             if(unix_conn != nullptr)
             {
-                if(unix_conn->understand_command(msg.get_command())) // destination: "*" or "?" or "."
-                {
-                    //verify_command(unix_conn, message); -- we reach this line only if the command is understood, it is therefore good
 SNAP_LOG_WARNING
 << "forward message to ["
 << unix_conn->get_name()
 << "] msg=["
 << msg.to_string()
+<< "] understand_command=["
+<< std::boolalpha << unix_conn->understand_command(msg.get_command())
 << "]..."
 << SNAP_LOG_SEND;
+                if(unix_conn->understand_command(msg.get_command())) // destination: "*" or "?" or "."
+                {
+                    //verify_command(unix_conn, message); -- we reach this line only if the command is understood, it is therefore good
                     unix_conn->send_message(msg);
                 }
                 continue;

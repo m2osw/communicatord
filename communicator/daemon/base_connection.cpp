@@ -104,6 +104,18 @@ base_connection::~base_connection()
 }
 
 
+std::string base_connection::get_connection_name() const
+{
+    ed::connection const * conn(dynamic_cast<ed::connection const *>(this));
+    if(conn != nullptr)
+    {
+        return conn->get_name();
+    }
+
+    return std::string();
+}
+
+
 /** \brief Save when the connection started.
  *
  * This function is called whenever a CONNECT or REGISTER message
