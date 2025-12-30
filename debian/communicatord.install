@@ -2,7 +2,7 @@
 
 # Service, Scripts, Library, Plugins
 #
-debian/tmp/usr/sbin/communicatord                                     usr/sbin/
+usr/sbin/communicatord                                                usr/sbin/
 usr/lib/communicator/plugins
 usr/lib/communicator/options
 
