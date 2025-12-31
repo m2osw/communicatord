@@ -4,12 +4,12 @@
 #
 usr/sbin/communicatord                                                usr/sbin/
 usr/lib/communicator/plugins
-usr/lib/communicator/options
 
 # Configuration Files
 #
 conf/flags.conf                                                       etc/communicator/
 conf/logger/raise-flag.conf                                           usr/share/snaplogger/etc/
+usr/share/communicator/options
 
 # README.md
 #
