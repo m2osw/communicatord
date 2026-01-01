@@ -89,7 +89,7 @@ advgetopt::option const g_options[] =
             , advgetopt::GETOPT_FLAG_REQUIRED
             , advgetopt::GETOPT_FLAG_SHOW_SYSTEM>())
         , advgetopt::EnvironmentVariableName("COMMUNICATOR_LISTEN")
-        , advgetopt::DefaultValue("cd:///run/communicatord/communicatord.sock")
+        , advgetopt::DefaultValue("cd:///run/communicator/communicatord.sock")
         , advgetopt::Help("define the communicator daemon connection type as a scheme (cd://, cdu://, cds://, cdb://) along an \"address:port\" or \"/socket/path\".")
     ),
 
