@@ -65,7 +65,6 @@ param_date=date
 param_destination_service=destination_service
 param_down_since=down_since
 param_error=error
-param_firewall_status=firewall_status
 param_function=function
 param_heard_of=heard_of
 param_hostname=hostname
