@@ -3848,13 +3848,13 @@ void communicatord::cluster_status(ed::connection::pointer_t reply_connection)
     // if you have a single computer like many developers would have when
     // writing code and testing quickly.)
     //
-    size_t const count(f_remote_communicators->count_live_connections() + 1);
+    std::size_t const count(f_remote_communicators->count_live_connections() + 1);
 
     // calculate the quorum, minimum number of computers that have to be
     // interconnected to be able to say we have a live cluster
     //
-    size_t const total_count(f_all_neighbors.size());
-    size_t const quorum(total_count / 2 + 1);
+    std::size_t const total_count(f_all_neighbors.size());
+    std::size_t const quorum(total_count / 2 + 1);
     bool modified = false;
 
     std::string const new_status(count >= quorum
@@ -3884,7 +3884,8 @@ void communicatord::cluster_status(ed::connection::pointer_t reply_connection)
             // reply to a direct CLUSTER_STATUS
             //
             service_connection::pointer_t r(std::dynamic_pointer_cast<service_connection>(reply_connection));
-            if(r->understand_command(cluster_status_msg.get_command()))
+            if(r != nullptr
+            && r->understand_command(cluster_status_msg.get_command()))
             {
                 r->send_message(cluster_status_msg);
             }
@@ -3925,7 +3926,8 @@ void communicatord::cluster_status(ed::connection::pointer_t reply_connection)
             // reply to a direct CLUSTER_STATUS
             //
             service_connection::pointer_t r(std::dynamic_pointer_cast<service_connection>(reply_connection));
-            if(r->understand_command(cluster_complete_msg.get_command()))
+            if(r != nullptr
+            && r->understand_command(cluster_complete_msg.get_command()))
             {
                 r->send_message(cluster_complete_msg);
             }
