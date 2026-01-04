@@ -165,13 +165,13 @@ std::string canonicalize_server_types(std::string const & server_types)
 
 /** \brief Canonicalize a list of neighbors.
  *
- * This function takes a strings, verify all the IP:port addresses and
- * then returns the same address back out.
+ * This function takes a string of comma and/or space separated addresses
+ * and ports.
  *
- * The function also rejects IP addresses with a range or a mask.
+ * The function rejects addresses with a range or a mask.
  *
- * The invalid addresses are simply removed from the list and we emit
- * an error. The function goes on doing its work otherwise.
+ * The invalid addresses are simply removed from the list and the
+ * function emit a recoverable error.
  *
  * \note
  * The function has the side effect of \em sorting the addresses. The
@@ -186,11 +186,20 @@ std::string canonicalize_server_types(std::string const & server_types)
  * function also accepts spaces and the canonicalization replaces those
  * spaces with commas.
  *
+ * \note
+ * The command line already includes a validator which verifies the
+ * validity of the list. If not valid, then the communicator daemon
+ * won't start.
+ *
  * \todo
  * Since this function is used right before converting the result
  * back to a set of addresses, it would be faster to do the conversion
  * just once. Some other function would need to be converted to use
- * a vector of addresses instead of a string.
+ * a vector of addresses instead of a string. That said, we also
+ * post the list in some of our messages and it needs to be a string
+ * in that case. However, if we can be sure that we get the string
+ * from the fluid settings, then we should not need to send that
+ * information along each connection message.
  *
  * \param[in] neighbors  The comma separated list of IP:port addresses.
  *

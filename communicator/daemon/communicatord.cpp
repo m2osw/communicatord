@@ -200,6 +200,7 @@ const advgetopt::option g_options[] =
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
         , advgetopt::DefaultValue("127.0.0.1:4040")
         , advgetopt::Help("<IP:port> to open a local TCP connection (no encryption).")
+        , advgetopt::Validator("address")
     ),
     advgetopt::define_option(
           advgetopt::Name("communicator-plugin-paths")
@@ -216,15 +217,16 @@ const advgetopt::option g_options[] =
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
         , advgetopt::DefaultValue("100")
         , advgetopt::Help("maximum number of connections allowed by this communicatord.")
+        , advgetopt::Validator("integer(5...10000)")
     ),
     advgetopt::define_option(
           advgetopt::Name("max-gossip-timeout")
         , advgetopt::Flags(advgetopt::all_flags<
               advgetopt::GETOPT_FLAG_REQUIRED
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
-        , advgetopt::DefaultValue("3600")
-        , advgetopt::Validator("duration")
+        , advgetopt::DefaultValue("1h")
         , advgetopt::Help("maximum number of seconds to wait between GOSSIP messages.")
+        , advgetopt::Validator("duration(1...)")
     ),
     advgetopt::define_option(
           advgetopt::Name("max-pending-connections")
@@ -233,6 +235,7 @@ const advgetopt::option g_options[] =
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
         , advgetopt::DefaultValue("25")
         , advgetopt::Help("maximum number of client connections waiting to be accepted.")
+        , advgetopt::Validator("integer(5...1000)")
     ),
     advgetopt::define_option(
           advgetopt::Name("my-address")
@@ -248,6 +251,7 @@ const advgetopt::option g_options[] =
               advgetopt::GETOPT_FLAG_REQUIRED
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
         , advgetopt::Help("define a comma separated list of communicatord neighbors.")
+        , advgetopt::Validator("address('address=commas spaces required', port, comments)")
     ),
     advgetopt::define_option(
           advgetopt::Name("private-key")
@@ -631,16 +635,6 @@ bool communicatord::init_max_connections()
     f_max_connections = f_opts.get_long("max-connections");
 
     f_max_pending_connections = f_opts.get_long("max-pending-connections");
-    if(f_max_pending_connections < 5
-    || f_max_pending_connections > 1000)
-    {
-        SNAP_LOG_FATAL
-            << "the --max-pending-connections option must be a valid number between 5 and 1000. "
-            << f_max_pending_connections
-            << " is not valid."
-            << SNAP_LOG_SEND;
-        return false;
-    }
 
     return true;
 }
@@ -648,27 +642,19 @@ bool communicatord::init_max_connections()
 
 void communicatord::init_max_gossip_timeout()
 {
-    if(!f_opts.is_defined("max-gossip-timeout"))
+    if(!f_opts.is_defined("max_gossip_timeout"))
     {
         return;
     }
 
     double timeout(0.0);
     if(!advgetopt::validator_duration::convert_string(
-                  f_opts.get_string("max-gossip-timeout")
+                  f_opts.get_string("max_gossip_timeout")
                 , advgetopt::validator_duration::VALIDATOR_DURATION_DEFAULT_FLAGS
                 , timeout))
     {
         SNAP_LOG_CONFIGURATION_WARNING
             << "the --max-gossip-timeout does not represent a valid duration."
-            << SNAP_LOG_SEND;
-        return;
-    }
-
-    if(timeout <= 0.0)
-    {
-        SNAP_LOG_CONFIGURATION_WARNING
-            << "the --max-gossip-timeout duration must be a positive number."
             << SNAP_LOG_SEND;
         return;
     }
@@ -3853,7 +3839,13 @@ void communicatord::cluster_status(ed::connection::pointer_t reply_connection)
     // calculate the quorum, minimum number of computers that have to be
     // interconnected to be able to say we have a live cluster
     //
-    std::size_t const total_count(f_all_neighbors.size());
+    // somehow the "all neighbors" does not currently include us, which I
+    // think it should, but on a single computer that means we end up with
+    // 0 instead of 1 and that causes issues so adjust to a minimum of 1
+    // for now--I think the real fix is to look at why we are not included
+    // in the list of neighbors
+    //
+    std::size_t const total_count(std::max(1UL, f_all_neighbors.size()));
     std::size_t const quorum(total_count / 2 + 1);
     bool modified = false;
 
@@ -3883,11 +3875,10 @@ void communicatord::cluster_status(ed::connection::pointer_t reply_connection)
         {
             // reply to a direct CLUSTER_STATUS
             //
-            service_connection::pointer_t r(std::dynamic_pointer_cast<service_connection>(reply_connection));
-            if(r != nullptr
-            && r->understand_command(cluster_status_msg.get_command()))
+            base_connection::pointer_t r(std::dynamic_pointer_cast<base_connection>(reply_connection));
+            if(r != nullptr)
             {
-                r->send_message(cluster_status_msg);
+                r->send_message_to_connection(cluster_status_msg, false, true);
             }
         }
         else

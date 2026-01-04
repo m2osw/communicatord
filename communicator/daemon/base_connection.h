@@ -97,7 +97,10 @@ public:
     bool                        wants_loadavg() const;
 
     // allows us to send messages directly from the base_connection class
-    bool                        send_message_to_connection(ed::message & msg, bool cache = false);
+    bool                        send_message_to_connection(
+                                      ed::message & msg
+                                    , bool cache = false
+                                    , bool only_if_command_known = false);
 
     virtual int                 get_socket() const = 0;
 

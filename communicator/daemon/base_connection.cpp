@@ -553,7 +553,7 @@ bool base_connection::wants_loadavg() const
 }
 
 
-bool base_connection::send_message_to_connection(ed::message & msg, bool cache)
+bool base_connection::send_message_to_connection(ed::message & msg, bool cache, bool only_if_command_known)
 {
     ed::connection * conn(dynamic_cast<ed::connection *>(this));
     if(conn == nullptr)
@@ -565,7 +565,12 @@ bool base_connection::send_message_to_connection(ed::message & msg, bool cache)
     {
         throw communicator::logic_error("std::dynamic_pointer_cast<ed::connection_with_send_message>() on our ed::connection failed.");
     }
-    return conn_msg->send_message(msg, cache);
+    if(!only_if_command_known
+    || understand_command(msg.get_command()))
+    {
+        return conn_msg->send_message(msg, cache);
+    }
+    return false;
 }
 
 

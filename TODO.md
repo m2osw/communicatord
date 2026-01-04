@@ -1,6 +1,15 @@
 
 * Remove debug code (I have many logs that are really just debug).
 
+* The list of neighbor can be empty when we first start the communicatord.
+  That means we send a count of 0 (which now is adjust to a minimum of 1
+  at least). But I think we should have at least ourselves in the list.
+
+* There are now many ways to send a message to one of the connections.
+  We should review all the `send_message()` calls and see if we can
+  simplify the code in various places by calling the `base_connection`
+  version or the `communicatord` version.
+
 * Look at whether we can separate the daemon from the main library
 
   I moved the daemon (like in the Sitter) to the library so the plugins
@@ -8,7 +17,7 @@
   I should have a separate library instead. So the libcommunicator.so
   as now and a libcommunicatord.so in the daemon folder.
 
-* Use bare pointers for child connections
+* Use bare pointers to the communicatord in child connections (parent pointer)
 
   **NOTE:** this is done, just not tested 100%.
 
