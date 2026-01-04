@@ -251,7 +251,7 @@ const advgetopt::option g_options[] =
               advgetopt::GETOPT_FLAG_REQUIRED
             , advgetopt::GETOPT_FLAG_GROUP_OPTIONS>())
         , advgetopt::Help("define a comma separated list of communicatord neighbors.")
-        , advgetopt::Validator("address('address=commas spaces required', port, comments)")
+        , advgetopt::Validator("address('address=commas spaces required', port, comment)")
     ),
     advgetopt::define_option(
           advgetopt::Name("private-key")
