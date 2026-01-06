@@ -153,6 +153,20 @@ advgetopt::option const g_options[] =
 };
 
 
+advgetopt::group_description const g_group_descriptions[] =
+{
+    advgetopt::define_group(
+          advgetopt::GroupNumber(advgetopt::GETOPT_FLAG_GROUP_COMMANDS)
+        , advgetopt::GroupName("command")
+        , advgetopt::GroupDescription("Commands:")
+    ),
+    advgetopt::define_group(
+          advgetopt::GroupNumber(advgetopt::GETOPT_FLAG_GROUP_OPTIONS)
+        , advgetopt::GroupName("option")
+        , advgetopt::GroupDescription("Options:")
+    ),
+    advgetopt::end_groups()
+};
 
 
 advgetopt::options_environment const g_options_environment =
@@ -169,6 +183,7 @@ advgetopt::options_environment const g_options_environment =
     .f_copyright = "Copyright (c) 2011-"
                    SNAPDEV_STRINGIZE(UTC_BUILD_YEAR)
                    " by Made to Order Software Corporation -- All Rights Reserved",
+    .f_groups = g_group_descriptions,
 };
 
 

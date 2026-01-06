@@ -92,6 +92,19 @@ advgetopt::option const g_options[] =
         , advgetopt::DefaultValue("cd:///run/communicator/communicatord.sock")
         , advgetopt::Help("define the communicator daemon connection type as a scheme (cd://, cdu://, cds://, cdb://) along an \"address:port\" or \"/socket/path\".")
     ),
+    advgetopt::define_option(
+          advgetopt::Name("permanent-connection-retries")
+        , advgetopt::Flags(advgetopt::all_flags<
+              advgetopt::GETOPT_FLAG_GROUP_OPTIONS
+            , advgetopt::GETOPT_FLAG_COMMAND_LINE
+            , advgetopt::GETOPT_FLAG_ENVIRONMENT_VARIABLE
+            , advgetopt::GETOPT_FLAG_CONFIGURATION_FILE
+            , advgetopt::GETOPT_FLAG_REQUIRED
+            , advgetopt::GETOPT_FLAG_SHOW_SYSTEM>())
+        , advgetopt::EnvironmentVariableName("PERMANENT_CONNECTION_RETRIES")
+        , advgetopt::DefaultValue("1,1,1,3,5,10,20,30,60")
+        , advgetopt::Help("define a list of pause duration for the permanent connection. The last one get used until a connection happens. The list restart at the beginning after a lost connection.")
+    ),
 
     // END
     //
@@ -116,10 +129,11 @@ class local_stream
 public:
     local_stream(
               addr::addr_unix const & address
-            , std::string const & service_name)
+            , std::string const & service_name
+            , ed::pause_durations const & retries)
         : local_stream_client_permanent_message_connection(
                   address
-                , ed::DEFAULT_PAUSE_BEFORE_RECONNECTING
+                , retries
                 , true
                 , false
                 , true
@@ -149,11 +163,12 @@ public:
     tcp_stream(
               addr::addr_range::vector_t const & ranges
             , ed::mode_t mode
-            , std::string const service_name)
+            , std::string const & service_name
+            , ed::pause_durations const & retries)
         : tcp_client_permanent_message_connection(
               ranges
             , mode
-            , ed::DEFAULT_PAUSE_BEFORE_RECONNECTING
+            , retries
             , true
             , service_name)
     {
@@ -283,6 +298,8 @@ void communicator::process_communicator_options()
 
     ed::process_message_definition_options(f_opts);
 
+    std::string const retries(f_opts.get_string("permanent-connection-retries"));
+
     // extract the scheme and segments
     //
     edhttp::uri u;
@@ -305,7 +322,7 @@ void communicator::process_communicator_options()
         }
         addr::addr_unix address('/' + u.path(false));
         address.set_scheme(scheme);
-        f_communicator_connection = std::make_shared<local_stream>(address, f_service_name);
+        f_communicator_connection = std::make_shared<local_stream>(address, f_service_name, retries);
     }
     else
     {
@@ -342,7 +359,8 @@ void communicator::process_communicator_options()
             f_communicator_connection = std::make_shared<tcp_stream>(
                       ranges
                     , ed::mode_t::MODE_PLAIN
-                    , f_service_name);
+                    , f_service_name
+                    , retries);
         }
         else if(scheme == g_name_communicator_scheme_cds)
         {
@@ -361,7 +379,8 @@ void communicator::process_communicator_options()
             f_communicator_connection = std::make_shared<tcp_stream>(
                       ranges
                     , ed::mode_t::MODE_ALWAYS_SECURE
-                    , f_service_name);
+                    , f_service_name
+                    , retries);
         }
         else if(scheme == g_name_communicator_scheme_cdu)
         {
@@ -466,7 +485,7 @@ void communicator::process_communicator_options()
 /** \brief Retrieve the service name from the communicator.
  *
  * This function returns a reference to the service name as defined when
- * the communocator object was created. This parameter cannot be an empty
+ * the communicator object was created. This parameter cannot be an empty
  * string.
  *
  * \return the service name as specified when you constructed this

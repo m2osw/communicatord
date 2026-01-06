@@ -378,7 +378,7 @@ advgetopt::options_environment const g_options_environment =
     .f_copyright = "Copyright (c) 2012-"
                    SNAPDEV_STRINGIZE(UTC_BUILD_YEAR)
                    "  Made to Order Software Corporation",
-    .f_groups = g_group_descriptions
+    .f_groups = g_group_descriptions,
 };
 
 
