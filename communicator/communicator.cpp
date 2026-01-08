@@ -103,7 +103,7 @@ advgetopt::option const g_options[] =
             , advgetopt::GETOPT_FLAG_SHOW_SYSTEM>())
         , advgetopt::EnvironmentVariableName("PERMANENT_CONNECTION_RETRIES")
         , advgetopt::DefaultValue("1,1,1,3,5,10,20,30,60")
-        , advgetopt::Help("define a list of pause duration for the permanent connection. The last one get used until a connection happens. The list restart at the beginning after a lost connection.")
+        , advgetopt::Help("define a list of pause durations for the permanent connection; each one gets used until a connection happens; the list restart at the beginning after a lost connection.")
     ),
 
     // END
