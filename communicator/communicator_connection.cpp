@@ -18,7 +18,7 @@
 
 // self
 //
-#include    "communicator/communicator.h"
+#include    "communicator/communicator_connection.h"
 
 #include    "communicator/exception.h"
 #include    "communicator/names.h"
@@ -47,7 +47,7 @@
 #include    <edhttp/uri.h>
 
 
-// snapdev
+// last include
 //
 #include    <snapdev/poison.h>
 
@@ -113,10 +113,10 @@ advgetopt::option const g_options[] =
 
 
 
-class communicator_connection
+class communicator_interface
 {
 public:
-    virtual             ~communicator_connection() {}
+    virtual             ~communicator_interface() {}
 
     virtual bool        is_connected() const = 0;
 };
@@ -124,7 +124,7 @@ public:
 
 class local_stream
     : public ed::local_stream_client_permanent_message_connection
-    , public communicator_connection
+    , public communicator_interface
 {
 public:
     local_stream(
@@ -157,7 +157,7 @@ public:
 
 class tcp_stream
     : public ed::tcp_client_permanent_message_connection
-    , public communicator_connection
+    , public communicator_interface
 {
 public:
     tcp_stream(
@@ -190,7 +190,7 @@ public:
 
 class udp_dgram
     : public ed::udp_server_message_connection
-    , public communicator_connection
+    , public communicator_interface
 {
 public:
     typedef std::shared_ptr<udp_dgram>  pointer_t;
@@ -244,22 +244,52 @@ public:
  * Although it is expected that your final connection calls that function to
  * properly name the connection.
  *
+ * \warning
+ * At this point, the \p opts parameter is likely a reference to a
+ * non-initialized options object (a.k.a. empty, no argc/argv passed
+ * through, no base environment). This means all sorts of features are
+ * not yet available.
+ *
  * \param[in] opts  An reference to an advgetopt::getopt object.
  * \param[in] service_name  Name of the service (daemon) using this communicator
  * client.
  */
-communicator::communicator(
+communicator_connection::communicator_connection(
           advgetopt::getopt & opts
         , std::string const & service_name)
     : timer(-1)
     , f_opts(opts)
     , f_communicator(ed::communicator::instance())
     , f_service_name(service_name)
+    , f_dispatcher(std::make_shared<ed::dispatcher>(this))
 {
     if(f_service_name.empty())
     {
-        throw invalid_name("the service_name parameter of the communicator constructor cannot be an empty string.");
+        throw invalid_name("the service_name parameter of the communicator_connection constructor cannot be an empty string.");
     }
+
+    // WARNING: keep in mind that the dispatcher_support class only has
+    //          a weak pointer to the dispatcher so that multiple types
+    //          of connections can have access to the same dispatcher
+    //          but not hold on to it when the main connection disappears
+    //
+    set_dispatcher(f_dispatcher);
+
+    // further dispatcher initialization
+    //
+#ifdef _DEBUG
+    f_dispatcher->set_trace();
+    f_dispatcher->set_show_matches();
+#endif
+
+    f_dispatcher->add_matches({
+        ed::define_match(
+              ed::Expression(::communicator::g_name_communicator_cmd_status)
+            , ed::Callback(std::bind(&communicator_connection::msg_status, this, std::placeholders::_1))
+            , ed::Priority(ed::dispatcher_match::DISPATCHER_MATCH_SYSTEM_PRIORITY)
+        ),
+    });
+    f_dispatcher->add_communicator_commands();
 
     set_name("communicator_client");
     f_opts.parse_options_info(g_options, true);
@@ -267,12 +297,41 @@ communicator::communicator(
 }
 
 
-/** \brief Destroy the communicator.
+/** \brief Destroy the communicator_connection.
  *
- * The communicator needed a virtual destructor so here it is.
+ * The communicator_connection needed a virtual destructor so here it is.
  */
-communicator::~communicator()
+communicator_connection::~communicator_connection()
 {
+}
+
+
+/** \brief Get the command options.
+ *
+ * The communicator_connection saves a reference to the advgetopt options. This
+ * function gives you access to that reference.
+ *
+ * \return A reference to the command line options managed by the
+ *         communicator_connection.
+ */
+advgetopt::getopt & communicator_connection::get_options()
+{
+    return f_opts;
+}
+
+
+/** \brief Retrieve the service name from the communicator_connection.
+ *
+ * This function returns a reference to the service name as defined when
+ * the communicator object was created. This parameter cannot be an empty
+ * string.
+ *
+ * \return the service name as specified when you constructed this
+ * communicator_connection.
+ */
+std::string const & communicator_connection::service_name() const
+{
+    return f_service_name;
 }
 
 
@@ -289,7 +348,7 @@ communicator::~communicator()
  * your service since it would continue to listen for messages on this
  * connection forever.
  */
-void communicator::process_communicator_options()
+void communicator_connection::process_communicator_options()
 {
     if(f_communicator_connection != nullptr)
     {
@@ -331,7 +390,7 @@ void communicator::process_communicator_options()
         {
             // I don't think this is possible
             //
-            connection_unavailable const e("the communicator requires at least one address to work.");
+            connection_unavailable const e("the communicator_connection requires at least one address to work.");
             SNAP_LOG_FATAL
                 << e
                 << SNAP_LOG_SEND;
@@ -482,22 +541,22 @@ void communicator::process_communicator_options()
 }
 
 
-/** \brief Retrieve the service name from the communicator.
+/** \brief Check whether the connection to the communicator is up.
  *
- * This function returns a reference to the service name as defined when
- * the communicator object was created. This parameter cannot be an empty
- * string.
+ * This function returns true if there is a connection to the communicator
+ * daemon and it is up.
  *
- * \return the service name as specified when you constructed this
- * communicator.
+ * \return true if the connection is available.
  */
-std::string const & communicator::service_name() const
+bool communicator_connection::is_connected() const
 {
-    return f_service_name;
+    return f_communicator_connection != nullptr
+        ? std::dynamic_pointer_cast<communicator_interface>(f_communicator_connection)->is_connected()
+        : false;
 }
 
 
-bool communicator::send_message(ed::message & msg, bool cache)
+bool communicator_connection::send_message(ed::message & msg, bool cache)
 {
     ed::connection_with_send_message::pointer_t messenger(std::dynamic_pointer_cast<ed::connection_with_send_message>(f_communicator_connection));
     if(messenger != nullptr)
@@ -513,6 +572,48 @@ bool communicator::send_message(ed::message & msg, bool cache)
 }
 
 
+/** \brief The communicator STATUS message.
+ *
+ * Whenever the communicator obtains or loses a connection with a
+ * service, it sends a STATUS message with the name and new status
+ * of that message.
+ *
+ * The communicator object manages the message and calls this
+ * callback function. The default function does nothing at the
+ * moment, but it should be called, just in case it does later.
+ *
+ * \note
+ * The UP status uses the following name:
+ * \code
+ *     communicator::g_name_communicator_value_up
+ * \endcode
+ * And the DOWN status uses the following name:
+ * \code
+ *     communicator::g_name_communicator_value_down
+ * \endcode
+ *
+ * \param[in] service  The name of the service of which the status changed.
+ * \param[in] status  The new status (usually UP or DOWN).
+ */
+void communicator_connection::service_status(std::string const & service, std::string const & status)
+{
+    snapdev::NOT_USED(service, status);
+}
+
+
+void communicator_connection::msg_status(ed::message & msg)
+{
+    if(!msg.has_parameter(::communicator::g_name_communicator_param_service)
+    || !msg.has_parameter(::communicator::g_name_communicator_param_status))
+    {
+        return;
+    }
+    service_status(
+          msg.get_parameter(::communicator::g_name_communicator_param_service)
+        , msg.get_parameter(::communicator::g_name_communicator_param_status));
+}
+
+
 /** \brief When exiting your process, make sure to unregister.
  *
  * To cleanly unregister a service and thus send a message to the communicator
@@ -523,7 +624,7 @@ bool communicator::send_message(ed::message & msg, bool cache)
  *
  * \param[in] quitting  true if the communicator daemon itself is quitting.
  */
-void communicator::unregister_communicator(bool quitting)
+void communicator_connection::unregister_communicator(bool quitting)
 {
     if(f_communicator_connection != nullptr)
     {
@@ -543,14 +644,6 @@ void communicator::unregister_communicator(bool quitting)
             messenger->unregister_service();
         }
     }
-}
-
-
-bool communicator::is_connected() const
-{
-    return f_communicator_connection != nullptr
-        ? std::dynamic_pointer_cast<communicator_connection>(f_communicator_connection)->is_connected()
-        : false;
 }
 
 

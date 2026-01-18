@@ -25,7 +25,7 @@
 
 // communicator
 //
-#include    <communicator/communicator.h>
+#include    <communicator/communicator_connection.h>
 #include    <communicator/exception.h>
 #include    <communicator/version.h>
 
@@ -130,7 +130,7 @@ addr::addr get_address()
 // extension instead of a standalone client
 //
 class test_messenger
-    : public communicator::communicator
+    : public communicator::communicator_connection
     , public ed::manage_message_definition_paths
 {
 public:
@@ -146,7 +146,7 @@ public:
             , int argc
             , char * argv[]
             , sequence_t sequence)
-        : communicator(opts, "test_communicator_client")
+        : communicator_connection(opts, "test_communicator_client")
         , manage_message_definition_paths(
                 // WARNING: the order matters, we want to test with our source
                 //          (i.e. original) files first
@@ -155,25 +155,16 @@ public:
                     + SNAP_CATCH2_NAMESPACE::g_source_dir() + "/daemon/message-definitions:"
                     + SNAP_CATCH2_NAMESPACE::g_dist_dir() + "/share/eventdispatcher/messages")
         , f_sequence(sequence)
-        , f_dispatcher(std::make_shared<ed::dispatcher>(this))
     {
         set_name("test_messenger");    // connection name
-        set_dispatcher(f_dispatcher);
 
         opts.finish_parsing(argc, argv);
 
-        f_dispatcher->add_matches({
+        get_dispatcher()->add_matches({
             DISPATCHER_MATCH("DATA", &test_messenger::msg_data),
             //DISPATCHER_CATCH_ALL(),
         });
-        f_dispatcher->add_communicator_commands();
-
-        // further dispatcher initialization
-        //
-#ifdef _DEBUG
-        f_dispatcher->set_trace();
-        f_dispatcher->set_show_matches();
-#endif
+        get_dispatcher()->add_communicator_commands();
     }
 
     void finish_init()
@@ -199,11 +190,6 @@ public:
         ed::message too_early;
         too_early.set_command("TOO_EARLY");
         CATCH_REQUIRE_FALSE(send_message(too_early));
-    }
-
-    ed::dispatcher::pointer_t get_dispatcher() const
-    {
-        return f_dispatcher;
     }
 
 //    virtual void process_connected() override
@@ -295,9 +281,7 @@ std::cerr << "--- got DATA message: " << msg << "...\n";
 private:
     // the sequence & step define the next action
     //
-    //advgetopt::getopt           f_opts;
     sequence_t                  f_sequence = sequence_t::SEQUENCE_SUCCESS;
-    ed::dispatcher::pointer_t   f_dispatcher = ed::dispatcher::pointer_t();
     int                         f_step = 0;
     ed::connection::weak_pointer_t
                                 f_timer = ed::connection::weak_pointer_t();
@@ -372,9 +356,9 @@ CATCH_TEST_CASE("communicator_client_connection", "[client]")
     {
         advgetopt::getopt opts(g_options_environment);
         CATCH_REQUIRE_THROWS_MATCHES(
-              std::make_shared<communicator::communicator>(opts, "")
+              std::make_shared<communicator::communicator_connection>(opts, "")
             , communicator::invalid_name
-            , Catch::Matchers::ExceptionMessage("communicator_exception: the service_name parameter of the communicator constructor cannot be an empty string."));
+            , Catch::Matchers::ExceptionMessage("communicator_exception: the service_name parameter of the communicator_connection constructor cannot be an empty string."));
     }
     CATCH_END_SECTION()
 

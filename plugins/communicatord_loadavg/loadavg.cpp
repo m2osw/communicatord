@@ -30,7 +30,7 @@
 
 // communicator
 //
-#include    <communicator/communicator.h>
+#include    <communicator/communicator_connection.h>
 #include    <communicator/exception.h>
 #include    <communicator/loadavg.h>
 #include    <communicator/names.h>

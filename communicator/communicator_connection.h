@@ -28,6 +28,7 @@
 #include    <eventdispatcher/communicator.h>
 #include    <eventdispatcher/connection.h>
 #include    <eventdispatcher/connection_with_send_message.h>
+#include    <eventdispatcher/dispatcher.h>
 #include    <eventdispatcher/dispatcher_support.h>
 #include    <eventdispatcher/message.h>
 #include    <eventdispatcher/timer.h>
@@ -63,23 +64,24 @@ constexpr std::string_view      g_communicator_any_ip_port = snapdev::join_strin
 
 
 
-class communicator
+class communicator_connection
     : public ed::timer
     , public ed::dispatcher_support
     , public ed::connection_with_send_message
 {
 public:
-    typedef std::shared_ptr<communicator>   pointer_t;
+    typedef std::shared_ptr<communicator_connection>   pointer_t;
 
-                                communicator(
+                                communicator_connection(
                                       advgetopt::getopt & opts
                                     , std::string const & service_name);
-                                communicator(communicator const &) = delete;
-    virtual                     ~communicator();
-    communicator &              operator = (communicator const &) = delete;
+                                communicator_connection(communicator_connection const &) = delete;
+    virtual                     ~communicator_connection() override;
+    communicator_connection &   operator = (communicator_connection const &) = delete;
 
-    void                        process_communicator_options();
+    advgetopt::getopt &         get_options();
     std::string const &         service_name() const;
+    void                        process_communicator_options();
     void                        unregister_communicator(bool quitting);
     bool                        is_connected() const;
 
@@ -87,10 +89,17 @@ public:
     //
     virtual bool                send_message(ed::message & msg, bool cache = false) override;
 
+    // new callbacks
+    //
+    virtual void                service_status(std::string const & service, std::string const & status);
+
 private:
+    void                        msg_status(ed::message & msg);
+
     advgetopt::getopt &         f_opts;
     ed::communicator::pointer_t f_communicator = ed::communicator::pointer_t();
     std::string                 f_service_name = std::string();
+    ed::dispatcher::pointer_t   f_dispatcher = ed::dispatcher::pointer_t();
     ed::connection::pointer_t   f_communicator_connection = ed::connection::pointer_t();
 };
 

@@ -22,6 +22,11 @@
 #include    <catch2/snapcatch2.hpp>
 
 
+// snaplogger
+//
+#include    <snaplogger/snapcatch2.hpp>
+
+
 // C++
 //
 #include    <string>

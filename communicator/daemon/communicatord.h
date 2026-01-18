@@ -32,7 +32,7 @@
 
 // communicator
 //
-#include    <communicator/communicator.h>
+#include    <communicator/communicator_connection.h>
 
 
 // eventdispatcher
@@ -203,7 +203,6 @@ private:
     int                             f_default_remote_port = communicator::REMOTE_PORT;
     bool                            f_shutdown = false;
     bool                            f_debug_all_messages = false;
-    bool                            f_force_restart = false;
     cache                           f_local_message_cache = cache();
     std::map<std::string, time_t>   f_received_broadcast_messages = (std::map<std::string, time_t>());
     std::string                     f_cluster_status = std::string();

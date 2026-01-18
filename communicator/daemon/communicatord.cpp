@@ -1305,9 +1305,7 @@ int communicatord::run()
     //
     f_communicator.reset();
 
-    // we received a RELOADCONFIG, exit with 1 so systemd restarts us
-    //
-    return f_force_restart ? 1 : 0;
+    return 0;
 }
 
 
@@ -3150,7 +3148,9 @@ void communicatord::msg_service_status(ed::message & msg)
         SNAP_LOG_ERROR
             << "The "
             << communicator::g_name_communicator_cmd_service_status
-            << "'s service parameter cannot be an empty string."
+            << "'s "
+            << communicator::g_name_communicator_param_service
+            << " parameter cannot be an empty string."
             << SNAP_LOG_SEND;
         return;
     }

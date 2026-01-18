@@ -54,7 +54,20 @@ namespace SNAP_CATCH2_NAMESPACE
 {
 
 
+
 char **         g_argv = nullptr;
+
+
+int init_tests(Catch::Session & session)
+{
+    snapdev::NOT_USED(session);
+
+    snaplogger::setup_catch2_nested_diagnostics();
+    snaplogger::mark_ready(); // we do not process options, so we have to explicitly call ready()
+
+    return 0;
+}
+
 
 
 } // SNAP_CATCH2_NAMESPACE namespace
@@ -75,6 +88,8 @@ int main(int argc, char * argv[])
             , argc
             , argv
             , []() { libexcept::set_collect_stack(libexcept::collect_stack_t::COLLECT_STACK_NO); }
+            , nullptr
+            , SNAP_CATCH2_NAMESPACE::init_tests
         );
 }
 

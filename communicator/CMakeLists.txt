@@ -32,7 +32,7 @@ configure_file(
 add_library(${PROJECT_NAME} SHARED
     # This first list is considered to be part of the library
     #
-    communicator.cpp
+    communicator_connection.cpp
     flags.cpp
     loadavg.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/names.cpp
@@ -85,7 +85,6 @@ target_link_libraries(${PROJECT_NAME}
     ${SNAPLOGGER_LIBRARIES}
 )
 
-
 set_target_properties(${PROJECT_NAME} PROPERTIES
     VERSION
         ${COMMUNICATOR_VERSION_MAJOR}.${COMMUNICATOR_VERSION_MINOR}
@@ -108,23 +107,9 @@ install(
         lib
 )
 
-
 install(
     FILES
-        communicator.h
-        exception.h
-        flags.h
-        loadavg.h
-        ${CMAKE_CURRENT_BINARY_DIR}/names.h
-        ${CMAKE_CURRENT_BINARY_DIR}/version.h
-
-    DESTINATION
-        include/communicator
-)
-
-install(
-    FILES
-        communicator.h
+        communicator_connection.h
         exception.h
         flags.h
         loadavg.h

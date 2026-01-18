@@ -19,7 +19,7 @@
 
 // communicator
 //
-#include    <communicator/communicator.h>
+#include    <communicator/communicator_connection.h>
 #include    <communicator/names.h>
 #include    <communicator/version.h>
 
