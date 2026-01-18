@@ -164,7 +164,6 @@ public:
             DISPATCHER_MATCH("DATA", &test_messenger::msg_data),
             //DISPATCHER_CATCH_ALL(),
         });
-        get_dispatcher()->add_communicator_commands();
     }
 
     void finish_init()
